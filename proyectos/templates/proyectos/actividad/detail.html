@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load project_filters %}
+
+{% block extra_css %}
+<style>
+    .activity-details {
+        margin-bottom: 2rem;
+    }
+    .activity-actions {
+        margin-top: 1.5rem;
+    }
+    .progress {
+        height: 24px;
+    }
+    .progress-bar {
+        line-height: 24px;
+    }
+</style>
+{% endblock %}
+
+{% block title %}{{ actividad.actividad }} - Detalles{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{% url 'proyectos:proyecto_list' %}">Proyectos</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'proyectos:proyecto_detail' actividad.proyecto.id %}">{{ actividad.proyecto.nombre_proyecto|truncatechars:20 }}</a></li>
+                        <li class="breadcrumb-item active">{{ actividad.actividad|truncatechars:20 }}</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">{{ actividad.actividad }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">Información de la Actividad</h4>
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0">
+                            <tbody>
+                                <tr>
+                                    <th scope="row" style="width: 200px;">Proyecto</th>
+                                    <td>{{ actividad.proyecto.nombre_proyecto }}</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Fecha de Inicio</th>
+                                    <td>{{ actividad.inicio|date:"d/m/Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Fecha de Fin</th>
+                                    <td>{{ actividad.fin|date:"d/m/Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Duración</th>
+                                    <td>{{ actividad.duracion }} días</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Avance</th>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-success" 
+                                                 role="progressbar" 
+                                                 style="width: {{ actividad.avance }}%"
+                                                 aria-valuenow="{{ actividad.avance }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ actividad.avance }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Estado</th>
+                                    <td>
+                                        <span class="badge bg-{{ actividad.estado|get_estado_badge }}">
+                                            {{ actividad.get_estado_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% if actividad.observaciones %}
+                                <tr>
+                                    <th scope="row">Observaciones</th>
+                                    <td>{{ actividad.observaciones|linebreaks }}</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bitácoras -->
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">Bitácoras</h4>
+                    {% if bitacoras %}
+                        <div class="table-responsive">
+                            <table class="table table-centered table-nowrap mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Subactividad</th>
+                                        <th>Responsable</th>
+                                        <th>Duración</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for bitacora in bitacoras %}
+                                    <tr>
+                                        <td>{{ bitacora.fecha_registro|date:"d/m/Y H:i" }}</td>
+                                        <td>{{ bitacora.subactividad }}</td>
+                                        <td>{{ bitacora.responsable.nombre }}</td>
+                                        <td>{{ bitacora.duracion_horas }} horas</td>
+                                        <td>
+                                            <a href="#" class="btn btn-xs btn-info" data-bs-toggle="modal" data-bs-target="#bitacoraModal{{ bitacora.id }}">
+                                                <i class="mdi mdi-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">No hay bitácoras registradas para esta actividad.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Acciones -->
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">Acciones</h4>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'proyectos:actividad_update' actividad.id %}" class="btn btn-primary">
+                            <i class="mdi mdi-pencil me-1"></i> Editar Actividad
+                        </a>
+                        <a href="#" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#agregarBitacoraModal">
+                            <i class="mdi mdi-plus-circle me-1"></i> Agregar Bitácora
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recursos -->
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">Recursos</h4>
+                    <div class="d-grid gap-2">
+                        <a href="#" class="btn btn-outline-primary">
+                            <i class="mdi mdi-file-document-outline me-1"></i> Ver Recursos
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Bitácora Modals -->
+{% for bitacora in bitacoras %}
+<div class="modal fade" id="bitacoraModal{{ bitacora.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles de Bitácora</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <h6>Descripción:</h6>
+                        <p>{{ bitacora.descripcion|linebreaks }}</p>
+                    </div>
+                </div>
+                {% if bitacora.observaciones %}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Observaciones:</h6>
+                        <p>{{ bitacora.observaciones|linebreaks }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                {% if bitacora.imagen %}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Imagen:</h6>
+                        <img src="{{ bitacora.imagen.url }}" alt="Imagen de bitácora" class="img-fluid">
+                    </div>
+                </div>
+                {% endif %}
+                {% if bitacora.archivo %}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Archivo adjunto:</h6>
+                        <a href="{{ bitacora.archivo.url }}" class="btn btn-outline-primary btn-sm" download>
+                            <i class="mdi mdi-download me-1"></i> Descargar archivo
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <a href="{% url 'proyectos:bitacora_update' bitacora.id %}" class="btn btn-primary">
+                    <i class="mdi mdi-pencil me-1"></i> Editar
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    // Inicializar tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends 'base/form_base.html' %}
+
+{% block title %}{{ form.instance.pk|yesno:"Editar,Nuevo" }} Proyecto{% endblock %}
+
+{% block form_title %}
+    {% if form.instance.pk %}
+        Editar Proyecto {{ form.instance.nombre_proyecto }}
+    {% else %}
+        Nuevo Proyecto
+    {% endif %}
+{% endblock %}
+
+{% block extra_fields %}
+    {% if form.instance.pk %}
+        <div class="mb-3">
+            <p class="text-muted">Creado el: {{ form.instance.fecha_creacion|date:"d/m/Y H:i" }}</p>
+            <p class="text-muted">Estado: {{ form.instance.get_estado_display }}</p>
+            <p class="text-muted">Avance: {{ form.instance.avance }}%</p>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Datos de tratos para autocompletado
+    const tratosData = {{ tratos_json|safe }};
+
+    // Función para obtener elemento por ID con validación
+    function getElementSafe(id) {
+        const element = document.getElementById(id);
+        if (!element) {
+            console.error(`Elemento con ID '${id}' no encontrado`);
+        }
+        return element;
+    }
+
+    // Función para autocompletar campos cuando se selecciona un trato
+    function initTratosAutocompletar() {
+        const tratoSelect = getElementSafe('id_trato');
+        if (!tratoSelect) return;
+
+        tratoSelect.addEventListener('change', function() {
+            const tratoId = this.value;
+            console.log('Trato ID seleccionado:', tratoId);
+            console.log('Datos de tratos disponibles:', tratosData);
+            
+            if (!tratoId) {
+                console.log('No hay trato seleccionado');
+                return;
+            }
+
+            const tratoSeleccionado = tratosData.find(trato => trato.id == tratoId);
+            console.log('Trato seleccionado:', tratoSeleccionado);
+            
+            if (!tratoSeleccionado) {
+                console.log('No se encontró el trato en los datos');
+                return;
+            }
+
+            // Buscar la opción del cliente por nombre
+            const clienteSelect = getElementSafe('id_cliente');
+            if (!clienteSelect) return;
+
+            console.log('Nombre del cliente a buscar:', tratoSeleccionado.cliente);
+            const opciones = Array.from(clienteSelect.options || []);
+            console.log('Opciones disponibles:', opciones.map(opt => opt.text));
+            
+            const clienteOption = opciones.find(
+                option => option.text.trim() === tratoSeleccionado.cliente.trim()
+            );
+            
+            console.log('Opción de cliente encontrada:', clienteOption);
+            
+            if (clienteOption) {
+                clienteSelect.value = clienteOption.value;
+                console.log('Cliente seleccionado:', clienteOption.value);
+            } else {
+                console.log('No se encontró la opción del cliente');
+            }
+
+            // Autocompletar el resto de campos
+            const campos = {
+                'id_centro_costos': tratoSeleccionado.centro_costos || '',
+                'id_nombre_proyecto': tratoSeleccionado.nombre_proyecto || '',
+                'id_orden_contrato': tratoSeleccionado.orden_contrato || '',
+                'id_dias_prometidos': tratoSeleccionado.dias_prometidos || ''
+            };
+
+            // Actualizar cada campo si existe
+            Object.entries(campos).forEach(([id, valor]) => {
+                const campo = getElementSafe(id);
+                if (campo) {
+                    campo.value = valor;
+                }
+            });
+            
+            console.log('Campos autocompletados con:', campos);
+        });
+    }
+
+    // Inicializar el autocompletado
+    initTratosAutocompletar();
+</script>
+{% endblock %}

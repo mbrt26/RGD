@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Información General del Proyecto -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">{{ proyecto.nombre_proyecto }}</h6>
+            <div>
+                <a href="{% url 'proyectos:proyecto_update' proyecto.id %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-edit"></i> Editar
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Cliente:</strong> {{ proyecto.cliente }}</p>
+                    <p><strong>Centro de Costos:</strong> {{ proyecto.centro_costos }}</p>
+                    <p><strong>Orden de Contrato:</strong> {{ proyecto.orden_contrato }}</p>
+                    <p><strong>Días Prometidos:</strong> {{ proyecto.dias_prometidos }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Fecha de Inicio:</strong> {{ proyecto.fecha_inicio|date:"d/m/Y" }}</p>
+                    <p><strong>Fecha de Fin:</strong> {{ proyecto.fecha_fin|date:"d/m/Y" }}</p>
+                    <p><strong>Estado:</strong> <span class="badge badge-{{ proyecto.estado|lower }}">{{ proyecto.get_estado_display }}</span></p>
+                    <p><strong>Prioridad:</strong> <span class="badge badge-{{ proyecto.prioridad|lower }}">{{ proyecto.get_prioridad_display }}</span></p>
+                </div>
+            </div>
+            {% if proyecto.observaciones %}
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6 class="font-weight-bold">Observaciones:</h6>
+                    <p>{{ proyecto.observaciones|linebreaksbr }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Actividades del Proyecto -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Actividades</h6>
+            <a href="{% url 'proyectos:actividad_list' %}?proyecto_id={{ proyecto.id }}" class="btn btn-info btn-sm">
+                <i class="fas fa-tasks"></i> Ver Todas
+            </a>
+        </div>
+        <div class="card-body">
+            {% if actividades %}
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Actividad</th>
+                            <th>Estado</th>
+                            <th>Avance</th>
+                            <th>Fecha Inicio</th>
+                            <th>Fecha Fin</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for actividad in actividades %}
+                        <tr>
+                            <td>{{ actividad.actividad }}</td>
+                            <td><span class="badge badge-{{ actividad.estado|lower }}">{{ actividad.get_estado_display }}</span></td>
+                            <td>
+                                <div class="progress">
+                                    <div class="progress-bar" role="progressbar" style="width: {{ actividad.avance }}%">
+                                        {{ actividad.avance }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ actividad.inicio|date:"d/m/Y" }}</td>
+                            <td>{{ actividad.fin|date:"d/m/Y" }}</td>
+                            <td>
+                                <a href="{% url 'proyectos:actividad_detail' actividad.pk %}" class="btn btn-info btn-sm">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center text-muted">No hay actividades registradas para este proyecto.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Bitácoras Recientes -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Bitácoras Recientes</h6>
+        </div>
+        <div class="card-body">
+            {% if bitacoras %}
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Descripción</th>
+                            <th>Registrado por</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bitacora in bitacoras %}
+                        <tr>
+                            <td>{{ bitacora.fecha_registro|date:"d/m/Y H:i" }}</td>
+                            <td>{{ bitacora.descripcion }}</td>
+                            <td>{{ bitacora.responsable }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center text-muted">No hay bitácoras registradas para este proyecto.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Entregables -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Entregables</h6>
+        </div>
+        <div class="card-body">
+            {% if entregables %}
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Estado</th>
+                            <th>Fecha de Entrega</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entregable in entregables %}
+                        <tr>
+                            <td>{{ entregable.nombre }}</td>
+                            <td><span class="badge badge-{{ entregable.estado|lower }}">{{ entregable.get_estado_display }}</span></td>
+                            <td>{{ entregable.fecha_entrega|date:"d/m/Y" }}</td>
+                            <td>
+                                <a href="{% url 'proyectos:entregable_detail' entregable.pk %}" class="btn btn-info btn-sm">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center text-muted">No hay entregables registrados para este proyecto.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

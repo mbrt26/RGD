@@ -1,0 +1,198 @@
+{% extends 'crm/proyecto/base.html' %}
+{% load static %}
+
+{% block content_title %}Listado de Proyectos{% endblock %}
+
+{% block breadcrumb_items %}
+    <li class="breadcrumb-item active">Listado</li>
+{% endblock %}
+
+{% block content_fluid %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Proyectos</h3>
+        <div class="card-tools">
+            <a href="{% url 'crm:proyecto_create' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Nuevo Proyecto
+            </a>
+            <a href="{% url 'crm:proyecto_dashboard' %}" class="btn btn-info btn-sm ml-2">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <form method="get" class="form-inline">
+                    <div class="input-group input-group-sm w-100">
+                        <input type="text" name="q" class="form-control" placeholder="Buscar proyectos..." value="{{ request.GET.q }}">
+                        <div class="input-group-append">
+                            <select name="estado" class="form-control">
+                                <option value="">Todos los estados</option>
+                                {% for value, label in estados.items %}
+                                    <option value="{{ value }}" {% if request.GET.estado == value|stringformat:'s' %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <select name="prioridad" class="form-control">
+                                <option value="">Todas las prioridades</option>
+                                {% for value, label in prioridades.items %}
+                                    <option value="{{ value }}" {% if request.GET.prioridad == value|stringformat:'s' %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Buscar
+                            </button>
+                            <a href="{% url 'crm:proyecto_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-undo"></i> Limpiar
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped table-hover datatable">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Cliente</th>
+                        <th>Responsable</th>
+                        <th>Fecha Inicio</th>
+                        <th>Fecha Fin</th>
+                        <th>Estado</th>
+                        <th>Prioridad</th>
+                        <th>Avance</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for proyecto in object_list %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'crm:proyecto_detail' proyecto.pk %}">
+                                    {{ proyecto.nombre|truncatechars:30 }}
+                                </a>
+                            </td>
+                            <td>{{ proyecto.cliente.nombre|truncatechars:25 }}</td>
+                            <td>{{ proyecto.responsable.nombre|default:"Sin asignar" }}</td>
+                            <td>{{ proyecto.fecha_inicio|date:"d/m/Y" }}</td>
+                            <td>{{ proyecto.fecha_fin_estimada|date:"d/m/Y" }}</td>
+                            <td>
+                                <span class="badge {% if proyecto.estado == 'completado' %}bg-success{% elif proyecto.estado == 'cancelado' %}bg-danger{% elif proyecto.estado == 'en_progreso' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                    {{ proyecto.get_estado_display }}
+                                </span>
+                                {% if proyecto.esta_atrasado and proyecto.estado == 'en_progreso' %}
+                                    <span class="badge bg-warning" data-toggle="tooltip" title="¡Proyecto atrasado!">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if proyecto.prioridad == 'alta' %}
+                                    <span class="badge bg-danger">{{ proyecto.get_prioridad_display }}</span>
+                                {% elif proyecto.prioridad == 'media' %}
+                                    <span class="badge bg-warning">{{ proyecto.get_prioridad_display }}</span>
+                                {% elif proyecto.prioridad == 'baja' %}
+                                    <span class="badge bg-success">{{ proyecto.get_prioridad_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ proyecto.get_prioridad_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar {% if proyecto.avance < 50 %}bg-danger{% elif proyecto.avance < 80 %}bg-warning{% else %}bg-success{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ proyecto.avance }}%;" 
+                                         aria-valuenow="{{ proyecto.avance }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ proyecto.avance }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'crm:proyecto_detail' proyecto.pk %}" class="btn btn-sm btn-info" data-toggle="tooltip" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'crm:proyecto_update' proyecto.pk %}" class="btn btn-sm btn-primary" data-toggle="tooltip" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-danger" data-toggle="modal" data-target="#deleteModal{{ proyecto.pk }}" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Delete Modal -->
+                                <div class="modal fade" id="deleteModal{{ proyecto.pk }}" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel{{ proyecto.pk }}" aria-hidden="true">
+                                    <div class="modal-dialog" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="deleteModalLabel{{ proyecto.pk }}">Confirmar eliminación</h5>
+                                                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </div>
+                                            <div class="modal-body">
+                                                ¿Estás seguro de que deseas eliminar el proyecto "{{ proyecto.nombre }}"?
+                                                <br><br>
+                                                <strong>Esta acción no se puede deshacer.</strong>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                                                <form action="{% url 'crm:proyecto_delete' proyecto.pk %}" method="post" style="display: inline;">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center">No hay proyectos registrados.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer clearfix">
+        <div class="float-right">
+            <a href="{% url 'crm:proyecto_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nuevo Proyecto
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    $(document).ready(function() {
+        // Inicializar DataTable
+        $('.datatable').DataTable({
+            "responsive": true,
+            "autoWidth": false,
+            "order": [[3, "desc"]], // Ordenar por fecha de inicio por defecto
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json"
+            },
+            "columnDefs": [
+                { "orderable": false, "targets": [8] } // Deshabilitar ordenación en columna de acciones
+            ]
+        });
+        
+        // Inicializar tooltips
+        $('[data-toggle="tooltip"]').tooltip();
+    });
+</script>
+{% endblock %}

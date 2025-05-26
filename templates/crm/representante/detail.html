@@ -1,0 +1,102 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ representante.nombre }} | Detalle de Representante{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h3 class="card-title mb-0">Representante: {{ representante.nombre }}</h3>
+            </div>
+            <div class="col text-end">
+                <a href="{% url 'crm:representante_update' representante.id %}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Editar
+                </a>
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                    <i class="fas fa-trash"></i> Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h5>Información General</h5>
+                <dl class="row">
+                    <dt class="col-sm-4">Nombre</dt>
+                    <dd class="col-sm-8">{{ representante.nombre }}</dd>
+                    
+                    <dt class="col-sm-4">Usuario</dt>
+                    <dd class="col-sm-8">{{ representante.usuario.username }}</dd>
+                    
+                    <dt class="col-sm-4">Teléfono</dt>
+                    <dd class="col-sm-8">{{ representante.telefono|default:"No especificado" }}</dd>
+                    
+                    <dt class="col-sm-4">Meta de Ventas</dt>
+                    <dd class="col-sm-8">${{ representante.meta_ventas|floatformat:2 }}</dd>
+                </dl>
+            </div>
+        </div>
+        
+        <!-- Sección de Tratos -->
+        <div class="mt-4">
+            <h5>Tratos Asociados</h5>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Valor</th>
+                            <th>Estado</th>
+                            <th>Probabilidad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trato in tratos %}
+                        <tr>
+                            <td>{{ trato.fecha_creacion|date:"d/m/Y" }}</td>
+                            <td>{{ trato.cliente }}</td>
+                            <td>${{ trato.valor|floatformat:2 }}</td>
+                            <td>
+                                <span class="badge bg-{{ trato.estado }}">
+                                    {{ trato.get_estado_display }}
+                                </span>
+                            </td>
+                            <td>{{ trato.probabilidad }}%</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No hay tratos registrados</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación de eliminación -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                ¿Está seguro que desea eliminar al representante {{ representante.nombre }}?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form action="{% url 'crm:representante_delete' representante.id %}" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

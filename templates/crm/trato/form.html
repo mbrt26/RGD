@@ -1,0 +1,304 @@
+{% extends 'base/form_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .form-actions {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #dee2e6;
+    }
+    .form-section {
+        margin-bottom: 2rem;
+    }
+    .form-section h5 {
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 1.5rem;
+    }
+    .form-text {
+        color: #6c757d;
+        font-size: 0.875em;
+    }
+    /* Estilos para campos de fecha */
+    input[type="date"] {
+        height: calc(1.5em + 0.75rem + 2px);
+        padding: 0.375rem 0.75rem;
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+        color: #495057;
+        background-color: #fff;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        width: 100%;
+    }
+    input[type="date"]:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        outline: 0;
+    }
+</style>
+{% endblock %}
+
+{% block form_content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title mb-0">
+            {% if form.instance.pk %}
+                Editar Trato #{{ form.instance.numero_oferta }}
+            {% else %}
+                Nuevo Trato
+            {% endif %}
+        </h3>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data" class="form-horizontal">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            {% if form.instance.pk %}
+            <div class="form-section">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <strong>Número de Oferta:</strong> {{ form.instance.numero_oferta }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="form-section">
+                <h5>Información Básica</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.nombre|as_crispy_field }}
+                        {{ form.cliente|as_crispy_field }}
+                        {{ form.contacto|as_crispy_field }}
+                        {{ form.correo|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.telefono|as_crispy_field }}
+                        {{ form.valor|as_crispy_field }}
+                        {{ form.probabilidad|as_crispy_field }}
+                        {{ form.responsable|as_crispy_field }}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        {{ form.tipo_negociacion|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h5>Estado y Fechas</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.estado|as_crispy_field }}
+                        {{ form.fuente|as_crispy_field }}
+                        <div class="form-group">
+                            <label for="id_fecha_creacion" class="form-label">Fecha de Creación</label>
+                            {% if form.instance.pk %}
+                                <input type="date" id="id_fecha_creacion" class="form-control" value="{{ form.instance.fecha_creacion|date:'Y-m-d' }}" disabled>
+                            {% else %}
+                                <input type="date" id="id_fecha_creacion" class="form-control" value="{{ now|date:'Y-m-d' }}" disabled>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="id_fecha_cierre" class="form-label">Fecha de Cierre</label>
+                            {{ form.fecha_cierre }}
+                            <div class="form-text">
+                                Fecha estimada de cierre del trato
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h5>Información de Proyecto</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.centro_costos|as_crispy_field }}
+                        {{ form.nombre_proyecto|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.orden_contrato|as_crispy_field }}
+                        {{ form.dias_prometidos|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h5>Descripción y Notas</h5>
+                <div class="row">
+                    <div class="col-12">
+                        {{ form.descripcion|as_crispy_field }}
+                        {{ form.notas|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section mt-4">
+                <h5 class="d-flex justify-content-between align-items-center">
+                    Tareas Relacionadas
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#nuevaTareaModal">
+                        <i class="fas fa-plus"></i> Nueva Tarea
+                    </button>
+                </h5>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th>Estado</th>
+                                <th>Vencimiento</th>
+                                <th>Responsable</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tareasList">
+                            {% for tarea in tareas %}
+                            <tr>
+                                <td>{{ tarea.titulo }}</td>
+                                <td><span class="badge bg-{{ tarea.estado }}">{{ tarea.get_estado_display }}</span></td>
+                                <td>{{ tarea.fecha_vencimiento|date:"d/m/Y" }}</td>
+                                <td>{{ tarea.responsable.get_full_name|default:tarea.responsable.username }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{% url 'crm:tarea_detail' tarea.id %}" class="btn btn-sm btn-info" title="Ver">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'crm:tarea_update' tarea.id %}" class="btn btn-sm btn-primary" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No hay tareas asociadas a este trato.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="form-actions text-end">
+                <a href="{% url 'crm:trato_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> {% if form.instance.pk %}Actualizar{% else %}Crear{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if form.instance.pk %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Información Adicional</h5>
+    </div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Creado el:</dt>
+            <dd class="col-sm-9">{{ form.instance.fecha_creacion|date:"d/m/Y" }}</dd>
+        </dl>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal Nueva Tarea -->
+<div class="modal fade" id="nuevaTareaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nueva Tarea</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'crm:tarea_create' %}" id="nuevaTareaForm">
+                {% csrf_token %}
+                <input type="hidden" name="trato" value="{{ form.instance.pk }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="titulo" class="form-label">Título</label>
+                                <input type="text" class="form-control" id="titulo" name="titulo" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="descripcion" class="form-label">Descripción</label>
+                                <textarea class="form-control" id="descripcion" name="descripcion" rows="3"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="fecha_vencimiento" class="form-label">Fecha de Vencimiento</label>
+                                <input type="datetime-local" class="form-control" id="fecha_vencimiento" name="fecha_vencimiento" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="tipo" class="form-label">Tipo</label>
+                                <select class="form-select" id="tipo" name="tipo">
+                                    <option value="general">General</option>
+                                    <option value="seguimiento">Seguimiento</option>
+                                    <option value="reunion">Reunión</option>
+                                    <option value="documento">Documento</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="estado" class="form-label">Estado</label>
+                                <select class="form-select" id="estado" name="estado">
+                                    <option value="pendiente">Pendiente</option>
+                                    <option value="en_progreso">En Progreso</option>
+                                    <option value="completada">Completada</option>
+                                    <option value="cancelada">Cancelada</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="prioridad" class="form-label">Prioridad</label>
+                                <select class="form-select" id="prioridad" name="prioridad">
+                                    <option value="baja">Baja</option>
+                                    <option value="media">Media</option>
+                                    <option value="alta">Alta</option>
+                                    <option value="urgente">Urgente</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="responsable" class="form-label">Responsable</label>
+                                <select class="form-select" id="responsable" name="responsable">
+                                    {% for user in users %}
+                                    <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-primary">Crear Tarea</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

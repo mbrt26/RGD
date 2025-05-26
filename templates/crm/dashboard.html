@@ -1,0 +1,702 @@
+{% load static %}
+{% extends "base/base.html" %}
+
+{% block title %}Dashboard CRM{% endblock title %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock extra_css %}
+
+{% block content %}
+{{ tratos_por_estado|json_script:"tratos-por-estado-data" }}
+{{ tratos_por_fuente|json_script:"tratos-por-fuente-data" }}
+{{ ultimos_tratos|json_script:"ultimos-tratos-data" }}
+
+<div class="container-fluid">
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Filtros de Análisis</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="cliente" class="form-label">Cliente</label>
+                    <select name="cliente" id="cliente" class="form-select">
+                        <option value="">Todos los clientes</option>
+                        {% for cliente in clientes %}
+                            <option value="{{ cliente.id }}" {% if filtros.cliente == cliente.id|stringformat:"s" %}selected{% endif %}>
+                                {{ cliente.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="comercial" class="form-label">Comercial</label>
+                    <select name="comercial" id="comercial" class="form-select">
+                        <option value="">Todos los comerciales</option>
+                        {% for comercial in comerciales %}
+                            <option value="{{ comercial.id }}" {% if filtros.comercial == comercial.id|stringformat:"s" %}selected{% endif %}>
+                                {{ comercial.first_name }} {{ comercial.last_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="tipo_negociacion" class="form-label">Tipo Negociación</label>
+                    <select name="tipo_negociacion" id="tipo_negociacion" class="form-select">
+                        <option value="">Todos los tipos</option>
+                        {% for tipo, nombre in tipos_negociacion %}
+                            <option value="{{ tipo.id }}" {% if filtros.tipo_negociacion == tipo.id|stringformat:"s" %}selected{% endif %}>
+                                {{ tipo.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="periodo" class="form-label">Período</label>
+                    <select name="periodo" id="periodo" class="form-select">
+                            <option value="mes" {% if filtros.periodo == 'mes' %}selected{% endif %}>Este mes</option>
+                            <option value="trimestre" {% if filtros.periodo == 'trimestre' %}selected{% endif %}>Este trimestre</option>
+                    </select>
+                </div>
+                <div class="col-md-2" id="trimestre-container" style="display: none;">
+                    <label for="trimestre" class="form-label">Trimestre</label>
+                    <select name="trimestre" id="trimestre" class="form-select">
+                            <option value="1" {% if filtros.trimestre == '1' %}selected{% endif %}>1er Trimestre</option>
+                            <option value="2" {% if filtros.trimestre == '2' %}selected{% endif %}>2do Trimestre</option>
+                            <option value="3" {% if filtros.trimestre == '3' %}selected{% endif %}>3er Trimestre</option>
+                            <option value="4" {% if filtros.trimestre == '4' %}selected{% endif %}>4to Trimestre</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> Filtrar
+                    </button>
+                    <a href="{% url 'crm:dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Métricas Principales -->
+    <div class="row">
+        <!-- Total Clientes -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card dashboard-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="mb-0">{{ total_clientes }}</h5>
+                            <div class="small">Total Clientes</div>
+                        </div>
+                        <div class="fa-3x">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{% url 'crm:cliente_list' %}">Ver Detalles</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Ganado -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card dashboard-card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="mb-0">${{ total_ganado|floatformat:2 }}</h5>
+                            <div class="small">Total Ganado</div>
+                        </div>
+                        <div class="fa-3x">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <span class="small text-white">Según filtros aplicados</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tratos Abiertos -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card dashboard-card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="mb-0">{{ tratos_abiertos }}</h5>
+                            <div class="small">Tratos Abiertos</div>
+                        </div>
+                        <div class="fa-3x">
+                            <i class="fas fa-handshake"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{% url 'crm:trato_list' %}?estado=abierto">Ver Detalles</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tareas Pendientes -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card dashboard-card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="mb-0">{{ tareas_atrasadas }}</h5>
+                            <div class="small">Tareas Atrasadas</div>
+                        </div>
+                        <div class="fa-3x">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{% url 'crm:tarea_list' %}?estado=atrasada">Ver Detalles</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Segunda fila de métricas -->
+    <div class="row mb-4">
+        <div class="col-xl-6">
+            <!-- Tratos por Estado -->
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Tratos por Estado</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height:300px;">
+                        <canvas id="tratosPorEstadoChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <!-- Fuentes de Tratos -->
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Fuentes de Tratos</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height:300px;">
+                        <canvas id="tratosPorFuenteChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tablas de Información -->
+    <div class="row">
+        <!-- Últimos Tratos -->
+        <div class="col-xl-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Últimos Tratos</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Valor</th>
+                                    <th>Estado</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trato in ultimos_tratos %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'crm:trato_detail' trato.id %}">
+                                            {{ trato.cliente|truncatechars:30 }}
+                                        </a>
+                                    </td>
+                                    <td>${{ trato.valor|floatformat:2 }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ trato.estado }}">
+                                            {{ trato.get_estado_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ trato.fecha_creacion|date:"d/m/Y" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No hay tratos registrados</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tareas Pendientes -->
+        <div class="col-xl-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Tareas Pendientes</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Tarea</th>
+                                    <th>Cliente</th>
+                                    <th>Vencimiento</th>
+                                    <th>Tipo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tarea in tareas_pendientes %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'crm:tarea_detail' tarea.id %}">
+                                            {{ tarea.descripcion|truncatechars:30 }}
+                                        </a>
+                                    </td>
+                                    <td>{{ tarea.cliente.nombre }}</td>
+                                    <td>{{ tarea.fecha_vencimiento|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ tarea.tipo }}">
+                                            {{ tarea.get_tipo_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No hay tareas pendientes</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Variables globales
+    let tratosPorEstadoChart = null;
+    let tratosPorFuenteChart = null;
+
+    // Mostrar/ocultar selector de trimestre según período seleccionado
+    const periodoSelect = document.getElementById('periodo');
+    const trimestreContainer = document.getElementById('trimestre-container');
+
+    function toggleTrimestreSelector() {
+        if (periodoSelect.value === 'trimestre') {
+            trimestreContainer.style.display = 'block';
+        } else {
+            trimestreContainer.style.display = 'none';
+        }
+    }
+
+    // Función para actualizar las métricas en la interfaz
+    function updateMetrics(data) {
+        if (!data) return;
+        
+        // Función auxiliar para formatear moneda
+        const formatCurrency = (value) => {
+            if (value === undefined || value === null) return '$0';
+            return '$' + parseFloat(value).toLocaleString('es-CL', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+        };
+        
+        // Actualizar tarjetas de métricas
+        const totalGanadoEl = document.querySelector('.card.bg-success .h5.mb-0');
+        const totalClientesEl = document.querySelector('.card.bg-primary .h5.mb-0');
+        const tratosAbiertosEl = document.querySelector('.card.bg-info .h5.mb-0');
+        const tareasAtrasadasEl = document.querySelector('.card.bg-warning .h5.mb-0');
+        
+        if (totalGanadoEl) totalGanadoEl.textContent = formatCurrency(data.total_ganado || 0);
+        if (totalClientesEl) totalClientesEl.textContent = data.total_clientes || 0;
+        if (tratosAbiertosEl) tratosAbiertosEl.textContent = data.tratos_abiertos || 0;
+        if (tareasAtrasadasEl) tareasAtrasadasEl.textContent = data.tareas_atrasadas || 0;
+        
+        // Actualizar el valor total de tratos si existe el elemento
+        const valorTotalTratosEl = document.querySelector('.card.bg-info + .card-footer .small');
+        if (valorTotalTratosEl) {
+            valorTotalTratosEl.textContent = formatCurrency(data.valor_total_tratos || 0);
+        }
+        
+        // Actualizar tabla de últimos tratos
+        const tbody = document.querySelector('#ultimos-tratos tbody');
+        if (tbody) {
+            tbody.innerHTML = '';
+            
+            if (!data.ultimos_tratos || data.ultimos_tratos.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="6" class="text-center">No hay tratos recientes</td>';
+                tbody.appendChild(row);
+            } else {
+                data.ultimos_tratos.forEach(trato => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${trato.nombre || 'Sin nombre'}</td>
+                        <td>${trato.cliente__nombre || trato.cliente || 'Sin cliente'}</td>
+                        <td>${formatCurrency(trato.valor || 0)}</td>
+                        <td><span class="badge bg-primary">${trato.estado || 'Sin estado'}</span></td>
+                        <td>${trato.fecha_creacion ? new Date(trato.fecha_creacion).toLocaleDateString() : 'Sin fecha'}</td>
+                        <td class="text-end">
+                            <a href="#" class="btn btn-sm btn-outline-primary">Ver</a>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+        }
+    }
+    
+    // Función para actualizar los gráficos con nuevos datos
+    function updateCharts(data) {
+        // Actualizar gráfico de tratos por estado
+        if (tratosPorEstadoChart) {
+            tratosPorEstadoChart.data.datasets[0].data = Object.values(data.tratos_por_estado);
+            tratosPorEstadoChart.update();
+        }
+        
+        // Actualizar gráfico de tratos por fuente
+        if (tratosPorFuenteChart) {
+            tratosPorFuenteChart.data.labels = Object.keys(data.tratos_por_fuente);
+            tratosPorFuenteChart.data.datasets[0].data = Object.values(data.tratos_por_fuente);
+            tratosPorFuenteChart.update();
+        }
+    }
+    
+    // Función para cargar datos del dashboard vía AJAX
+    function loadDashboardData() {
+        const filterForm = document.querySelector('form[method="get"]');
+        if (!filterForm) return;
+        
+        const filterButton = filterForm.querySelector('button[type="submit"]');
+        const formData = new FormData(filterForm);
+        const searchParams = new URLSearchParams();
+        
+        // Agregar solo los valores de los campos que tienen valor
+        for (const [key, value] of formData.entries()) {
+            if (value) {
+                searchParams.append(key, value);
+            }
+        }
+        
+        // Mostrar indicador de carga
+        if (filterButton) {
+            filterButton.disabled = true;
+            filterButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Cargando...';
+        }
+        
+        // Mostrar mensaje de carga si existe el elemento
+        const loadingToastEl = document.getElementById('loadingToast');
+        let loadingToast = null;
+        if (loadingToastEl && typeof bootstrap !== 'undefined') {
+            loadingToast = new bootstrap.Toast(loadingToastEl);
+            loadingToast.show();
+        }
+        
+        // Realizar la petición AJAX
+        const url = `?${searchParams.toString()}`;
+        
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            cache: 'no-cache'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Actualizar la interfaz con los nuevos datos
+            if (data) {
+                updateMetrics(data);
+                updateCharts(data);
+                
+                // Actualizar la URL sin recargar la página
+                const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
+                window.history.pushState({ path: newUrl }, '', newUrl);
+                
+                // Mostrar mensaje de éxito si existe el elemento
+                const successToastEl = document.getElementById('successToast');
+                if (successToastEl && typeof bootstrap !== 'undefined') {
+                    const successToast = new bootstrap.Toast(successToastEl);
+                    successToast.show();
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar los datos:', error);
+            
+            // Mostrar mensaje de error si existe el elemento
+            const errorToastEl = document.getElementById('errorToast');
+            if (errorToastEl) {
+                const errorMessage = errorToastEl.querySelector('.toast-body');
+                if (errorMessage) {
+                    errorMessage.textContent = 'Error al cargar los datos. Por favor, intente nuevamente.';
+                }
+                if (typeof bootstrap !== 'undefined') {
+                    const errorToast = new bootstrap.Toast(errorToastEl);
+                    errorToast.show();
+                }
+            }
+        })
+        .finally(() => {
+            // Ocultar mensaje de carga si existe
+            if (loadingToast) {
+                loadingToast.hide();
+            }
+            
+            // Restaurar estado del botón
+            if (filterButton) {
+                filterButton.disabled = false;
+                filterButton.innerHTML = '<i class="fas fa-filter"></i> Filtrar';
+            }
+        });
+    }
+    
+    // Función para inicializar los gráficos
+    function initCharts() {
+        // Obtener datos iniciales de los elementos JSON
+        const tratosPorEstadoData = JSON.parse(document.getElementById('tratos-por-estado-data')?.textContent || '{}');
+        const tratosPorFuenteData = JSON.parse(document.getElementById('tratos-por-fuente-data')?.textContent || '{}');
+        
+        // Inicializar gráfico de tratos por estado
+        const tratosPorEstadoCtx = document.getElementById('tratosPorEstadoChart');
+        if (tratosPorEstadoCtx) {
+            window.tratosPorEstadoChart = new Chart(tratosPorEstadoCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Nuevo', 'Cotización', 'Negociación', 'Ganado', 'Perdido'],
+                    datasets: [{
+                        label: 'Cantidad de Tratos',
+                        data: [
+                            tratosPorEstadoData.nuevo || 0,
+                            tratosPorEstadoData.cotizacion || 0,
+                            tratosPorEstadoData.negociacion || 0,
+                            tratosPorEstadoData.ganado || 0,
+                            tratosPorEstadoData.perdido || 0
+                        ],
+                        backgroundColor: [
+                            'rgba(54, 162, 235, 0.7)',  // Azul - Nuevo
+                            'rgba(255, 206, 86, 0.7)',  // Amarillo - Cotización
+                            'rgba(255, 159, 64, 0.7)',  // Naranja - Negociación
+                            'rgba(75, 192, 192, 0.7)',  // Verde - Ganado
+                            'rgba(255, 99, 132, 0.7)'   // Rojo - Perdido
+                        ],
+                        borderColor: [
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(255, 99, 132, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y + ' tratos';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Inicializar gráfico de tratos por fuente
+        const tratosPorFuenteCtx = document.getElementById('tratosPorFuenteChart');
+        if (tratosPorFuenteCtx) {
+            const fuentes = Object.entries(tratosPorFuenteData);
+            const labels = fuentes.length > 0 ? fuentes.map(([fuente]) => fuente) : ['Sin datos'];
+            const values = fuentes.length > 0 ? fuentes.map(([_, total]) => total) : [0];
+            
+            window.tratosPorFuenteChart = new Chart(tratosPorFuenteCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(153, 102, 255, 0.7)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.raw + ' tratos';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // Función para actualizar los gráficos con nuevos datos
+    function updateCharts(data) {
+        if (!data) return;
+        
+        // Actualizar gráfico de tratos por estado
+        if (window.tratosPorEstadoChart && data.tratos_por_estado) {
+            window.tratosPorEstadoChart.data.datasets[0].data = [
+                data.tratos_por_estado.nuevo || 0,
+                data.tratos_por_estado.cotizacion || 0,
+                data.tratos_por_estado.negociacion || 0,
+                data.tratos_por_estado.ganado || 0,
+                data.tratos_por_estado.perdido || 0
+            ];
+            window.tratosPorEstadoChart.update();
+        }
+        // Actualizar gráfico de tratos por fuente
+        if (window.tratosPorFuenteChart && data.tratos_por_fuente) {
+            const fuentes = Object.entries(data.tratos_por_fuente);
+            const labels = fuentes.length > 0 ? fuentes.map(([fuente]) => fuente) : ['Sin datos'];
+            const values = fuentes.length > 0 ? fuentes.map(([_, total]) => total) : [0];
+            
+            window.tratosPorFuenteChart.data.labels = labels;
+            window.tratosPorFuenteChart.data.datasets[0].data = values;
+            window.tratosPorFuenteChart.update();
+        }
+    }
+    
+    // Inicializar todo cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        // Obtener referencias a los elementos del formulario
+        const periodoSelect = document.getElementById('periodo');
+        const trimestreContainer = document.getElementById('trimestre-container');
+        const filterForm = document.querySelector('form[method="get"]');
+        
+        // Inicializar selectores
+        if (periodoSelect && trimestreContainer) {
+            toggleTrimestreSelector();
+        }
+        
+        // Manejar cambios en el selector de período
+        if (periodoSelect) {
+            periodoSelect.addEventListener('change', function() {
+                toggleTrimestreSelector();
+                if (periodoSelect.value !== 'trimestre') {
+                    loadDashboardData();
+                }
+            });
+        }
+        
+        // Manejar cambios en los filtros
+        const filterInputs = document.querySelectorAll('select[name], input[name]');
+        filterInputs.forEach(function(element) {
+            if (element.id !== 'trimestre' || (periodoSelect && periodoSelect.value === 'trimestre')) {
+                element.addEventListener('change', loadDashboardData);
+            }
+        });
+        
+        // Prevenir envío del formulario tradicional
+        if (filterForm) {
+            filterForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                loadDashboardData();
+            });
+        }
+        
+        // Inicializar gráficos
+        initCharts();
+    });
+</script>
+{% endblock extra_js %}
+                }
+            });
+        }
+    }
+    
+    // Inicializar todo cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar selectores
+        toggleTrimestreSelector();
+        
+        // Obtener referencias a los elementos del formulario
+        const periodoSelect = document.getElementById('periodo');
+        const trimestreContainer = document.getElementById('trimestre-container');
+        const trimestreSelect = document.getElementById('trimestre');
+        const filterForm = document.querySelector('form[method="get"]');
+        
+        // Manejar cambios en el selector de período
+        if (periodoSelect) {
+            periodoSelect.addEventListener('change', function() {
+                toggleTrimestreSelector();
+                loadDashboardData();
+            });
+        }
+        
+        // Manejar cambios en los filtros
+        const filterInputs = document.querySelectorAll('select[name], input[name]');
+        filterInputs.forEach(function(element) {
+            if (element.id !== 'trimestre' || (periodoSelect && periodoSelect.value === 'trimestre')) {
+                element.addEventListener('change', loadDashboardData);
+            }
+        });
+        
+        // Prevenir envío del formulario tradicional
+        if (filterForm) {
+            filterForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                loadDashboardData();
+            });
+        }
+        
+        // Inicializar gráficos con datos iniciales
+        initCharts();
+    });
+</script>
+{% endblock extra_js %}

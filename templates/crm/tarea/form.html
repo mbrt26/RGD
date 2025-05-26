@@ -1,0 +1,125 @@
+{% extends 'base/form_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ form.instance.pk|yesno:"Editar,Nueva" }} Tarea{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos específicos para el formulario de tareas */
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .form-actions {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #dee2e6;
+    }
+</style>
+{% endblock %}
+
+{% block form_content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title mb-0">
+            {% if form.instance.pk %}
+                Editar Tarea #{{ form.instance.id }}
+            {% else %}
+                Nueva Tarea
+            {% endif %}
+        </h3>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        {{ form.titulo|as_crispy_field }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.descripcion|as_crispy_field }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.fecha_vencimiento|as_crispy_field }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.tipo|as_crispy_field }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        {{ form.estado|as_crispy_field }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.prioridad|as_crispy_field }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.responsable|as_crispy_field }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.cliente|as_crispy_field }}
+                    </div>
+                    {% if form.trato %}
+                    <div class="form-group">
+                        {{ form.trato|as_crispy_field }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        {{ form.fecha_ejecucion|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+
+            {% if form.notas %}
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="form-group">
+                        {{ form.notas|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="form-actions text-end">
+                <a href="{% url 'crm:tarea_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> {% if form.instance.pk %}Actualizar{% else %}Crear{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if form.instance.pk %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Información Adicional</h5>
+    </div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Creada el:</dt>
+            <dd class="col-sm-9">{{ form.instance.fecha_creacion|date:"d/m/Y H:i" }}</dd>
+            
+            <dt class="col-sm-3">Última actualización:</dt>
+            <dd class="col-sm-9">{{ form.instance.fecha_actualizacion|default:"Nunca"|date:"d/m/Y H:i" }}</dd>
+        </dl>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

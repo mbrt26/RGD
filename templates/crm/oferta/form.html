@@ -1,0 +1,112 @@
+{% extends 'base/form_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ form.instance.pk|yesno:"Editar,Nueva" }} Oferta{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title mb-0">
+            {% if form.instance.pk %}
+                Editar Oferta {{ form.instance.numero_oferta }}
+            {% else %}
+                Nueva Oferta
+            {% endif %}
+        </h3>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="row">
+                <!-- Información básica de la cotización -->
+                <div class="col-md-6">
+                    {{ form.cliente|as_crispy_field }}
+                    {{ form.trato|as_crispy_field }}
+                    {{ form.monto|as_crispy_field }}
+                    {{ form.estado|as_crispy_field }}
+                </div>
+                
+                <!-- Versión del documento -->
+                <div class="col-md-6">
+                    <div class="form-group">
+                        {{ form.archivo|as_crispy_field }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.razon_cambio|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12">
+                    {{ form.notas|as_crispy_field }}
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col">
+                    <a href="{% url 'crm:cotizacion_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> {% if form.instance.pk %}Actualizar{% else %}Crear{% endif %} Oferta
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if form.instance.pk %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Versiones anteriores</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Versión</th>
+                        <th>Fecha</th>
+                        <th>Valor</th>
+                        <th>Razón del cambio</th>
+                        <th>Archivo</th>
+                        <th>Creado por</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for version in form.instance.versiones.all %}
+                    <tr>
+                        <td>{{ version.version }}</td>
+                        <td>{{ version.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                        <td>${{ version.valor|floatformat:2 }}</td>
+                        <td>{{ version.razon_cambio }}</td>
+                        <td>
+                            <a href="{{ version.archivo.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="fas fa-download"></i> Descargar
+                            </a>
+                        </td>
+                        <td>{{ version.creado_por.get_full_name|default:version.creado_por.username }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center">No hay versiones anteriores</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

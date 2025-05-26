@@ -1,0 +1,199 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ trato.nombre }} | Detalle de Trato{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'crm:trato_list' %}">Tratos</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Trato #{{ trato.numero_oferta }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información Principal -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Información del Trato #{{ trato.numero_oferta }}</h5>
+                    <div>
+                        <a href="{% url 'crm:trato_update' trato.id %}" class="btn btn-primary">
+                            <i class="fas fa-edit"></i> Editar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Cliente:</dt>
+                                <dd class="col-sm-8">{{ trato.cliente }}</dd>
+                                
+                                <dt class="col-sm-4">Valor Estimado:</dt>
+                                <dd class="col-sm-8">${{ trato.valor|floatformat:2 }}</dd>
+                                
+                                <dt class="col-sm-4">Probabilidad:</dt>
+                                <dd class="col-sm-8">{{ trato.probabilidad }}%</dd>
+                                
+                                <dt class="col-sm-4">Fuente:</dt>
+                                <dd class="col-sm-8">{{ trato.get_fuente_display }}</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Estado:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-{{ trato.estado }}">
+                                        {{ trato.get_estado_display }}
+                                    </span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Fecha Inicio:</dt>
+                                <dd class="col-sm-8">{{ trato.fecha_creacion|date:"d/m/Y" }}</dd>
+                                
+                                <dt class="col-sm-4">Fecha Cierre:</dt>
+                                <dd class="col-sm-8">{{ trato.fecha_cierre|date:"d/m/Y"|default:"No establecida" }}</dd>
+                                
+                                <dt class="col-sm-4">Responsable:</dt>
+                                <dd class="col-sm-8">{{ trato.responsable.get_full_name|default:trato.responsable.username }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>Descripción:</h6>
+                            <p>{{ trato.descripcion|linebreaksbr }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contacto -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Información de Contacto</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">Contacto:</dt>
+                        <dd class="col-sm-9">{{ trato.contacto }}</dd>
+                        
+                        <dt class="col-sm-3">Email:</dt>
+                        <dd class="col-sm-9">{{ trato.correo|default:"No especificado" }}</dd>
+                        
+                        <dt class="col-sm-3">Teléfono:</dt>
+                        <dd class="col-sm-9">{{ trato.telefono|default:"No especificado" }}</dd>
+                    </dl>
+                </div>
+            </div>
+            
+            <!-- Notas -->
+            {% if trato.notas %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Notas</h5>
+                </div>
+                <div class="card-body">
+                    {{ trato.notas|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Cotizaciones Relacionadas -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Cotizaciones</h5>
+                    <a href="{% url 'crm:cotizacion_create' %}?trato={{ trato.id }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Nueva Cotización
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if cotizaciones %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Fecha</th>
+                                        <th>Monto</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cotizacion in cotizaciones %}
+                                    <tr>
+                                        <td>{{ cotizacion.numero_oferta }}</td>
+                                        <td>{{ cotizacion.fecha_creacion|date:"d/m/Y" }}</td>
+                                        <td>${{ cotizacion.monto|floatformat:2 }}</td>
+                                        <td><span class="badge bg-{{ cotizacion.estado }}">{{ cotizacion.get_estado_display }}</span></td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="{% url 'crm:cotizacion_detail' cotizacion.id %}" class="btn btn-sm btn-info" title="Ver detalle">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="{% url 'crm:cotizacion_update' cotizacion.id %}" class="btn btn-sm btn-primary" title="Editar">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                {% if cotizacion.archivo %}
+                                                <a href="{{ cotizacion.archivo.url }}" class="btn btn-sm btn-secondary" target="_blank" title="Ver documento">
+                                                    <i class="fas fa-file-pdf"></i>
+                                                </a>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center mb-0">No hay cotizaciones relacionadas. 
+                            <a href="{% url 'crm:cotizacion_create' %}?trato={{ trato.id }}">Crear una nueva cotización</a>
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Tareas Relacionadas -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Tareas</h5>
+                        <a href="{% url 'crm:tarea_create' %}?trato={{ trato.id }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Nueva Tarea
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if tareas %}
+                        <div class="list-group list-group-flush">
+                            {% for tarea in tareas %}
+                                <a href="{% url 'crm:tarea_detail' tarea.id %}" class="list-group-item list-group-item-action">
+                                    {{ tarea.descripcion|truncatewords:10 }}
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">{{ tarea.get_estado_display }}</small>
+                                        <small class="text-muted">{{ tarea.fecha_vencimiento|date:"d/m/Y" }}</small>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No hay tareas relacionadas.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

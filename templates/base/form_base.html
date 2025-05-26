@@ -1,0 +1,58 @@
+{% extends "base/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ view.title|default:"Formulario" }} | {{ block.super }}{% endblock %}
+
+{% block content %}
+{% block form_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    {% if view.title %}
+                        {{ view.title }}
+                    {% else %}
+                        {% if object %}
+                            Editar {{ object }}
+                        {% else %}
+                            Nuevo Registro
+                        {% endif %}
+                    {% endif %}
+                </h3>
+            </div>
+            <div class="card-body">
+                {% include "includes/form_errors.html" %}
+                
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    
+                    {% block form_buttons %}
+                    <div class="row mt-4">
+                        <div class="col">
+                            <a href="{{ view.success_url }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                        </div>
+                        <div class="col text-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Guardar
+                            </button>
+                        </div>
+                    </div>
+                    {% endblock %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock form_content %}
+{% endblock content %}
+
+{% block extra_js %}
+{{ block.super }}
+{% if form.media %}
+    {{ form.media }}
+{% endif %}
+{% endblock %}

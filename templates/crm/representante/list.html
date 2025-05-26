@@ -1,0 +1,32 @@
+{% extends "base/list_base.html" %}
+
+{% block title %}Lista de Representantes{% endblock %}
+
+{% block table_header %}
+    <th>Nombre</th>
+    <th>Teléfono</th>
+    <th>Meta de Ventas</th>
+    <th>Acciones</th>
+{% endblock %}
+
+{% block table_body %}
+    {% for representante in representantes %}
+    <tr>
+        <td>{{ representante.nombre }}</td>
+        <td>{{ representante.telefono|default:"No especificado" }}</td>
+        <td>${{ representante.meta_ventas|floatformat:2 }}</td>
+        <td>
+            <a href="{% url 'crm:representante_detail' representante.id %}" class="btn btn-sm btn-info">
+                <i class="fas fa-eye"></i> Ver
+            </a>
+            <a href="{% url 'crm:representante_update' representante.id %}" class="btn btn-sm btn-primary">
+                <i class="fas fa-edit"></i> Editar
+            </a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="4" class="text-center">No hay representantes registrados.</td>
+    </tr>
+    {% endfor %}
+{% endblock %}

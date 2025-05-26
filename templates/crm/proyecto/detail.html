@@ -1,0 +1,449 @@
+{% extends 'crm/proyecto/base.html' %}
+{% load static %}
+
+{% block content_title %}{{ object.nombre }}{% endblock %}
+
+{% block breadcrumb_items %}
+    <li class="breadcrumb-item active">{{ object.nombre|truncatechars:30 }}</li>
+{% endblock %}
+
+{% block content_fluid %}
+<div class="row">
+    <div class="col-md-8">
+        <!-- Información General del Proyecto -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Información del Proyecto</h3>
+                <div class="card-tools">
+                    <a href="{% url 'crm:proyecto_update' object.pk %}" class="btn btn-tool" data-toggle="tooltip" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Cliente:</strong> {{ object.cliente.nombre }}</p>
+                        <p><strong>Trato asociado:</strong> 
+                            {% if object.trato %}
+                                <a href="{% url 'crm:trato_detail' object.trato.pk %}">{{ object.trato.numero_trato }}</a>
+                            {% else %}
+                                Ninguno
+                            {% endif %}
+                        </p>
+                        <p><strong>Fecha de inicio:</strong> {{ object.fecha_inicio|date:"d/m/Y" }}</p>
+                        <p><strong>Fecha estimada de fin:</strong> {{ object.fecha_fin_estimada|date:"d/m/Y" }}</p>
+                        {% if object.fecha_fin_real %}
+                            <p><strong>Fecha real de fin:</strong> {{ object.fecha_fin_real|date:"d/m/Y" }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Estado:</strong> 
+                            <span class="badge {% if object.estado == 'completado' %}bg-success{% elif object.estado == 'cancelado' %}bg-danger{% elif object.estado == 'en_progreso' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                {{ object.get_estado_display }}
+                            </span>
+                        </p>
+                        <p><strong>Prioridad:</strong> 
+                            {% if object.prioridad == 'alta' %}
+                                <span class="badge bg-danger">{{ object.get_prioridad_display }}</span>
+                            {% elif object.prioridad == 'media' %}
+                                <span class="badge bg-warning">{{ object.get_prioridad_display }}</span>
+                            {% elif object.prioridad == 'baja' %}
+                                <span class="badge bg-success">{{ object.get_prioridad_display }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ object.get_prioridad_display }}</span>
+                            {% endif %}
+                        </p>
+                        <p><strong>Responsable:</strong> {{ object.responsable.nombre|default:"Sin asignar" }}</p>
+                        <p><strong>Presupuesto:</strong> ${{ object.presupuesto|floatformat:2 }}</p>
+                        <p><strong>Costo actual:</strong> ${{ object.costo_actual|floatformat:2 }}</p>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h5>Descripción:</h5>
+                        <p>{{ object.descripcion|linebreaksbr }}</p>
+                    </div>
+                </div>
+                {% if object.notas %}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h5>Notas:</h5>
+                        <p>{{ object.notas|linebreaksbr }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tareas del Proyecto -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3 class="card-title">Tareas</h3>
+                <div class="card-tools">
+                    <a href="{% url 'crm:tarea_proyecto_create' object.pk %}" class="btn btn-tool" data-toggle="tooltip" title="Agregar tarea">
+                        <i class="fas fa-plus"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if object.tareas.all %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Título</th>
+                                    <th>Responsable</th>
+                                    <th>Fecha Fin</th>
+                                    <th>Estado</th>
+                                    <th>Avance</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tarea in object.tareas.all %}
+                                    <tr>
+                                        <td>{{ tarea.titulo|truncatechars:30 }}</td>
+                                        <td>{{ tarea.responsable.nombre|default:"Sin asignar" }}</td>
+                                        <td>{{ tarea.fecha_fin|date:"d/m/Y" }}</td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if tarea.estado == 'completada' %}bg-success
+                                                {% elif tarea.estado == 'en_progreso' %}bg-primary
+                                                {% elif tarea.estado == 'bloqueada' %}bg-danger
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ tarea.get_estado_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar 
+                                                    {% if tarea.porcentaje_completado < 50 %}bg-danger
+                                                    {% elif tarea.porcentaje_completado < 80 %}bg-warning
+                                                    {% else %}bg-success{% endif %}" 
+                                                    role="progressbar" 
+                                                    style="width: {{ tarea.porcentaje_completado }}%;" 
+                                                    aria-valuenow="{{ tarea.porcentaje_completado }}" 
+                                                    aria-valuemin="0" 
+                                                    aria-valuemax="100">
+                                                    {{ tarea.porcentaje_completado }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="{% url 'crm:tarea_proyecto_update' tarea.pk %}" class="btn btn-sm btn-primary" data-toggle="tooltip" title="Editar">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="#" class="btn btn-sm btn-danger" data-toggle="modal" data-target="#deleteTareaModal{{ tarea.pk }}" title="Eliminar">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </div>
+
+                                            <!-- Delete Tarea Modal -->
+                                            <div class="modal fade" id="deleteTareaModal{{ tarea.pk }}" tabindex="-1" role="dialog" aria-labelledby="deleteTareaModalLabel{{ tarea.pk }}" aria-hidden="true">
+                                                <div class="modal-dialog" role="document">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="deleteTareaModalLabel{{ tarea.pk }}">Confirmar eliminación</h5>
+                                                            <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                                                                <span aria-hidden="true">&times;</span>
+                                                            </button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            ¿Estás seguro de que deseas eliminar la tarea "{{ tarea.titulo }}"?
+                                                            <br><br>
+                                                            <strong>Esta acción no se puede deshacer.</strong>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                                                            <form action="{% url 'crm:tarea_proyecto_delete' tarea.pk %}" method="post" style="display: inline;">
+                                                                {% csrf_token %}
+                                                                <button type="submit" class="btn btn-danger">Eliminar</button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="p-3 text-center text-muted">
+                        No hay tareas registradas para este proyecto.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Resumen del Proyecto -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Resumen</h3>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="position-relative d-inline-block">
+                        <div class="position-absolute w-100 h-100" style="top: 0; left: 0;">
+                            <canvas id="projectProgressChart" width="200" height="200"></canvas>
+                        </div>
+                        <div class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center">
+                            <h2 class="mb-0">{{ object.avance }}%</h2>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Presupuesto utilizado:</span>
+                        <strong>{{ object.presupuesto_utilizado|default:0|floatformat:2 }}%</strong>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-{% if object.presupuesto_utilizado > 100 %}danger{% else %}info{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ object.presupuesto_utilizado|default:0|floatformat:0 }}%" 
+                             aria-valuenow="{{ object.presupuesto_utilizado|default:0 }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                        </div>
+                    </div>
+                    <small class="text-muted">${{ object.costo_actual|default:0|floatformat:2 }} de ${{ object.presupuesto|floatformat:2 }}</small>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Tiempo transcurrido:</span>
+                        <strong>{{ object.tiempo_transcurrido|default:0|floatformat:0 }}%</strong>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-{% if object.tiempo_transcurrido > 100 %}danger{% else %}success{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ object.tiempo_transcurrido|default:0|floatformat:0 }}%" 
+                             aria-valuenow="{{ object.tiempo_transcurrido|default:0 }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                        </div>
+                    </div>
+                    <small class="text-muted">{{ object.dias_transcurridos }} de {{ object.duracion_estimada }} días</small>
+                </div>
+
+                <div class="mt-4">
+                    <h5>Estado de las tareas</h5>
+                    <canvas id="tareasChart" height="150"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documentos del Proyecto -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3 class="card-title">Documentos</h3>
+                <div class="card-tools">
+                    <a href="{% url 'crm:documento_proyecto_create' object.pk %}" class="btn btn-tool" data-toggle="tooltip" title="Agregar documento">
+                        <i class="fas fa-plus"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if object.documentos.all %}
+                    <div class="list-group list-group-flush">
+                        {% for documento in object.documentos.all %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-file-{% if documento.tipo == 'contrato' %}contract{% elif documento.tipo == 'factura' %}invoice-dollar{% else %}alt{% endif %} mr-2"></i>
+                                        {{ documento.nombre }}
+                                        <br>
+                                        <small class="text-muted">{{ documento.get_tipo_display }} - {{ documento.fecha_subida|date:"d/m/Y H:i" }}</small>
+                                    </div>
+                                    <div class="btn-group">
+                                        <a href="{{ documento.archivo.url }}" class="btn btn-sm btn-info" target="_blank" data-toggle="tooltip" title="Ver">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ documento.archivo.url }}" class="btn btn-sm btn-secondary" download data-toggle="tooltip" title="Descargar">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                        <a href="#" class="btn btn-sm btn-danger" data-toggle="modal" data-target="#deleteDocModal{{ documento.pk }}" title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <!-- Delete Documento Modal -->
+                                <div class="modal fade" id="deleteDocModal{{ documento.pk }}" tabindex="-1" role="dialog" aria-labelledby="deleteDocModalLabel{{ documento.pk }}" aria-hidden="true">
+                                    <div class="modal-dialog" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="deleteDocModalLabel{{ documento.pk }}">Confirmar eliminación</h5>
+                                                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </div>
+                                            <div class="modal-body">
+                                                ¿Estás seguro de que deseas eliminar el documento "{{ documento.nombre }}"?
+                                                <br><br>
+                                                <strong>Esta acción no se puede deshacer y el archivo se eliminará permanentemente.</strong>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                                                <form action="{% url 'crm:documento_proyecto_delete' documento.pk %}" method="post" style="display: inline;">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="p-3 text-center text-muted">
+                        No hay documentos adjuntos.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .progress {
+        height: 10px;
+    }
+    .progress-thin {
+        height: 5px;
+    }
+    .task-completed {
+        text-decoration: line-through;
+        opacity: 0.7;
+    }
+    .document-item {
+        transition: all 0.2s;
+    }
+    .document-item:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    $(document).ready(function() {
+        // Inicializar tooltips
+        $('[data-toggle="tooltip"]').tooltip();
+
+        // Gráfico de progreso del proyecto
+        const progressCtx = document.getElementById('projectProgressChart').getContext('2d');
+        const progressChart = new Chart(progressCtx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [{{ object.avance }}, {{ 100|sub:object.avance }}],
+                    backgroundColor: ['#4e73df', '#eaecf4'],
+                    borderWidth: 0,
+                }]
+            },
+            options: {
+                cutout: '80%',
+                responsive: true,
+                maintainAspectRatio: false,
+                legend: {
+                    display: false
+                },
+                tooltips: {
+                    enabled: false
+                },
+                animation: {
+                    animateScale: true,
+                    animateRotate: true
+                }
+            }
+        });
+
+        // Gráfico de estado de tareas
+        const tareasCtx = document.getElementById('tareasChart').getContext('2d');
+        const tareasChart = new Chart(tareasCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    'Pendientes', 
+                    'En Progreso', 
+                    'En Revisión', 
+                    'Completadas',
+                    'Bloqueadas'
+                ],
+                datasets: [{
+                    data: [
+                        {{ tareas_por_estado.pendiente|default:0 }},
+                        {{ tareas_por_estado.en_progreso|default:0 }},
+                        {{ tareas_por_estado.en_revision|default:0 }},
+                        {{ tareas_por_estado.completada|default:0 }},
+                        {{ tareas_por_estado.bloqueada|default:0 }}
+                    ],
+                    backgroundColor: [
+                        '#6c757d',  // Pendiente - Gris
+                        '#4e73df',  // En Progreso - Azul
+                        '#f6c23e',  // En Revisión - Amarillo
+                        '#1cc88a',  // Completada - Verde
+                        '#e74a3b'   // Bloqueada - Rojo
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 10,
+                        padding: 10
+                    }
+                },
+                cutout: '70%',
+                animation: {
+                    animateScale: true
+                }
+            }
+        });
+
+        // Actualizar el progreso de las tareas
+        $('.update-progress').on('click', function(e) {
+            e.preventDefault();
+            const tareaId = $(this).data('tarea-id');
+            const nuevoProgreso = $(`#progress-${tareaId}`).val();
+            
+            // Aquí iría la llamada AJAX para actualizar el progreso
+            console.log(`Actualizando tarea ${tareaId} a ${nuevoProgreso}%`);
+            
+            // Actualizar la interfaz
+            $(`#progress-bar-${tareaId}`).css('width', `${nuevoProgreso}%`).attr('aria-valuenow', nuevoProgreso);
+            $(`#progress-value-${tareaId}`).text(`${nuevoProgreso}%`);
+            
+            // Actualizar el estado según el progreso
+            const estadoSelect = $(`#estado-${tareaId}`);
+            if (nuevoProgreso == 0) {
+                estadoSelect.val('pendiente');
+            } else if (nuevoProgreso == 100) {
+                estadoSelect.val('completada');
+            } else {
+                estadoSelect.val('en_progreso');
+            }
+            
+            // Mostrar mensaje de éxito
+            alert('Progreso actualizado correctamente');
+        });
+    });
+</script>
+{% endblock %}

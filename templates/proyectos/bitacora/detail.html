@@ -1,0 +1,103 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Detalle de Bitácora{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="fas fa-clipboard-list me-2"></i>Detalle de Bitácora
+                        </h4>
+                        <div>
+                            <a href="{% url 'proyectos:bitacora_update' bitacora.pk %}" class="btn btn-primary">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </a>
+                            <a href="{% url 'proyectos:bitacora_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Volver
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="card-title">Información General</h5>
+                            <dl class="row">
+                                <dt class="col-sm-4">Proyecto:</dt>
+                                <dd class="col-sm-8">{{ bitacora.proyecto }}</dd>
+                                
+                                <dt class="col-sm-4">Actividad:</dt>
+                                <dd class="col-sm-8">{{ bitacora.actividad }}</dd>
+                                
+                                <dt class="col-sm-4">Subactividad:</dt>
+                                <dd class="col-sm-8">{{ bitacora.subactividad }}</dd>
+                                
+                                <dt class="col-sm-4">Fecha:</dt>
+                                <dd class="col-sm-8">{{ bitacora.fecha_registro|date:"d/m/Y H:i" }}</dd>
+                                
+                                <dt class="col-sm-4">Duración:</dt>
+                                <dd class="col-sm-8">{{ bitacora.duracion_horas }} horas</dd>
+                                
+                                <dt class="col-sm-4">Responsable:</dt>
+                                <dd class="col-sm-8">{{ bitacora.responsable }}</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="card-title">Equipo de Trabajo</h5>
+                            {% if bitacora.equipo.all %}
+                            <ul class="list-group">
+                                {% for miembro in bitacora.equipo.all %}
+                                <li class="list-group-item">{{ miembro.nombre }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="text-muted">No hay miembros del equipo registrados</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h5 class="card-title">Descripción</h5>
+                            <p>{{ bitacora.descripcion|linebreaks }}</p>
+                        </div>
+                    </div>
+
+                    {% if bitacora.observaciones %}
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h5 class="card-title">Observaciones</h5>
+                            <p>{{ bitacora.observaciones|linebreaks }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if bitacora.imagen or bitacora.archivo %}
+                    <div class="row mt-4">
+                        {% if bitacora.imagen %}
+                        <div class="col-md-6">
+                            <h5 class="card-title">Imagen</h5>
+                            <img src="{{ bitacora.imagen.url }}" alt="Imagen de la bitácora" class="img-fluid">
+                        </div>
+                        {% endif %}
+                        
+                        {% if bitacora.archivo %}
+                        <div class="col-md-6">
+                            <h5 class="card-title">Archivo Adjunto</h5>
+                            <a href="{{ bitacora.archivo.url }}" class="btn btn-outline-primary" download>
+                                <i class="fas fa-download me-1"></i>Descargar archivo
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

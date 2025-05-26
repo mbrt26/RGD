@@ -1,0 +1,59 @@
+{% extends 'base/form_base.html' %}
+
+{% block title %}{{ form.instance.pk|yesno:"Editar,Nueva" }} Entrada de Bitácora{% endblock %}
+
+{% block form_title %}
+    {% if form.instance.pk %}
+        Editar Entrada de Bitácora
+    {% else %}
+        Nueva Entrada de Bitácora
+    {% endif %}
+{% endblock %}
+
+{% block extra_fields %}
+    {% if form.instance.pk %}
+        <div class="mb-3">
+            <p class="text-muted">Proyecto: {{ form.instance.proyecto.nombre_proyecto }}</p>
+            <p class="text-muted">Fecha de registro: {{ form.instance.fecha_registro|date:"d/m/Y H:i" }}</p>
+            <p class="text-muted">Registrado por: {{ form.instance.responsable.get_full_name }}</p>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    $(document).ready(function() {
+        const proyectoSelect = $('#id_proyecto');
+        const actividadSelect = $('#id_actividad');
+
+        // Función para cargar las actividades del proyecto seleccionado
+        function cargarActividades(proyectoId) {
+            if (!proyectoId) {
+                actividadSelect.empty();
+                actividadSelect.append('<option value="">---------</option>');
+                return;
+            }
+
+            $.get(`{% url 'proyectos:get_actividades_por_proyecto' 0 %}`.replace('0', proyectoId), function(data) {
+                actividadSelect.empty();
+                actividadSelect.append('<option value="">---------</option>');
+                data.forEach(function(actividad) {
+                    actividadSelect.append(`<option value="${actividad.id}">${actividad.actividad}</option>`);
+                });
+            });
+        }
+
+        // Manejar el cambio en el select de proyecto
+        proyectoSelect.on('change', function() {
+            const proyectoId = $(this).val();
+            cargarActividades(proyectoId);
+        });
+
+        // Cargar actividades al cargar la página si hay un proyecto seleccionado
+        if (proyectoSelect.val()) {
+            cargarActividades(proyectoSelect.val());
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends "base/base.html" %}
+
+{% block title %}Oferta #{{ cotizacion.id }} | Detalle{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h3 class="card-title mb-0">Oferta #{{ cotizacion.id }}</h3>
+            </div>
+            <div class="col text-end">
+                <a href="{% url 'crm:cotizacion_update' cotizacion.id %}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Editar
+                </a>
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                    <i class="fas fa-trash"></i> Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h5>Información General</h5>
+                <dl class="row">
+                    <dt class="col-sm-4">Fecha</dt>
+                    <dd class="col-sm-8">{{ cotizacion.fecha_creacion }}</dd>
+                    
+                    <dt class="col-sm-4">Monto</dt>
+                    <dd class="col-sm-8">${{ cotizacion.monto|floatformat:2 }}</dd>
+                    
+                    <dt class="col-sm-4">Estado</dt>
+                    <dd class="col-sm-8">{{ cotizacion.get_estado_display }}</dd>
+                </dl>
+            </div>
+            <div class="col-md-6">
+                <h5>Información del Cliente</h5>
+                <dl class="row">
+                    <dt class="col-sm-4">Cliente</dt>
+                    <dd class="col-sm-8">
+                        <a href="{% url 'crm:cliente_detail' cotizacion.cliente.id %}">
+                            {{ cotizacion.cliente.nombre }}
+                        </a>
+                    </dd>
+                    
+                    <dt class="col-sm-4">Trato</dt>
+                    <dd class="col-sm-8">
+                        <a href="{% url 'crm:trato_detail' cotizacion.trato.id %}">
+                            {{ cotizacion.trato.titulo }}
+                        </a>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Descripción y detalles -->
+        <div class="mt-4">
+            <h5>Descripción</h5>
+            <div class="card">
+                <div class="card-body">
+                    {{ cotizacion.descripcion|linebreaks }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Archivos adjuntos -->
+        <div class="mt-4">
+            <h5>Archivos Adjuntos</h5>
+            {% if cotizacion.archivo %}
+            <div class="card">
+                <div class="card-body">
+                    <a href="{{ cotizacion.archivo.url }}" target="_blank" class="btn btn-outline-primary">
+                        <i class="fas fa-file"></i> Ver Oferta
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-muted">No hay archivos adjuntos</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación de eliminación -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                ¿Está seguro que desea eliminar la oferta #{{ cotizacion.id }}?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form action="{% url 'crm:cotizacion_delete' cotizacion.id %}" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

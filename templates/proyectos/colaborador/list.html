@@ -1,0 +1,160 @@
+{% extends "base/list_base.html" %}
+{% load static %}
+
+{% block title %}Lista de Colaboradores{% endblock %}
+
+{% block content_header %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0"><i class="fas fa-users me-2"></i>Colaboradores</h1>
+        <a href="{% url 'proyectos:colaborador_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> Nuevo Colaborador
+        </a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1 class="mb-0"><i class="fas fa-users me-2"></i>Colaboradores</h1>
+            </div>
+            <div class="col text-end">
+                <a href="{% url 'proyectos:colaborador_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i> Nuevo Colaborador
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                {% block table_header %}
+                <tr>
+                    <th>#</th>
+                    <th>Nombre</th>
+                    <th>Cargo</th>
+                    <th>Contacto</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+                {% endblock %}
+                {% block table_body %}
+                {% for colaborador in colaboradores %}
+                <tr>
+                    <td class="text-muted">{{ forloop.counter }}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm me-3">
+                                <div class="avatar-title bg-soft-primary text-primary rounded-circle">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">{{ colaborador.nombre }}</h6>
+                                <small class="text-muted">ID: {{ colaborador.id }}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if colaborador.cargo %}
+                            <span class="badge bg-primary">{{ colaborador.cargo }}</span>
+                        {% else %}
+                            <span class="text-muted">Sin cargo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if colaborador.email %}
+                            <div><i class="far fa-envelope me-2 text-muted"></i>{{ colaborador.email }}</div>
+                        {% endif %}
+                        {% if colaborador.telefono %}
+                            <div><i class="fas fa-phone me-2 text-muted"></i>{{ colaborador.telefono }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'proyectos:colaborador_detail' colaborador.id %}" 
+                               class="btn btn-sm btn-outline-primary" 
+                               data-bs-toggle="tooltip" 
+                               title="Ver detalles">
+                                <i class="far fa-eye"></i>
+                            </a>
+                            <a href="{% url 'proyectos:colaborador_update' colaborador.id %}" 
+                               class="btn btn-sm btn-outline-secondary"
+                               data-bs-toggle="tooltip"
+                               title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-4">
+                        <div class="text-muted">
+                            <i class="fas fa-users-slash fa-3x mb-3"></i>
+                            <p class="mb-0">No hay colaboradores registrados</p>
+                            <a href="{% url 'proyectos:colaborador_create' %}" class="btn btn-primary mt-3">
+                                <i class="fas fa-plus me-1"></i> Agregar Colaborador
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% endblock %}
+            </table>
+        </div>
+
+        {% if is_paginated %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Activar tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+{% endblock %}

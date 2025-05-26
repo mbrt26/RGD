@@ -1,0 +1,21 @@
+{% extends 'base/form_base.html' %}
+
+{% block title %}{{ form.instance.pk|yesno:"Editar,Nuevo" }} Colaborador{% endblock %}
+
+{% block form_title %}
+    {% if form.instance.pk %}
+        Editar Colaborador {{ form.instance.nombre }}
+    {% else %}
+        Nuevo Colaborador
+    {% endif %}
+{% endblock %}
+
+{% block extra_fields %}
+    {% if form.instance.pk %}
+        <div class="mb-3">
+            <p class="text-muted">Email: {{ form.instance.email }}</p>
+            <p class="text-muted">Teléfono: {{ form.instance.telefono }}</p>
+            <p class="text-muted">Cargo: {{ form.instance.cargo }}</p>
+        </div>
+    {% endif %}
+{% endblock %}

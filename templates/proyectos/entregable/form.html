@@ -1,0 +1,66 @@
+{% extends "base/form_base.html" %}
+{% load static crispy_forms_tags %}
+
+{% block title %}{{ object|default:"Nuevo Entregable" }} | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h1 class="mb-0">
+                            <i class="fas fa-file-alt me-2"></i>
+                            {% if object %}
+                                Editar Entregable
+                            {% else %}
+                                Nuevo Entregable
+                            {% endif %}
+                        </h1>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    
+                    <div class="row mt-4">
+                        <div class="col">
+                            <a href="{% url 'proyectos:entregable_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Volver
+                            </a>
+                        </div>
+                        <div class="col text-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Guardar
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    $(document).ready(function() {
+        // Initialize select2 for dropdowns if needed
+        $('select').select2({
+            theme: 'bootstrap4',
+            width: '100%'
+        });
+
+        // Initialize datepicker for date fields
+        $('.dateinput').datepicker({
+            format: 'dd/mm/yyyy',
+            language: 'es',
+            autoclose: true
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base/form_base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}Editar{% else %}Nuevo{% endif %} Cliente{% endblock %}
+
+{% block form_content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title mb-0">{% if object %}Editar{% else %}Nuevo{% endif %} Cliente</h3>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            
+            <!-- Información básica -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Información básica</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.nombre|as_crispy_field }}
+                            {{ form.correo|as_crispy_field }}
+                            {{ form.telefono|as_crispy_field }}
+                            {{ form.direccion_linea1|as_crispy_field }}
+                            {{ form.direccion_linea2|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.ciudad|as_crispy_field }}
+                            {{ form.estado|as_crispy_field }}
+                            {{ form.pais|as_crispy_field }}
+                            {{ form.codigo_postal|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Documentación -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Documentación</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="rut" class="form-label">RUT de la empresa</label>
+                                {{ form.rut }}
+                                <small class="form-text text-muted">Documento RUT o identificación fiscal de la empresa</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="documentos" class="form-label">Documentos adicionales</label>
+                                <input type="file" name="documentos" id="documentos" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-info-circle"></i> Puede seleccionar múltiples archivos<br>
+                                    <i class="fas fa-file-alt"></i> Formatos permitidos: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notas -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Notas adicionales</h5>
+                </div>
+                <div class="card-body">
+                    {{ form.notas|as_crispy_field }}
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col">
+                    <a href="{% url 'crm:cliente_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+                <div class="col text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> {% if object %}Actualizar{% else %}Crear{% endif %} Cliente
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

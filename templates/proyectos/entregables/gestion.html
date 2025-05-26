@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gestión de Entregables | {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .fase-section {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .fase-header {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        font-weight: 600;
+    }
+    
+    .entregable-item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .entregable-item:last-child {
+        border-bottom: none;
+    }
+    
+    .obligatorio-badge {
+        background-color: #dc3545;
+        color: white;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+    
+    .opcional-badge {
+        background-color: #6c757d;
+        color: white;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+    
+    .estado-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+    
+    .estado-pendiente { background-color: #6c757d; color: white; }
+    .estado-en_proceso { background-color: #ffc107; color: black; }
+    .estado-completado { background-color: #28a745; color: white; }
+    .estado-no_aplica { background-color: #17a2b8; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h1 class="card-title mb-0">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        Gestión de Entregables del Proyecto
+                    </h1>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Selector de Proyecto -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <form method="get" class="d-flex">
+                                <select name="proyecto" class="form-select me-2" onchange="this.form.submit()">
+                                    <option value="">Seleccione un proyecto...</option>
+                                    {% for proyecto in proyectos %}
+                                        <option value="{{ proyecto.id }}" 
+                                                {% if proyecto_seleccionado and proyecto.id == proyecto_seleccionado.id %}selected{% endif %}>
+                                            {{ proyecto.nombre_proyecto }} - {{ proyecto.cliente }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Cargar
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    {% if proyecto_seleccionado %}
+                    <!-- Información del Proyecto -->
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-project-diagram me-2"></i>{{ proyecto_seleccionado.nombre_proyecto }}</h5>
+                        <p class="mb-1"><strong>Cliente:</strong> {{ proyecto_seleccionado.cliente }}</p>
+                        <p class="mb-1"><strong>Centro de Costos:</strong> {{ proyecto_seleccionado.centro_costos }}</p>
+                        <p class="mb-0"><strong>Estado:</strong> 
+                            <span class="badge bg-{% if proyecto_seleccionado.estado == 'completado' %}success{% elif proyecto_seleccionado.estado == 'en_progreso' %}primary{% else %}secondary{% endif %}">
+                                {{ proyecto_seleccionado.get_estado_display }}
+                            </span>
+                        </p>
+                    </div>
+
+                    <!-- Formulario de Entregables -->
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="proyecto_id" value="{{ proyecto_seleccionado.id }}">
+
+                        <!-- Reglas de Negocio -->
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-info-circle me-2"></i>Reglas de Selección:</h6>
+                            <ul class="mb-0">
+                                <li><strong>Definición (Legalización):</strong> Todos los documentos son obligatorios</li>
+                                <li><strong>Planeación:</strong> Todos los documentos son obligatorios</li>
+                                <li><strong>Ejecución:</strong> Seleccione los documentos necesarios según el proyecto</li>
+                                <li><strong>Entrega Administrativa:</strong> Seleccione los documentos necesarios según el proyecto</li>
+                            </ul>
+                        </div>
+
+                        {% for fase, entregables in entregables_por_fase.items %}
+                        <div class="fase-section">
+                            <div class="fase-header">
+                                <h4 class="mb-0">
+                                    {% if fase == 'Definición' %}
+                                        <i class="fas fa-file-contract me-2"></i>{{ fase }} (Legalización)
+                                    {% elif fase == 'Planeación' %}
+                                        <i class="fas fa-calendar-alt me-2"></i>{{ fase }}
+                                    {% elif fase == 'Ejecución' %}
+                                        <i class="fas fa-cogs me-2"></i>{{ fase }}
+                                    {% elif fase == 'Entrega' %}
+                                        <i class="fas fa-shipping-fast me-2"></i>{{ fase }} Administrativa
+                                    {% endif %}
+                                </h4>
+                            </div>
+                            
+                            <div class="fase-body">
+                                {% for entregable in entregables %}
+                                <div class="entregable-item">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-1">
+                                            <div class="form-check">
+                                                <input type="checkbox" 
+                                                       class="form-check-input" 
+                                                       name="entregables" 
+                                                       value="{{ entregable.id }}"
+                                                       id="entregable_{{ entregable.id }}"
+                                                       {% if entregable.obligatorio %}checked disabled{% endif %}
+                                                       {% if entregable.seleccionado %}checked{% endif %}>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <strong>{{ entregable.codigo }}</strong>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <label for="entregable_{{ entregable.id }}" class="form-check-label">
+                                                {{ entregable.nombre }}
+                                            </label>
+                                            {% if entregable.observaciones %}
+                                                <br><small class="text-muted">{{ entregable.observaciones }}</small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            {% if entregable.obligatorio %}
+                                                <span class="obligatorio-badge">Obligatorio</span>
+                                            {% else %}
+                                                <span class="opcional-badge">Opcional</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <span class="estado-badge estado-{{ entregable.estado }}">
+                                                {{ entregable.get_estado_display }}
+                                            </span>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <a href="{% url 'proyectos:entregable_proyecto_update' entregable.id %}" 
+                                               class="btn btn-sm btn-outline-primary"
+                                               title="Editar entregable">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <small class="text-muted">
+                                                <strong>Creador:</strong> {{ entregable.creador }}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <small class="text-muted">
+                                                <strong>Consolidador:</strong> {{ entregable.consolidador }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="entregable-item text-center text-muted">
+                                    No hay entregables definidos para esta fase.
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'proyectos:proyecto_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Volver a Proyectos
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i> Guardar Selección
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <!-- Mensaje cuando no hay proyecto seleccionado -->
+                    <div class="text-center py-5">
+                        <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">Seleccione un proyecto para gestionar sus entregables</h4>
+                        <p class="text-muted">
+                            Una vez seleccionado el proyecto, podrá ver y gestionar todos los documentos 
+                            que deben ser controlados durante la ejecución del mismo.
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    // Mejorar la experiencia del selector de proyecto
+    $('select[name="proyecto"]').select2({
+        placeholder: 'Seleccione un proyecto...',
+        allowClear: true,
+        width: '100%'
+    });
+    
+    // Confirmar antes de guardar cambios
+    $('form').on('submit', function(e) {
+        if ($(this).find('input[name="proyecto_id"]').length > 0) {
+            if (!confirm('¿Está seguro de que desea guardar los cambios en la selección de entregables?')) {
+                e.preventDefault();
+                return false;
+            }
+        }
+    });
+    
+    // Tooltip para elementos informativos
+    $('[title]').tooltip();
+});
+</script>
+{% endblock %}

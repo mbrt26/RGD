@@ -1,0 +1,18 @@
+{% extends "base/form_base.html" %}
+
+{% block title %}{% if object %}Editar{% else %}Nuevo{% endif %} Representante{% endblock %}
+
+{% block form_buttons %}
+<div class="row mt-4">
+    <div class="col">
+        <a href="{% url 'crm:representante_list' %}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Cancelar
+        </a>
+    </div>
+    <div class="col text-end">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> {% if object %}Actualizar{% else %}Crear{% endif %} Representante
+        </button>
+    </div>
+</div>
+{% endblock %}

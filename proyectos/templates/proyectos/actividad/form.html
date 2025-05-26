@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+{{ block.super }}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block title %}{{ form_title }} | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ form_title }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">Inicio</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'proyectos:actividad_list' %}">Actividades</a></li>
+        <li class="breadcrumb-item active">{{ form_title }}</li>
+    </ol>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.proyecto.id_for_label }}" class="form-label">{{ form.proyecto.label }}</label>
+                            {{ form.proyecto }}
+                            {% if form.proyecto.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.proyecto.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.actividad.id_for_label }}" class="form-label">{{ form.actividad.label }}</label>
+                            {{ form.actividad }}
+                            {% if form.actividad.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.actividad.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="id_inicio" class="form-label">{{ form.inicio.label }}</label>
+                            <input type="date" name="inicio" id="id_inicio" class="form-control datepicker" required>
+                            {% if form.inicio.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.inicio.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="id_fin" class="form-label">{{ form.fin.label }}</label>
+                            <input type="date" name="fin" id="id_fin" class="form-control datepicker" required>
+                            {% if form.fin.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.fin.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="{{ form.duracion.id_for_label }}" class="form-label">{{ form.duracion.label }}</label>
+                            <div class="input-group">
+                                {{ form.duracion }}
+                                <span class="input-group-text">días</span>
+                            </div>
+                            {% if form.duracion.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.duracion.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="{{ form.estado.id_for_label }}" class="form-label">{{ form.estado.label }}</label>
+                            {{ form.estado }}
+                            {% if form.estado.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.estado.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.predecesoras.id_for_label }}" class="form-label">{{ form.predecesoras.label }}</label>
+                            {{ form.predecesoras }}
+                            <small class="form-text text-muted">Ingrese los IDs de las actividades predecesoras separados por comas (ej: 1, 2, 3)</small>
+                            {% if form.predecesoras.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.predecesoras.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.avance.id_for_label }}" class="form-label">{{ form.avance.label }}</label>
+                            <div class="input-group">
+                                {{ form.avance }}
+                                <span class="input-group-text">%</span>
+                            </div>
+                            {% if form.avance.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.avance.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-group">
+                        <label for="{{ form.observaciones.id_for_label }}" class="form-label">{{ form.observaciones.label }}</label>
+                        {{ form.observaciones }}
+                        {% if form.observaciones.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.observaciones.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-group">
+                        <label for="{{ form.adjuntos.id_for_label }}" class="form-label">{{ form.adjuntos.label }}</label>
+                        {{ form.adjuntos }}
+                        {% if form.adjuntos.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.adjuntos.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    {% if form.instance.pk %}
+                    <a href="{% url 'proyectos:actividad_detail' form.instance.pk %}" class="btn btn-secondary me-md-2">
+                        <i class="fas fa-arrow-left me-1"></i> Cancelar
+                    </a>
+                    {% else %}
+                    <a href="{% url 'proyectos:actividad_list' %}" class="btn btn-secondary me-md-2">
+                        <i class="fas fa-arrow-left me-1"></i> Cancelar
+                    </a>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% endblock %}

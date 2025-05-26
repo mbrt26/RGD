@@ -1,0 +1,114 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ view.title|default:"Listado" }} | {{ block.super }}{% endblock %}
+
+{% block content %}
+{% block content_header %}{% endblock %}
+
+<div class="card">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h3 class="card-title mb-0">
+                    {% if view.title %}
+                        {{ view.title }}
+                    {% else %}
+                        Listado
+                    {% endif %}
+                </h3>
+            </div>
+            <div class="col-md-6 text-end">
+                {% if view.add_url %}
+                    <a href="{% url view.add_url %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Nuevo
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Buscar...">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table id="dataTable" class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        {% block table_header %}
+                        {% endblock %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% block table_body %}
+                    {% endblock %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% include "includes/pagination.html" %}
+    </div>
+</div>
+
+{% block list_modals %}
+<!-- Modal de confirmación de eliminación -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                ¿Está seguro que desea eliminar este registro?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <a href="#" id="confirmDelete" class="btn btn-danger">Eliminar</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    $(document).ready(function() {
+        // Inicializar la funcionalidad de búsqueda
+        $("#searchInput").on("keyup", function() {
+            var value = $(this).val().toLowerCase();
+            $("#dataTable tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+
+        // Inicializar el ordenamiento de columnas
+        $(".sortable").click(function() {
+            var table = $(this).parents('table').eq(0);
+            var rows = table.find('tr:gt(0)').toArray().sort(comparer($(this).index()));
+            this.asc = !this.asc;
+            if (!this.asc) {
+                rows = rows.reverse();
+            }
+            for (var i = 0; i < rows.length; i++) {
+                table.append(rows[i]);
+            }
+        });
+
+        // Inicializar Select2 si está disponible
+        if($.fn.select2) {
+            $('.select2').select2();
+        }
+    });
+</script>
+{% endblock %}

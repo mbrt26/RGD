@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% load static humanize project_filters %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/projects.css' %}">
+{% endblock %}
+
+{% block title %}Lista de Proyectos{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Gestión de Proyectos</h1>
+        <a href="{% url 'proyectos:proyecto_create' %}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+            <i class="fas fa-plus fa-sm text-white-50"></i> Nuevo Proyecto
+        </a>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Filtros</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="form-inline">
+                <!-- Search Input -->
+                <div class="form-group mr-3 mb-2">
+                    <input type="text" name="q" class="form-control" placeholder="Buscar..." value="{{ request.GET.q }}">
+                </div>
+                
+                <!-- Status Filter -->
+                <div class="form-group mr-3 mb-2">
+                    <select name="estado" class="form-control">
+                        <option value="">Todos los estados</option>
+                        {% for value, label in estados.items %}
+                            <option value="{{ value }}" {% if request.GET.estado == value|stringformat:'s' %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Priority Filter -->
+                <div class="form-group mr-3 mb-2">
+                    <select name="prioridad" class="form-control">
+                        <option value="">Todas las prioridades</option>
+                        {% for value, label in prioridades.items %}
+                            <option value="{{ value }}" {% if request.GET.prioridad == value|stringformat:'s' %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary mb-2">
+                    <i class="fas fa-filter"></i> Filtrar
+                </button>
+                
+                {% if request.GET %}
+                    <a href="{% url 'proyectos:proyecto_list' %}" class="btn btn-secondary mb-2 ml-2">
+                        <i class="fas fa-times"></i> Limpiar
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Projects Card -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Lista de Proyectos</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nombre del Proyecto</th>
+                            <th>Cliente</th>
+                            <th>Estado</th>
+                            <th>Prioridad</th>
+                            <th>Avance</th>
+                            <th>Fecha Inicio</th>
+                            <th>Fecha Fin</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for proyecto in proyectos %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'proyectos:proyecto_detail' proyecto.id %}">
+                                    {{ proyecto.nombre_proyecto }}
+                                </a>
+                                <br>
+                                <small class="text-muted">{{ proyecto.orden_contrato }}</small>
+                            </td>
+                            <td>{{ proyecto.cliente }}</td>
+                            <td>
+                                <span class="badge badge-{{ proyecto.estado|get_estado_badge }}">
+                                    {{ proyecto.get_estado_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ proyecto.prioridad|get_prioridad_badge }}">
+                                    {{ proyecto.get_prioridad_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="progress mb-2" style="height: 20px;">
+                                    <div class="progress-bar bg-{{ proyecto.avance|get_avance_color }} progress-bar-striped progress-bar-animated" 
+                                         role="progressbar" 
+                                         style="width: {{ proyecto.avance }}%" 
+                                         aria-valuenow="{{ proyecto.avance }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ proyecto.avance }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ proyecto.fecha_inicio|date:"d/m/Y" }}</td>
+                            <td>{{ proyecto.fecha_fin|date:"d/m/Y" }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'proyectos:proyecto_detail' proyecto.id %}" 
+                                       class="btn btn-sm btn-info" 
+                                       title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'proyectos:proyecto_update' proyecto.id %}" 
+                                       class="btn btn-sm btn-primary" 
+                                       title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'proyectos:actividad_list' %}?proyecto_id={{ proyecto.id }}" 
+                                       class="btn btn-sm btn-success" 
+                                       title="Actividades">
+                                        <i class="fas fa-tasks"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">
+                                <div class="alert alert-info">
+                                    No se encontraron proyectos con los filtros actuales.
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">&laquo; Primera</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Anterior</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Siguiente</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Última &raquo;</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    <p class="text-center text-muted">
+                        Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }} registros
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap5.min.js"></script>
+<!-- Select2 JS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        // Initialize DataTable
+        $('#dataTable').DataTable({
+            "paging": false,
+            "searching": false,
+            "info": false,
+            "order": [],
+            "responsive": true,
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.20/i18n/Spanish.json"
+            },
+            "columnDefs": [
+                { "orderable": false, "targets": [7] }  // Disable sorting on actions column
+            ]
+        });
+        
+        // Initialize Select2
+        $('select').select2({
+            theme: 'bootstrap4',
+            width: '100%',
+            placeholder: 'Seleccionar...',
+            allowClear: true
+        });
+        
+        // Tooltip initialization
+        $('[data-toggle="tooltip"]').tooltip();
+    });
+    
+    // Function to confirm before deleting
+    function confirmDelete(url) {
+        if (confirm('¿Está seguro de que desea eliminar este proyecto? Esta acción no se puede deshacer.')) {
+            window.location.href = url;
+        }
+        return false;
+    }
+</script>
+{% endblock %}

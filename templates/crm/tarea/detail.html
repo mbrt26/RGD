@@ -1,0 +1,117 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ tarea.descripcion|truncatewords:5 }} | Detalle de Tarea{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'crm:tarea_list' %}">Tareas</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ tarea.descripcion|truncatewords:5 }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información Principal -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Información de la Tarea</h5>
+                        <div>
+                            <a href="{% url 'crm:tarea_update' tarea.id %}" class="btn btn-primary">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Cliente:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="{% url 'crm:cliente_detail' tarea.cliente.id %}">
+                                        {{ tarea.cliente }}
+                                    </a>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Tipo:</dt>
+                                <dd class="col-sm-8">{{ tarea.get_tipo_display }}</dd>
+                                
+                                <dt class="col-sm-4">Estado:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-{{ tarea.estado }}">
+                                        {{ tarea.get_estado_display }}
+                                    </span>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Responsable:</dt>
+                                <dd class="col-sm-8">{{ tarea.responsable.get_full_name|default:tarea.responsable.username }}</dd>
+                                
+                                <dt class="col-sm-4">Vencimiento:</dt>
+                                <dd class="col-sm-8">{{ tarea.fecha_vencimiento|date:"d/m/Y H:i" }}</dd>
+                                
+                                {% if tarea.trato %}
+                                <dt class="col-sm-4">Trato:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="{% url 'crm:trato_detail' tarea.trato.id %}">
+                                        {{ tarea.trato }}
+                                    </a>
+                                </dd>
+                                {% endif %}
+                            </dl>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>Descripción:</h6>
+                            <p>{{ tarea.descripcion|linebreaksbr }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if tarea.notas %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Notas</h5>
+                </div>
+                <div class="card-body">
+                    {{ tarea.notas|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Información Adicional -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Información Adicional</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Creada:</dt>
+                        <dd class="col-sm-8">{{ tarea.fecha_creacion|date:"d/m/Y H:i" }}</dd>
+                        
+                        {% if tarea.fecha_actualizacion %}
+                        <dt class="col-sm-4">Actualizada:</dt>
+                        <dd class="col-sm-8">{{ tarea.fecha_actualizacion|date:"d/m/Y H:i" }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

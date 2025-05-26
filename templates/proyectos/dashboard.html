@@ -1,0 +1,238 @@
+{% extends "base/base.html" %}
+{% load static humanize project_filters %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+
+{% block title %}Dashboard Proyectos | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Estadísticas Generales -->
+    <div class="col-md-3 animate-fade-in-up delay-1">
+        <div class="card dashboard-card bg-primary text-white mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="mb-0">{{ total_proyectos }}</h5>
+                        <div class="small">Proyectos</div>
+                    </div>
+                    <div class="fa-3x">
+                        <i class="fas fa-project-diagram"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+                <a class="small text-white stretched-link" href="{% url 'proyectos:proyecto_list' %}">Ver Detalles</a>
+                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 animate-fade-in-up delay-2">
+        <div class="card dashboard-card bg-success text-white mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="mb-0">{{ proyectos_activos }}</h5>
+                        <div class="small">Proyectos Activos</div>
+                    </div>
+                    <div class="fa-3x">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+                <a class="small text-white stretched-link" href="{% url 'proyectos:proyecto_list' %}?estado=activo">Ver Detalles</a>
+                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 animate-fade-in-up delay-3">
+        <div class="card dashboard-card bg-info text-white mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="mb-0">{{ avance_promedio|floatformat:1 }}%</h5>
+                        <div class="small">Avance Promedio</div>
+                    </div>
+                    <div class="fa-3x">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+                <a class="small text-white stretched-link" href="{% url 'proyectos:proyecto_list' %}">Ver Detalles</a>
+                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 animate-fade-in-up delay-4">
+        <div class="card dashboard-card bg-warning text-white mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="mb-0">{{ actividades_pendientes }}</h5>
+                        <div class="small">Actividades Pendientes</div>
+                    </div>
+                    <div class="fa-3x">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+                <a class="small text-white stretched-link" href="{% url 'proyectos:actividad_list' %}?estado=pendiente">Ver Detalles</a>
+                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos y Tablas -->
+<div class="row mt-4">
+    <!-- Proyectos Recientes -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-table me-1"></i>
+                Proyectos Recientes
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Proyecto</th>
+                                <th>Cliente</th>
+                                <th>Avance</th>
+                                <th>Fecha Fin</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for proyecto in ultimos_proyectos %}
+                            <tr>
+                                <td>{{ proyecto.nombre_proyecto }}</td>
+                                <td>{{ proyecto.cliente }}</td>
+                                <td>
+                                    {% with avance=proyecto.avance|default:0 %}
+                                    {% if avance < 30 %}
+                                        {% progress_bar avance 'bg-danger' %}
+                                    {% elif avance < 70 %}
+                                        {% progress_bar avance 'bg-warning' %}
+                                    {% else %}
+                                        {% progress_bar avance 'bg-success' %}
+                                    {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td>{{ proyecto.fecha_fin_estimada|date:"d/m/Y"|default:"Sin fecha" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center">No hay proyectos recientes</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribución de Actividades por Estado -->
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-chart-pie me-1"></i>
+                Distribución de Actividades por Estado
+            </div>
+            <div class="card-body">
+                <canvas id="actividadesPorEstado" width="100%" height="50"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Últimas Entradas de Bitácora -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-clipboard me-1"></i>
+                Últimas Entradas de Bitácora
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% if ultimas_bitacoras %}
+                    {% for bitacora in ultimas_bitacoras %}
+                    <div class="timeline-item">
+                        <div class="d-flex justify-content-between">
+                            <h5 class="mb-1">{{ bitacora.proyecto.nombre_proyecto }}</h5>
+                            <small>{{ bitacora.fecha_registro|date:"d/m/Y H:i" }}</small>
+                        </div>
+                        <p class="mb-1">{{ bitacora.descripcion|truncatewords:30 }}</p>
+                        <small>Responsable: {{ bitacora.responsable }}</small>
+                    </div>
+                                        {% endfor %}
+                    {% else %}
+                    <p class="text-center">No hay entradas de bitácora recientes</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    (function() {
+        'use strict';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            var chartEl = document.getElementById('actividadesPorEstado');
+            if (!chartEl) { return; }
+            
+            var chartData = [
+                {{ actividades_por_estado.no_iniciado|default:0 }},
+                {{ actividades_por_estado.en_proceso|default:0 }},
+                {{ actividades_por_estado.finalizado|default:0 }}
+            ];
+            
+            var totalActivities = chartData.reduce(function(sum, value) {
+                return sum + value;
+            }, 0);
+            
+            var chart = new window.Chart(chartEl, {
+                type: 'pie',
+                data: {
+                    labels: ['No Iniciado', 'En Proceso', 'Finalizado'],
+                    datasets: [{
+                        data: chartData,
+                        backgroundColor: ['#dc3545', '#ffc107', '#28a745']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    var value = context.raw || 0;
+                                    var percentage = totalActivities > 0 ? 
+                                        Math.round((value / totalActivities) * 100) : 0;
+                                    return context.label + ': ' + value + ' (' + percentage + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,262 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ cliente.nombre }} - Detalle{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">{{ cliente.nombre }}</h1>
+        <div>
+            <a href="{% url 'crm:cliente_update' cliente.id %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Editar
+            </a>
+            <a href="{% url 'crm:cliente_delete' cliente.id %}" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Eliminar
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información Principal -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Información Principal</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-sm-4"><strong>Dirección:</strong></div>
+                        <div class="col-sm-8">
+                            {{ cliente.direccion_linea1 }}
+                            {% if cliente.direccion_linea2 %}
+                            <br>{{ cliente.direccion_linea2 }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>Ciudad:</strong></div>
+                        <div class="col-sm-8">{{ cliente.ciudad }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>Estado/Dpto:</strong></div>
+                        <div class="col-sm-8">{{ cliente.estado }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>País:</strong></div>
+                        <div class="col-sm-8">{{ cliente.pais }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>Código Postal:</strong></div>
+                        <div class="col-sm-8">{{ cliente.codigo_postal }}</div>
+                    </div>
+                    {% if cliente.rut %}
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>RUT:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{{ cliente.rut.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-file"></i> Ver RUT
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Documentos -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Documentos</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Fecha</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for documento in cliente.documentos.all %}
+                                <tr>
+                                    <td>{{ documento.nombre }}</td>
+                                    <td>{{ documento.fecha_subida|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        <a href="{{ documento.archivo.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-download"></i> Descargar
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">No hay documentos adjuntos</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contactos -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Contactos</h6>
+                    <a href="#" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#nuevoContactoModal">
+                        <i class="fas fa-plus"></i> Nuevo Contacto
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% for contacto in cliente.contactos.all %}
+                    <div class="contact-item mb-3">
+                        <h6>{{ contacto.nombre }} - {{ contacto.cargo }}</h6>
+                        <p class="mb-0">
+                            <i class="fas fa-phone"></i> {{ contacto.telefono }}<br>
+                            <i class="fas fa-envelope"></i> {{ contacto.correo }}
+                        </p>
+                    </div>
+                    {% empty %}
+                    <p class="text-center">No hay contactos registrados</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Tratos -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Tratos</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th># Oferta</th>
+                                    <th>Valor</th>
+                                    <th>Estado</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trato in tratos %}
+                                <tr>
+                                    <td><a href="{% url 'crm:trato_detail' trato.id %}">{{ trato.numero_oferta }}</a></td>
+                                    <td>${{ trato.valor|floatformat:2 }}</td>
+                                    <td>{{ trato.get_estado_display }}</td>
+                                    <td>{{ trato.fecha_creacion|date:"d/m/Y" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No hay tratos registrados</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cotizaciones -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Cotizaciones</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Número</th>
+                                    <th>Versión</th>
+                                    <th>Fecha</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cotizacion in cotizaciones %}
+                                <tr>
+                                    <td><a href="{% url 'crm:cotizacion_detail' cotizacion.id %}">{{ cotizacion.numero_oferta }}</a></td>
+                                    <td>v{{ cotizacion.version }}</td>
+                                    <td>{{ cotizacion.fecha_creacion|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <a href="{{ cotizacion.documento.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-file-pdf"></i> Ver
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No hay cotizaciones registradas</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if cliente.observaciones %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Observaciones</h6>
+                </div>
+                <div class="card-body">
+                    {{ cliente.observaciones|linebreaks }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Nuevo Contacto -->
+<div class="modal fade" id="nuevoContactoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo Contacto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'crm:contacto_create' cliente.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <!-- Aquí irán los campos del formulario -->
+                    <div class="mb-3">
+                        <label for="nombre" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="nombre" name="nombre" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cargo" class="form-label">Cargo</label>
+                        <input type="text" class="form-control" id="cargo" name="cargo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="telefono" class="form-label">Teléfono</label>
+                        <input type="tel" class="form-control" id="telefono" name="telefono" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="correo" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="correo" name="correo" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Contacto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

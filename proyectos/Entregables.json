@@ -1,0 +1,444 @@
+[
+  {
+    "code": "1.0",
+    "name": "Copia Orden de Servicio",
+    "phase": "Definición",
+    "support": {
+      "creator": "Dirección Administrativa y Financiera",
+      "consolidator": "Dirección Administrativa y Financiera"
+    },
+    "medium": "Físico",
+    "client_dossier": false,
+    "status": "pendiente",
+    "observations": "Cotización aprobada por el cliente"
+  },
+  {
+    "code": "1.1",
+    "name": "Contrato / Otro si",
+    "phase": "Definición",
+    "support": {
+      "creator": "Dirección Administrativa y Financiera",
+      "consolidator": "Dirección Administrativa y Financiera"
+    },
+    "medium": "Físico",
+    "client_dossier": false,
+    "status": "pendiente",
+    "observations": "Copia Orden de Compra/Servicio. Cuando hay aprobación tácita se coloca ORDEN DE COMPRA APROBACION PRELIMINAR"
+  },
+  {
+    "code": "1.2",
+    "name": "Pólizas",
+    "phase": "Definición",
+    "support": {
+      "creator": "Dirección Administrativa y Financiera",
+      "consolidator": "Dirección Administrativa y Financiera"
+    },
+    "medium": "Físico",
+    "client_dossier": false,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "1.3",
+    "name": "Acta de Reunión (Socialización técnica del Proyecto)",
+    "phase": "Definición",
+    "support": {
+      "creator": "Dirección Comercial",
+      "consolidator": "Dirección Comercial"
+    },
+    "medium": "Físico",
+    "client_dossier": false,
+    "status": "pendiente",
+    "observations": "Políticas y manuales del proveedor"
+  },
+  {
+    "code": "2.0",
+    "name": "Copia de Cronograma inicial y versiones de ajustes a cronogramas",
+    "phase": "Planeación",
+    "support": {
+      "creator": "Director de Proyecto",
+      "consolidator": "Director de Proyecto"
+    },
+    "medium": "Digital",
+    "client_dossier": false,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "2.1",
+    "name": "Registro Acta de Inicio",
+    "phase": "Planeación",
+    "support": {
+      "creator": "Director de Proyecto",
+      "consolidator": "Director de Proyecto"
+    },
+    "medium": "Físico",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "2.2",
+    "name": "Registro Inspección Preoperacional HSEQ",
+    "phase": "Planeación",
+    "support": {
+      "creator": "Coordinación Calidad y SST",
+      "consolidator": "Coordinación Calidad y SST"
+    },
+    "medium": "Digital",
+    "client_dossier": false,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "2.3",
+    "name": "Informes derivados de inspección técnica",
+    "phase": "Planeación",
+    "support": {
+      "creator": "Ing. residente",
+      "consolidator": "Ing. residente"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "3.0",
+    "name": "Bitácora de Obra",
+    "phase": "Ejecución",
+    "support": {
+      "creator": "Ing. Residente",
+      "consolidator": "Ing. Residente"
+    },
+    "medium": "Físico",
+    "client_dossier": false,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "3.1",
+    "name": "Registros en Formatos de gestión de cambios",
+    "phase": "Ejecución",
+    "support": {
+      "creator": "Dir. Proyecto / Ing. Residente",
+      "consolidator": "Dir. Proyecto / Ing. Residente"
+    },
+    "medium": "Físico",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "3.2",
+    "name": "Copia de presupuesto",
+    "phase": "Ejecución",
+    "support": {
+      "creator": "Dirección Administrativa y Financiera",
+      "consolidator": "Dirección Administrativa y Financiera"
+    },
+    "medium": "Digital",
+    "client_dossier": false,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "3.3",
+    "name": "Consolidados de gastos y costos",
+    "phase": "Ejecución",
+    "support": {
+      "creator": "Dirección Administrativa y Financiera",
+      "consolidator": "Dirección Administrativa y Financiera"
+    },
+    "medium": "Digital",
+    "client_dossier": false,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "3.4",
+    "name": "Formatos de Comités de Obra Interno (Acta de reunión)",
+    "phase": "Ejecución",
+    "support": {
+      "creator": "Dirección Administrativa y Financiera",
+      "consolidator": "Dirección Administrativa y Financiera"
+    },
+    "medium": "Digital",
+    "client_dossier": false,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "3.5",
+    "name": "Formatos de Comités de Obra Externo (Acta de reunión)",
+    "phase": "Ejecución",
+    "support": {
+      "creator": "Dir. Proyecto / Ing. Residente",
+      "consolidator": "Dir. Proyecto / Ing. Residente"
+    },
+    "medium": "Físico / Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "3.6",
+    "name": "Actas de avance",
+    "phase": "Ejecución",
+    "support": {
+      "creator": "Dir. Proyecto / Ing. Residente",
+      "consolidator": "Dir. Proyecto / Ing. Residente"
+    },
+    "medium": "Digital",
+    "client_dossier": false,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "3.7",
+    "name": "Capítulo HSEQ (solo cuando el cliente lo solicite)",
+    "phase": "Ejecución",
+    "support": {
+      "creator": "Dir. Proyecto / Ing. Residente",
+      "consolidator": "Dir. Proyecto / Ing. Residente"
+    },
+    "medium": "Digital",
+    "client_dossier": false,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.0.1",
+    "name": "Resumen de equipos",
+    "phase": "Entrega",
+    "support": {
+      "creator": "Diseñador",
+      "consolidator": "Dir. Proyecto / Ing. Residente"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.0.2",
+    "name": "Resumen de cálculos",
+    "phase": "Entrega",
+    "support": {
+      "creator": "Diseñador",
+      "consolidator": "Dir. Proyecto / Ing. Residente"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.0.3",
+    "name": "Selección de equipos",
+    "phase": "Entrega",
+    "support": {
+      "creator": "Diseñador",
+      "consolidator": "Dir. Proyecto / Ing. Residente"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.0.4",
+    "name": "Informe de balanceo",
+    "phase": "Entrega",
+    "support": {
+      "creator": "Diseñador",
+      "consolidator": "Dir. Proyecto / Ing. Residente"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.1.1",
+    "name": "Manuales de mantenimiento",
+    "phase": "Entrega",
+    "support": {
+      "creator": "Director de Proyectos",
+      "consolidator": "Director de Proyectos"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.1.2",
+    "name": "Manuales de control",
+    "phase": "Entrega",
+    "support": {
+      "creator": "Director de Proyectos",
+      "consolidator": "Director de Proyectos"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.1.3",
+    "name": "Procedimientos operativos",
+    "phase": "Entrega",
+    "support": {
+      "creator": "Director de Proyectos",
+      "consolidator": "Director de Proyectos"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.1.4.a",
+    "name": "Hoja de vida de proyectos",
+    "phase": "Entrega",
+    "support": {
+      "creator": "Ingeniero Residente",
+      "consolidator": "Director de Proyectos"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.1.4.b",
+    "name": "Ficha Técnica sistema de enfriamiento (si aplica)",
+    "phase": "Entrega",
+    "support": {
+      "creator": "Ingeniero Residente",
+      "consolidator": "Director de Proyectos"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.1.4.c",
+    "name": "Check list de arranque de enfriador (si aplica)",
+    "phase": "Entrega",
+    "support": {
+      "creator": "Ingeniero Residente",
+      "consolidator": "Director de Proyectos"
+    },
+    "medium": "Físico",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.2.1",
+    "name": "Planos ACAD",
+    "phase": "Entrega",
+    "support": {
+      "creator": "Diseñador",
+      "consolidator": "Director de Proyectos"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.2.2",
+    "name": "Planos PDF",
+    "phase": "Entrega",
+    "support": {
+      "creator": "Diseñador",
+      "consolidator": "Director de Proyectos"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.3.1",
+    "name": "Fichas técnicas",
+    "phase": "Entrega",
+    "support": {
+      "creator": "—",
+      "consolidator": "—"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.3.2",
+    "name": "Catálogos de fábrica",
+    "phase": "Entrega",
+    "support": {
+      "creator": "—",
+      "consolidator": "—"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.3.3",
+    "name": "Certificación de equipos y materiales",
+    "phase": "Entrega",
+    "support": {
+      "creator": "—",
+      "consolidator": "—"
+    },
+    "medium": "Digital",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.4.1",
+    "name": "Acta de Liquidación (Ver actas de avance)",
+    "phase": "Entrega",
+    "support": {
+      "creator": "—",
+      "consolidator": "—"
+    },
+    "medium": "Digital",
+    "client_dossier": false,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.4.2",
+    "name": "Registro de Acta de cierre de proyectos",
+    "phase": "Entrega",
+    "support": {
+      "creator": "Dir. Proyecto / Ing. Residente",
+      "consolidator": "—"
+    },
+    "medium": "Físico",
+    "client_dossier": true,
+    "status": "pendiente",
+    "observations": ""
+  },
+  {
+    "code": "4.4.3",
+    "name": "Certificación emitida por el Cliente",
+    "phase": "Entrega",
+    "support": {
+      "creator": "Cliente",
+      "consolidator": "Dirección Comercial"
+    },
+    "medium": "Físico",
+    "client_dossier": false,
+    "status": "pendiente",
+    "observations": ""
+  }
+]
