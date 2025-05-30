@@ -29,6 +29,29 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'proyectos:proyecto_list' %}">Proyectos</a>
                     </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="entregablesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-clipboard-list me-1"></i>Entregables
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="entregablesDropdown">
+                            <li><a class="dropdown-item" href="{% url 'proyectos:gestion_entregables' %}">
+                                <i class="fas fa-cogs me-2"></i>Gestión de Entregables
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'proyectos:entregables_dashboard' %}">
+                                <i class="fas fa-chart-bar me-2"></i>Dashboard
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'proyectos:entregables_filtrados' %}">
+                                <i class="fas fa-filter me-2"></i>Filtros Avanzados
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'proyectos:configuracion_masiva_entregables' %}">
+                                <i class="fas fa-tools me-2"></i>Configuración Masiva
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'proyectos:reporte_entregables' %}">
+                                <i class="fas fa-file-excel me-2"></i>Reportes Excel
+                            </a></li>
+                        </ul>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'crm:trato_list' %}">Tratos</a>
                     </li>

@@ -10,8 +10,10 @@ from .views import (
 from .views.debug_views import debug_template_loading
 from .views.actividad.views import (
     ActividadListView, ActividadCreateView, ActividadDetailView, ActividadUpdateView,
-    actividades_por_proyecto
+    ActividadImportView, ActividadPlantillaExcelView, actividades_por_proyecto,
+    actividad_bulk_delete
 )
+from .views.api_views import proyecto_detail_api
 from .views.recurso.views import (
     RecursoListView, RecursoCreateView, RecursoDetailView, RecursoUpdateView
 )
@@ -22,7 +24,9 @@ from .views.bitacora.views import (
 from .views.entregable.views import (
     EntregaDocumentalListView, EntregaDocumentalCreateView,
     EntregaDocumentalDetailView, EntregaDocumentalUpdateView,
-    GestionEntregablesView, EntregableProyectoUpdateView, cargar_entregables_proyecto
+    GestionEntregablesView, EntregableProyectoUpdateView, cargar_entregables_proyecto,
+    EntregablesDashboardView, ConfiguracionMasivaEntregablesView, 
+    EntregablesFiltradosView, ReporteEntregablesView
 )
 
 app_name = 'proyectos'
@@ -30,6 +34,9 @@ app_name = 'proyectos'
 urlpatterns = [
     # Debug URL
     path('debug/template/', debug_template_loading, name='debug_template'),
+    
+    # API Endpoints
+    path('api/proyectos/<int:proyecto_id>/', login_required(proyecto_detail_api), name='proyecto_detail_api'),
     
     # Dashboard
     path('', login_required(ProyectoDashboardView.as_view()), name='dashboard'),
@@ -56,7 +63,10 @@ urlpatterns = [
     path('actividades/', include([
         path('', login_required(ActividadListView.as_view()), name='actividad_list'),
         path('nueva/', login_required(ActividadCreateView.as_view()), name='actividad_create'),
+        path('importar/', login_required(ActividadImportView.as_view()), name='actividad_import'),
+        path('plantilla-excel/', login_required(ActividadPlantillaExcelView.as_view()), name='actividad_plantilla_excel'),
         path('por-proyecto/<int:proyecto_id>/', login_required(actividades_por_proyecto), name='actividades_por_proyecto'),
+        path('eliminar-multiples/', login_required(actividad_bulk_delete), name='actividad_bulk_delete'),
         path('<int:pk>/editar/', login_required(ActividadUpdateView.as_view()), name='actividad_update'),
         path('<int:pk>/', login_required(ActividadDetailView.as_view()), name='actividad_detail'),
     ])),
@@ -80,13 +90,24 @@ urlpatterns = [
 
     # Entregables
     path('entregables/', include([
-        path('', login_required(EntregaDocumentalListView.as_view()), name='entregable_list'),
-        path('nuevo/', login_required(EntregaDocumentalCreateView.as_view()), name='entregable_create'),
-        path('<int:pk>/', login_required(EntregaDocumentalDetailView.as_view()), name='entregable_detail'),
-        path('<int:pk>/editar/', login_required(EntregaDocumentalUpdateView.as_view()), name='entregable_update'),
-        # Nuevas rutas para gestión de entregables del proyecto
+        # Vista principal - Gestión de entregables del proyecto
+        path('', login_required(GestionEntregablesView.as_view()), name='entregable_list'),
         path('gestion/', login_required(GestionEntregablesView.as_view()), name='gestion_entregables'),
+        
+        # Dashboard y vistas adicionales
+        path('dashboard/', login_required(EntregablesDashboardView.as_view()), name='entregables_dashboard'),
+        path('filtrados/', login_required(EntregablesFiltradosView.as_view()), name='entregables_filtrados'),
+        path('configuracion-masiva/', login_required(ConfiguracionMasivaEntregablesView.as_view()), name='configuracion_masiva_entregables'),
+        path('reporte/', login_required(ReporteEntregablesView.as_view()), name='reporte_entregables'),
+        
+        # Operaciones específicas de entregables
         path('proyecto/<int:proyecto_id>/cargar/', login_required(cargar_entregables_proyecto), name='cargar_entregables_proyecto'),
         path('proyecto-entregable/<int:pk>/editar/', login_required(EntregableProyectoUpdateView.as_view()), name='entregable_proyecto_update'),
+        
+        # Entregables documentales (legacy) - movidos a subcarpeta
+        path('documentales/', login_required(EntregaDocumentalListView.as_view()), name='entregable_documental_list'),
+        path('documentales/nuevo/', login_required(EntregaDocumentalCreateView.as_view()), name='entregable_create'),
+        path('documentales/<int:pk>/', login_required(EntregaDocumentalDetailView.as_view()), name='entregable_detail'),
+        path('documentales/<int:pk>/editar/', login_required(EntregaDocumentalUpdateView.as_view()), name='entregable_update'),
     ])),
 ]

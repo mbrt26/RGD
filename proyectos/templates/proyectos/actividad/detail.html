@@ -169,6 +169,106 @@
 </div>
 
 
+<!-- Modal para agregar bitácora -->
+<div class="modal fade" id="agregarBitacoraModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Nueva Bitácora</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'proyectos:bitacora_create' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <!-- Campos ocultos -->
+                    <input type="hidden" name="actividad" value="{{ actividad.id }}">
+                    <input type="hidden" name="proyecto" value="{{ actividad.proyecto.id }}">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="subactividad" class="form-label">Subactividad *</label>
+                                <input type="text" class="form-control" id="subactividad" name="subactividad" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="responsable" class="form-label">Responsable *</label>
+                                <select class="form-select" id="responsable" name="responsable" required>
+                                    <option value="">Seleccionar responsable</option>
+                                    {% for colaborador in colaboradores %}
+                                        <option value="{{ colaborador.id }}">{{ colaborador.nombre }} - {{ colaborador.cargo }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="duracion_horas" class="form-label">Duración (Horas) *</label>
+                                <input type="number" class="form-control" id="duracion_horas" name="duracion_horas" 
+                                       min="0" step="0.5" value="1" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fecha_registro" class="form-label">Fecha de Registro</label>
+                                <input type="datetime-local" class="form-control" id="fecha_registro" name="fecha_registro" 
+                                       value="{{ now|date:'Y-m-d\TH:i' }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">Descripción de la Actividad *</label>
+                        <textarea class="form-control" id="descripcion" name="descripcion" rows="4" required 
+                                  placeholder="Describe detalladamente la actividad realizada..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="observaciones" class="form-label">Observaciones</label>
+                        <textarea class="form-control" id="observaciones" name="observaciones" rows="3" 
+                                  placeholder="Observaciones adicionales, problemas encontrados, etc."></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="imagen" class="form-label">Imagen</label>
+                                <input type="file" class="form-control" id="imagen" name="imagen" 
+                                       accept="image/*">
+                                <div class="form-text">Formatos permitidos: JPG, PNG, GIF. Máximo 5MB.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="archivo" class="form-label">Archivo Adjunto</label>
+                                <input type="file" class="form-control" id="archivo" name="archivo">
+                                <div class="form-text">Cualquier tipo de archivo. Máximo 10MB.</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="mdi mdi-information me-2"></i>
+                        <strong>Nota:</strong> Esta bitácora se asociará automáticamente a la actividad 
+                        "<strong>{{ actividad.actividad }}</strong>" del proyecto 
+                        "<strong>{{ actividad.proyecto.nombre_proyecto }}</strong>".
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="mdi mdi-plus-circle me-1"></i> Crear Bitácora
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Bitácora Modals -->
 {% for bitacora in bitacoras %}
 <div class="modal fade" id="bitacoraModal{{ bitacora.id }}" tabindex="-1" aria-hidden="true">

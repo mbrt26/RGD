@@ -1,6 +1,6 @@
 from django import forms
 from django.shortcuts import render
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, TemplateView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, TemplateView, FormView
 from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
@@ -8,13 +8,18 @@ from django.db.models import Q, Sum, Count, F, ProtectedError
 from django.utils import timezone
 from django.contrib import messages
 from django.shortcuts import redirect, get_object_or_404
-from django.http import JsonResponse, HttpResponseRedirect
+from django.http import JsonResponse, HttpResponseRedirect, HttpResponse
 from django.db import transaction
+import pandas as pd
+import io
 from .models import (
     Cliente, Contacto, Cotizacion, TareaVenta, Trato, 
     RepresentanteVentas, DocumentoCliente, VersionCotizacion
 )
-from .forms import CotizacionForm, VersionCotizacionForm, CotizacionConVersionForm
+from .forms import (
+    CotizacionForm, VersionCotizacionForm, CotizacionConVersionForm,
+    ClienteImportForm, TratoImportForm
+)
 
 class CRMDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'crm/dashboard.html'
@@ -241,6 +246,53 @@ class ClienteDeleteView(LoginRequiredMixin, DeleteView):
     model = Cliente
     template_name = 'crm/cliente/confirm_delete.html'
     success_url = reverse_lazy('crm:cliente_list')
+
+class ClienteImportView(LoginRequiredMixin, FormView):
+    template_name = 'crm/cliente/import.html'
+    form_class = ClienteImportForm
+    success_url = reverse_lazy('crm:cliente_list')
+    
+    def form_valid(self, form):
+        try:
+            archivo_excel = form.cleaned_data['archivo_excel']
+            
+            # Leer el archivo Excel
+            df = pd.read_excel(archivo_excel)
+            
+            # Validar las columnas requeridas
+            required_columns = ['nombre', 'sector_actividad', 'correo', 'telefono', 'rut']
+            if not all(col in df.columns for col in required_columns):
+                messages.error(self.request, 'El archivo Excel debe contener las columnas: ' + ', '.join(required_columns))
+                return self.form_invalid(form)
+            
+            # Procesar cada fila
+            clientes_creados = 0
+            for _, row in df.iterrows():
+                try:
+                    Cliente.objects.create(
+                        nombre=row['nombre'],
+                        sector_actividad=row.get('sector_actividad', ''),
+                        correo=row.get('correo', ''),
+                        telefono=row.get('telefono', ''),
+                        direccion_linea1=row.get('direccion_linea1', ''),
+                        direccion_linea2=row.get('direccion_linea2', ''),
+                        ciudad=row.get('ciudad', ''),
+                        estado=row.get('estado', ''),
+                        pais=row.get('pais', ''),
+                        codigo_postal=row.get('codigo_postal', ''),
+                        rut=row.get('rut', ''),
+                        notas=row.get('notas', '')
+                    )
+                    clientes_creados += 1
+                except Exception as e:
+                    messages.warning(self.request, f'Error al importar cliente {row.get("nombre", "desconocido")}: {str(e)}')
+            
+            messages.success(self.request, f'Se importaron {clientes_creados} clientes exitosamente.')
+            return super().form_valid(form)
+            
+        except Exception as e:
+            messages.error(self.request, f'Error al procesar el archivo Excel: {str(e)}')
+            return self.form_invalid(form)
 
 # Vistas para RepresentanteVentas
 class RepresentanteListView(LoginRequiredMixin, ListView):
@@ -567,6 +619,65 @@ class TratoUpdateView(LoginRequiredMixin, UpdateView):
         context['tareas'] = TareaVenta.objects.filter(trato=self.object).order_by('-fecha_vencimiento')
         return context
 
+class TratoImportView(LoginRequiredMixin, FormView):
+    template_name = 'crm/trato/import.html'
+    form_class = TratoImportForm
+    success_url = reverse_lazy('crm:trato_list')
+    
+    def form_valid(self, form):
+        try:
+            archivo_excel = form.cleaned_data['archivo_excel']
+            
+            # Leer el archivo Excel
+            df = pd.read_excel(archivo_excel)
+            
+            # Validar las columnas requeridas
+            required_columns = ['nombre', 'cliente', 'valor', 'estado', 'fecha_cierre']
+            if not all(col in df.columns for col in required_columns):
+                messages.error(self.request, 'El archivo Excel debe contener las columnas: ' + ', '.join(required_columns))
+                return self.form_invalid(form)
+            
+            # Procesar cada fila
+            tratos_creados = 0
+            for _, row in df.iterrows():
+                try:
+                    # Buscar o crear el cliente
+                    cliente = Cliente.objects.filter(nombre=row['cliente']).first()
+                    if not cliente:
+                        messages.warning(self.request, f'Cliente no encontrado: {row["cliente"]}. Se omitirá este trato.')
+                        continue
+
+                    Trato.objects.create(
+                        nombre=row['nombre'],
+                        cliente=cliente,
+                        correo=row.get('correo', ''),
+                        telefono=row.get('telefono', ''),
+                        descripcion=row.get('descripcion', ''),
+                        valor=row['valor'],
+                        probabilidad=row.get('probabilidad', 50),
+                        estado=row['estado'],
+                        fuente=row.get('fuente', ''),
+                        fecha_cierre=row['fecha_cierre'],
+                        responsable=self.request.user,
+                        notas=row.get('notas', ''),
+                        centro_costos=row.get('centro_costos', ''),
+                        nombre_proyecto=row.get('nombre_proyecto', ''),
+                        orden_contrato=row.get('orden_contrato', ''),
+                        dias_prometidos=row.get('dias_prometidos', 0),
+                        tipo_negociacion=row.get('tipo_negociacion', ''),
+                        creado_por=self.request.user
+                    )
+                    tratos_creados += 1
+                except Exception as e:
+                    messages.warning(self.request, f'Error al importar trato {row.get("nombre", "desconocido")}: {str(e)}')
+            
+            messages.success(self.request, f'Se importaron {tratos_creados} tratos exitosamente.')
+            return super().form_valid(form)
+            
+        except Exception as e:
+            messages.error(self.request, f'Error al procesar el archivo Excel: {str(e)}')
+            return self.form_invalid(form)
+
 class ContactoCreateView(LoginRequiredMixin, CreateView):
     model = Contacto
     fields = ['nombre', 'cargo', 'correo', 'telefono', 'notas']
@@ -578,3 +689,128 @@ class ContactoCreateView(LoginRequiredMixin, CreateView):
     
     def get_success_url(self):
         return reverse_lazy('crm:cliente_detail', kwargs={'pk': self.kwargs['cliente_id']})
+
+# Vistas para descargar plantillas de Excel
+class ClientePlantillaExcelView(LoginRequiredMixin, TemplateView):
+    """Vista para generar y descargar plantilla de Excel para clientes"""
+    
+    def get(self, request, *args, **kwargs):
+        # Crear un DataFrame con las columnas y datos de ejemplo
+        datos_ejemplo = {
+            'nombre': ['Ejemplo Empresa ABC', 'Cliente Muestra XYZ'],
+            'sector_actividad': ['Tecnología', 'Comercio'],
+            'correo': ['contacto@empresa.com', 'info@cliente.com'],
+            'telefono': ['+56912345678', '+56987654321'],
+            'rut': ['12345678-9', '98765432-1'],
+            'direccion_linea1': ['Av. Principal 123', 'Calle Secundaria 456'],
+            'direccion_linea2': ['Oficina 201', ''],
+            'ciudad': ['Santiago', 'Valparaíso'],
+            'estado': ['Región Metropolitana', 'Valparaíso'],
+            'pais': ['Chile', 'Chile'],
+            'codigo_postal': ['7500000', '2340000'],
+            'notas': ['Cliente potencial importante', 'Referido por socio comercial']
+        }
+        
+        df = pd.DataFrame(datos_ejemplo)
+        
+        # Crear archivo Excel en memoria
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Clientes')
+            
+            # Obtener la hoja de trabajo para formatear
+            worksheet = writer.sheets['Clientes']
+            
+            # Ajustar el ancho de las columnas
+            for column in worksheet.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                worksheet.column_dimensions[column_letter].width = adjusted_width
+        
+        buffer.seek(0)
+        
+        # Crear respuesta HTTP con el archivo
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="plantilla_clientes.xlsx"'
+        
+        return response
+
+class TratoPlantillaExcelView(LoginRequiredMixin, TemplateView):
+    """Vista para generar y descargar plantilla de Excel para tratos"""
+    
+    def get(self, request, *args, **kwargs):
+        # Crear un DataFrame con las columnas y datos de ejemplo
+        datos_ejemplo = {
+            'nombre': ['Proyecto Implementación ERP', 'Desarrollo App Móvil'],
+            'cliente': ['Ejemplo Empresa ABC', 'Cliente Muestra XYZ'],
+            'valor': [150000, 85000],
+            'estado': ['nuevo', 'cotizacion'],
+            'fecha_cierre': ['2025-08-15', '2025-07-30'],
+            'correo': ['proyecto@empresa.com', 'desarrollo@cliente.com'],
+            'telefono': ['+56912345678', '+56987654321'],
+            'descripcion': ['Implementación completa de sistema ERP', 'Desarrollo de aplicación móvil nativa'],
+            'probabilidad': [75, 60],
+            'fuente': ['referido', 'web'],
+            'notas': ['Cliente con presupuesto aprobado', 'Proyecto urgente para Q3'],
+            'centro_costos': ['CC001', 'CC002'],
+            'nombre_proyecto': ['ERP-2025-001', 'APP-MOV-2025-002'],
+            'orden_contrato': ['OC-2025-001', 'OC-2025-002'],
+            'dias_prometidos': [90, 60],
+            'tipo_negociacion': ['licitacion', 'cotizacion_directa']
+        }
+        
+        df = pd.DataFrame(datos_ejemplo)
+        
+        # Crear archivo Excel en memoria
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Tratos')
+            
+            # Obtener la hoja de trabajo para formatear
+            worksheet = writer.sheets['Tratos']
+            
+            # Ajustar el ancho de las columnas
+            for column in worksheet.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                worksheet.column_dimensions[column_letter].width = adjusted_width
+                
+            # Agregar una segunda hoja con información sobre los valores válidos
+            info_data = {
+                'Campo': ['estado', 'fuente', 'tipo_negociacion'],
+                'Valores_Válidos': [
+                    'nuevo, cotizacion, negociacion, ganado, perdido, cancelado',
+                    'web, referido, telefono, email, redes_sociales, evento, otro',
+                    'licitacion, cotizacion_directa, negociacion_abierta'
+                ]
+            }
+            df_info = pd.DataFrame(info_data)
+            df_info.to_excel(writer, index=False, sheet_name='Valores_Válidos')
+        
+        buffer.seek(0)
+        
+        # Crear respuesta HTTP con el archivo
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="plantilla_tratos.xlsx"'
+        
+        return response

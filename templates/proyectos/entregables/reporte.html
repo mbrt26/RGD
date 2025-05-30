@@ -1,0 +1,520 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Reporte de Entregables | {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .filter-card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        background: #f8f9fa;
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .export-actions {
+        background: #e9ecef;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .table-responsive {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    
+    .estado-badge {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+    }
+    
+    .estado-pendiente { background-color: #6c757d; color: white; }
+    .estado-en_proceso { background-color: #ffc107; color: black; }
+    .estado-completado { background-color: #28a745; color: white; }
+    .estado-no_aplica { background-color: #17a2b8; color: white; }
+    
+    .filter-chip {
+        display: inline-block;
+        background: #007bff;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        margin: 0.25rem;
+    }
+    
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-chart-bar me-2"></i>Reporte de Entregables</h1>
+        <div>
+            <a href="{% url 'proyectos:entregables_dashboard' %}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-dashboard me-1"></i>Dashboard
+            </a>
+            <a href="{% url 'proyectos:entregables_filtrados' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-filter me-1"></i>Vista Filtrada
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    <div class="stats-card">
+        <div class="row text-center">
+            <div class="col-md-3">
+                <h3 id="totalEntregables">-</h3>
+                <p class="mb-0">Total Entregables</p>
+            </div>
+            <div class="col-md-3">
+                <h3 id="completados">-</h3>
+                <p class="mb-0">Completados</p>
+            </div>
+            <div class="col-md-3">
+                <h3 id="pendientes">-</h3>
+                <p class="mb-0">Pendientes</p>
+            </div>
+            <div class="col-md-3">
+                <h3 id="porcentajeAvance">-</h3>
+                <p class="mb-0">% Avance</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filter-card">
+        <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Filtros de Reporte</h5>
+        <form id="filterForm" method="get">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">Proyecto</label>
+                    <select name="proyecto" class="form-select" id="proyectoFilter">
+                        <option value="">Todos los proyectos</option>
+                        {% for proyecto in proyectos %}
+                        <option value="{{ proyecto.id }}" {% if filtros.proyecto == proyecto.id|stringformat:"s" %}selected{% endif %}>
+                            {{ proyecto.nombre_proyecto }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">Fase</label>
+                    <select name="fase" class="form-select" id="faseFilter">
+                        <option value="">Todas las fases</option>
+                        {% for value, display in fases %}
+                        <option value="{{ value }}" {% if filtros.fase == value %}selected{% endif %}>
+                            {{ display }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">Estado</label>
+                    <select name="estado" class="form-select" id="estadoFilter">
+                        <option value="">Todos los estados</option>
+                        {% for value, display in estados %}
+                        <option value="{{ value }}" {% if filtros.estado == value %}selected{% endif %}>
+                            {{ display }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">Tipo</label>
+                    <select name="obligatorio" class="form-select" id="obligatorioFilter">
+                        <option value="">Todos</option>
+                        <option value="true" {% if filtros.obligatorio == 'true' %}selected{% endif %}>Obligatorios</option>
+                        <option value="false" {% if filtros.obligatorio == 'false' %}selected{% endif %}>Opcionales</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">Acciones</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i>Filtrar
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros()">
+                            <i class="fas fa-times me-1"></i>Limpiar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+        
+        <!-- Filtros Activos -->
+        <div id="filtrosActivos" class="mt-3"></div>
+    </div>
+
+    <!-- Acciones de Exportación -->
+    <div class="export-actions">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="fas fa-download me-2"></i>Exportar Datos</h6>
+            <div>
+                <button type="button" class="btn btn-success" onclick="exportarExcel()">
+                    <i class="fas fa-file-excel me-1"></i>Exportar a Excel
+                </button>
+                <button type="button" class="btn btn-info" onclick="exportarPDF()">
+                    <i class="fas fa-file-pdf me-1"></i>Exportar a PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Resultados -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-table me-2"></i>Entregables 
+                <span class="badge bg-primary" id="contadorResultados">0</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0" id="tablaEntregables">
+                    <thead class="table-dark sticky-top">
+                        <tr>
+                            <th width="5%">
+                                <input type="checkbox" id="selectAll" class="form-check-input">
+                            </th>
+                            <th width="15%">Proyecto</th>
+                            <th width="8%">Código</th>
+                            <th width="25%">Nombre</th>
+                            <th width="10%">Fase</th>
+                            <th width="8%">Estado</th>
+                            <th width="8%">Tipo</th>
+                            <th width="10%">Creador</th>
+                            <th width="11%">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaBody">
+                        <!-- Contenido dinámico -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    Mostrando <span id="mostrandoInicio">0</span> - <span id="mostrandoFin">0</span> 
+                    de <span id="totalRegistros">0</span> entregables
+                </small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0" id="paginacion">
+                        <!-- Paginación dinámica -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="text-center text-white">
+        <div class="spinner-border mb-3" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p>Generando reporte...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+let entregablesData = [];
+let currentPage = 1;
+const itemsPerPage = 20;
+
+$(document).ready(function() {
+    cargarEntregables();
+    actualizarFiltrosActivos();
+    
+    // Configurar eventos
+    $('#filterForm').on('submit', function(e) {
+        e.preventDefault();
+        currentPage = 1;
+        cargarEntregables();
+    });
+    
+    $('#selectAll').on('change', function() {
+        $('.entregable-checkbox').prop('checked', this.checked);
+    });
+});
+
+function cargarEntregables() {
+    mostrarLoading(true);
+    
+    const filtros = {
+        proyecto: $('#proyectoFilter').val(),
+        fase: $('#faseFilter').val(),
+        estado: $('#estadoFilter').val(),
+        obligatorio: $('#obligatorioFilter').val()
+    };
+    
+    // Simular carga de datos (en implementación real sería una llamada AJAX)
+    setTimeout(() => {
+        // Datos de ejemplo
+        entregablesData = [
+            {
+                id: 1,
+                proyecto: 'Proyecto Alpha',
+                codigo: '1.0',
+                nombre: 'Oferta Comercial',
+                fase: 'Definición',
+                estado: 'completado',
+                obligatorio: true,
+                creador: 'Juan Pérez',
+                archivo: true
+            },
+            {
+                id: 2,
+                proyecto: 'Proyecto Beta',
+                codigo: '2.1',
+                nombre: 'Acta de Inicio',
+                fase: 'Planeación',
+                estado: 'pendiente',
+                obligatorio: true,
+                creador: 'María González',
+                archivo: false
+            }
+            // Más datos...
+        ];
+        
+        aplicarFiltros(filtros);
+        actualizarTabla();
+        actualizarEstadisticas();
+        mostrarLoading(false);
+    }, 1000);
+}
+
+function aplicarFiltros(filtros) {
+    // Implementar lógica de filtrado aquí
+    // Por ahora usando datos de ejemplo
+}
+
+function actualizarTabla() {
+    const tbody = $('#tablaBody');
+    tbody.empty();
+    
+    const inicio = (currentPage - 1) * itemsPerPage;
+    const fin = Math.min(inicio + itemsPerPage, entregablesData.length);
+    
+    for (let i = inicio; i < fin; i++) {
+        const item = entregablesData[i];
+        const row = `
+            <tr>
+                <td>
+                    <input type="checkbox" class="form-check-input entregable-checkbox" value="${item.id}">
+                </td>
+                <td>${item.proyecto}</td>
+                <td><code>${item.codigo}</code></td>
+                <td>${item.nombre}</td>
+                <td><span class="badge bg-info">${item.fase}</span></td>
+                <td><span class="estado-badge estado-${item.estado}">${getEstadoDisplay(item.estado)}</span></td>
+                <td>
+                    ${item.obligatorio ? 
+                        '<span class="badge bg-danger">Obligatorio</span>' : 
+                        '<span class="badge bg-secondary">Opcional</span>'
+                    }
+                </td>
+                <td>${item.creador}</td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="verEntregable(${item.id})" title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        ${item.archivo ? 
+                            '<button class="btn btn-outline-success" onclick="descargarArchivo(' + item.id + ')" title="Descargar"><i class="fas fa-download"></i></button>' :
+                            '<button class="btn btn-outline-secondary" disabled title="Sin archivo"><i class="fas fa-file-slash"></i></button>'
+                        }
+                    </div>
+                </td>
+            </tr>
+        `;
+        tbody.append(row);
+    }
+    
+    actualizarContadores(inicio, fin);
+    actualizarPaginacion();
+}
+
+function actualizarEstadisticas() {
+    const total = entregablesData.length;
+    const completados = entregablesData.filter(e => e.estado === 'completado').length;
+    const pendientes = entregablesData.filter(e => e.estado === 'pendiente').length;
+    const porcentaje = total > 0 ? Math.round((completados / total) * 100) : 0;
+    
+    $('#totalEntregables').text(total);
+    $('#completados').text(completados);
+    $('#pendientes').text(pendientes);
+    $('#porcentajeAvance').text(porcentaje + '%');
+}
+
+function actualizarContadores(inicio, fin) {
+    $('#mostrandoInicio').text(inicio + 1);
+    $('#mostrandoFin').text(fin);
+    $('#totalRegistros').text(entregablesData.length);
+    $('#contadorResultados').text(entregablesData.length);
+}
+
+function actualizarPaginacion() {
+    const totalPages = Math.ceil(entregablesData.length / itemsPerPage);
+    const pagination = $('#paginacion');
+    pagination.empty();
+    
+    if (totalPages > 1) {
+        // Anterior
+        pagination.append(`
+            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="cambiarPagina(${currentPage - 1})">Anterior</a>
+            </li>
+        `);
+        
+        // Páginas
+        for (let i = 1; i <= totalPages; i++) {
+            pagination.append(`
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="cambiarPagina(${i})">${i}</a>
+                </li>
+            `);
+        }
+        
+        // Siguiente
+        pagination.append(`
+            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="cambiarPagina(${currentPage + 1})">Siguiente</a>
+            </li>
+        `);
+    }
+}
+
+function cambiarPagina(page) {
+    if (page >= 1 && page <= Math.ceil(entregablesData.length / itemsPerPage)) {
+        currentPage = page;
+        actualizarTabla();
+    }
+}
+
+function actualizarFiltrosActivos() {
+    const container = $('#filtrosActivos');
+    container.empty();
+    
+    const filtros = [
+        { name: 'proyecto', display: 'Proyecto', value: $('#proyectoFilter option:selected').text() },
+        { name: 'fase', display: 'Fase', value: $('#faseFilter option:selected').text() },
+        { name: 'estado', display: 'Estado', value: $('#estadoFilter option:selected').text() },
+        { name: 'obligatorio', display: 'Tipo', value: $('#obligatorioFilter option:selected').text() }
+    ];
+    
+    filtros.forEach(filtro => {
+        if (filtro.value && filtro.value !== 'Todos los proyectos' && 
+            filtro.value !== 'Todas las fases' && filtro.value !== 'Todos los estados' && 
+            filtro.value !== 'Todos') {
+            container.append(`
+                <span class="filter-chip">
+                    ${filtro.display}: ${filtro.value}
+                    <i class="fas fa-times ms-1" onclick="limpiarFiltro('${filtro.name}')" style="cursor: pointer;"></i>
+                </span>
+            `);
+        }
+    });
+}
+
+function limpiarFiltros() {
+    $('#filterForm')[0].reset();
+    currentPage = 1;
+    cargarEntregables();
+    actualizarFiltrosActivos();
+}
+
+function limpiarFiltro(filtroName) {
+    $(`[name="${filtroName}"]`).val('');
+    currentPage = 1;
+    cargarEntregables();
+    actualizarFiltrosActivos();
+}
+
+function exportarExcel() {
+    mostrarLoading(true, 'Generando archivo Excel...');
+    
+    // Construir URL con filtros actuales
+    const params = new URLSearchParams($('#filterForm').serialize());
+    const url = '{% url "proyectos:reporte_entregables" %}?' + params.toString();
+    
+    // Crear enlace de descarga
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'reporte_entregables.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => mostrarLoading(false), 2000);
+}
+
+function exportarPDF() {
+    alert('Funcionalidad de exportación a PDF será implementada próximamente.');
+}
+
+function mostrarLoading(show, mensaje = 'Cargando...') {
+    const overlay = $('#loadingOverlay');
+    if (show) {
+        overlay.find('p').text(mensaje);
+        overlay.show();
+    } else {
+        overlay.hide();
+    }
+}
+
+function getEstadoDisplay(estado) {
+    const estados = {
+        'pendiente': 'Pendiente',
+        'en_proceso': 'En Proceso',
+        'completado': 'Completado',
+        'no_aplica': 'No Aplica'
+    };
+    return estados[estado] || estado;
+}
+
+function verEntregable(id) {
+    // Implementar vista de detalles
+    alert(`Ver detalles del entregable ${id}`);
+}
+
+function descargarArchivo(id) {
+    // Implementar descarga de archivo
+    alert(`Descargar archivo del entregable ${id}`);
+}
+</script>
+{% endblock %}

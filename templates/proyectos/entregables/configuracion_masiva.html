@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Configuración Masiva de Entregables | {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .proyecto-card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        transition: all 0.15s ease-in-out;
+    }
+    
+    .proyecto-card:hover {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.15);
+    }
+    
+    .proyecto-card.selected {
+        border-color: #007bff;
+        background-color: #f8f9ff;
+    }
+    
+    .select-all-section {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stats-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1><i class="fas fa-cogs me-2"></i>Configuración Masiva de Entregables</h1>
+                <a href="{% url 'proyectos:entregables_dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Volver al Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle me-2"></i>¿Qué hace esta función?</h5>
+                <p class="mb-0">
+                    Esta herramienta te permite cargar automáticamente todos los entregables predefinidos 
+                    para múltiples proyectos de una sola vez. Los entregables se cargan desde el archivo 
+                    de configuración del sistema y se aplicarán las reglas de negocio correspondientes.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="cargar_entregables">
+        
+        <!-- Selección Masiva -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="select-all-section">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">Selección de Proyectos</h6>
+                            <p class="mb-0 text-muted">
+                                Selecciona los proyectos para los cuales deseas cargar los entregables
+                            </p>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary btn-sm me-2" id="selectAll">
+                                <i class="fas fa-check-square me-1"></i>Seleccionar Todo
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="unselectAll">
+                                <i class="fas fa-square me-1"></i>Deseleccionar Todo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Proyectos -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            Proyectos Disponibles ({{ proyectos|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if proyectos %}
+                        <div class="row g-3">
+                            {% for proyecto in proyectos %}
+                            <div class="col-lg-6 col-xl-4">
+                                <div class="proyecto-card p-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input proyecto-checkbox" 
+                                               type="checkbox" 
+                                               name="proyectos" 
+                                               value="{{ proyecto.id }}" 
+                                               id="proyecto_{{ proyecto.id }}">
+                                        <label class="form-check-label w-100" for="proyecto_{{ proyecto.id }}">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1">{{ proyecto.nombre_proyecto|truncatechars:40 }}</h6>
+                                                    <p class="mb-2 text-muted small">{{ proyecto.cliente }}</p>
+                                                    
+                                                    <div class="mb-2">
+                                                        <span class="stats-badge bg-info text-white">
+                                                            {{ proyecto.get_estado_display }}
+                                                        </span>
+                                                        {% if proyecto.centro_costos %}
+                                                        <span class="stats-badge bg-secondary text-white ms-1">
+                                                            {{ proyecto.centro_costos }}
+                                                        </span>
+                                                        {% endif %}
+                                                    </div>
+                                                    
+                                                    <div class="row text-center">
+                                                        <div class="col-6">
+                                                            <small class="text-muted">Inicio</small><br>
+                                                            <small>{{ proyecto.fecha_inicio|date:"d/m/Y"|default:"Sin fecha" }}</small>
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <small class="text-muted">Fin</small><br>
+                                                            <small>{{ proyecto.fecha_fin|date:"d/m/Y"|default:"Sin fecha" }}</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Estado de entregables -->
+                                            {% if proyecto.entregables_proyecto.exists %}
+                                            <div class="mt-2 p-2 bg-warning text-dark rounded small">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                Ya tiene {{ proyecto.entregables_proyecto.count }} entregables configurados
+                                            </div>
+                                            {% else %}
+                                            <div class="mt-2 p-2 bg-light border rounded small">
+                                                <i class="fas fa-plus me-1"></i>
+                                                Sin entregables configurados
+                                            </div>
+                                            {% endif %}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No hay proyectos disponibles</h5>
+                            <p class="text-muted">
+                                No se encontraron proyectos en estado "en progreso" o "iniciado" 
+                                que requieran configuración de entregables.
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información sobre los entregables que se cargarán -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-clipboard-list me-2"></i>
+                            Entregables que se Cargarán
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-primary">Fase de Definición (Legalización)</h6>
+                                <ul class="small">
+                                    <li>Copia Orden de Servicio</li>
+                                    <li>Contrato / Otro si</li>
+                                    <li>Pólizas</li>
+                                    <li>Acta de Reunión (Socialización técnica)</li>
+                                </ul>
+                                <span class="badge bg-danger">Todos obligatorios</span>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-info">Fase de Planeación</h6>
+                                <ul class="small">
+                                    <li>Cronograma inicial y versiones</li>
+                                    <li>Registro Acta de Inicio</li>
+                                    <li>Registro Inspección Preoperacional HSEQ</li>
+                                    <li>Informes de inspección técnica</li>
+                                </ul>
+                                <span class="badge bg-danger">Todos obligatorios</span>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h6 class="text-warning">Fase de Ejecución</h6>
+                                <ul class="small">
+                                    <li>Bitácora de Obra</li>
+                                    <li>Registros de gestión de cambios</li>
+                                    <li>Copia de presupuesto</li>
+                                    <li>Consolidados de gastos y costos</li>
+                                    <li>Y más...</li>
+                                </ul>
+                                <span class="badge bg-secondary">Selección manual</span>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-success">Fase de Entrega Administrativa</h6>
+                                <ul class="small">
+                                    <li>Resumen de equipos</li>
+                                    <li>Manuales de mantenimiento</li>
+                                    <li>Planos ACAD/PDF</li>
+                                    <li>Certificaciones</li>
+                                    <li>Y más...</li>
+                                </ul>
+                                <span class="badge bg-secondary">Selección manual</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'proyectos:entregables_dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success" id="btnProcesar" disabled>
+                        <i class="fas fa-cogs me-1"></i>
+                        Cargar Entregables en Proyectos Seleccionados
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    const checkboxes = $('.proyecto-checkbox');
+    const btnProcesar = $('#btnProcesar');
+    const selectAllBtn = $('#selectAll');
+    const unselectAllBtn = $('#unselectAll');
+
+    // Función para actualizar el estado del botón
+    function updateButtonState() {
+        const selectedCount = checkboxes.filter(':checked').length;
+        if (selectedCount > 0) {
+            btnProcesar.prop('disabled', false);
+            btnProcesar.html(`<i class="fas fa-cogs me-1"></i>Cargar Entregables en ${selectedCount} Proyecto${selectedCount > 1 ? 's' : ''} Seleccionado${selectedCount > 1 ? 's' : ''}`);
+        } else {
+            btnProcesar.prop('disabled', true);
+            btnProcesar.html('<i class="fas fa-cogs me-1"></i>Cargar Entregables en Proyectos Seleccionados');
+        }
+    }
+
+    // Manejar cambios en checkboxes
+    checkboxes.on('change', function() {
+        const card = $(this).closest('.proyecto-card');
+        if ($(this).is(':checked')) {
+            card.addClass('selected');
+        } else {
+            card.removeClass('selected');
+        }
+        updateButtonState();
+    });
+
+    // Seleccionar todos
+    selectAllBtn.on('click', function() {
+        checkboxes.prop('checked', true);
+        $('.proyecto-card').addClass('selected');
+        updateButtonState();
+    });
+
+    // Deseleccionar todos
+    unselectAllBtn.on('click', function() {
+        checkboxes.prop('checked', false);
+        $('.proyecto-card').removeClass('selected');
+        updateButtonState();
+    });
+
+    // Confirmar antes de procesar
+    $('form').on('submit', function(e) {
+        const selectedCount = checkboxes.filter(':checked').length;
+        if (selectedCount === 0) {
+            e.preventDefault();
+            alert('Por favor selecciona al menos un proyecto.');
+            return false;
+        }
+
+        if (!confirm(`¿Estás seguro de que deseas cargar los entregables en ${selectedCount} proyecto${selectedCount > 1 ? 's' : ''}?\n\nEsta acción creará todos los entregables predefinidos para los proyectos seleccionados.`)) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Estado inicial
+    updateButtonState();
+});
+</script>
+{% endblock %}

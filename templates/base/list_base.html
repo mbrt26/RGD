@@ -18,11 +18,13 @@
                 </h3>
             </div>
             <div class="col-md-6 text-end">
-                {% if view.add_url %}
-                    <a href="{% url view.add_url %}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Nuevo
-                    </a>
-                {% endif %}
+                {% block actions %}
+                    {% if view.add_url %}
+                        <a href="{% url view.add_url %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Nuevo
+                        </a>
+                    {% endif %}
+                {% endblock %}
             </div>
         </div>
     </div>

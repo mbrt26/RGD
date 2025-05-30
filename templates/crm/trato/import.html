@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Importar Tratos{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">Importar Tratos desde Excel</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h5 class="mb-2"><i class="fas fa-download me-2"></i>¿Necesitas una plantilla?</h5>
+                                <p class="mb-0">Descarga nuestra plantilla de Excel con ejemplos y el formato correcto para facilitar la importación.</p>
+                            </div>
+                            <a href="{% url 'crm:trato_plantilla_excel' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-file-excel me-1"></i> Descargar Plantilla
+                            </a>
+                        </div>
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.archivo_excel.id_for_label }}" class="form-label">{{ form.archivo_excel.label }}</label>
+                            {{ form.archivo_excel }}
+                            {% if form.archivo_excel.help_text %}
+                            <div class="form-text">{{ form.archivo_excel.help_text }}</div>
+                            {% endif %}
+                            {% if form.archivo_excel.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.archivo_excel.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="alert alert-secondary">
+                            <h5>Formato del archivo Excel:</h5>
+                            <p>El archivo Excel debe contener las siguientes columnas:</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Campos obligatorios:</h6>
+                                    <ul>
+                                        <li><strong>nombre:</strong> Nombre del trato</li>
+                                        <li><strong>cliente:</strong> Nombre del cliente existente</li>
+                                        <li><strong>valor:</strong> Valor del trato</li>
+                                        <li><strong>estado:</strong> Estado (nuevo, cotizacion, negociacion, ganado, perdido, cancelado)</li>
+                                        <li><strong>fecha_cierre:</strong> Fecha de cierre esperada (formato YYYY-MM-DD)</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Campos opcionales:</h6>
+                                    <ul>
+                                        <li><strong>correo:</strong> Correo de contacto</li>
+                                        <li><strong>telefono:</strong> Teléfono de contacto</li>
+                                        <li><strong>descripcion:</strong> Descripción del trato</li>
+                                        <li><strong>probabilidad:</strong> Probabilidad de cierre (0-100)</li>
+                                        <li><strong>fuente:</strong> Fuente del trato</li>
+                                        <li><strong>notas:</strong> Notas adicionales</li>
+                                        <li><strong>centro_costos:</strong> Centro de costos</li>
+                                        <li><strong>nombre_proyecto:</strong> Nombre del proyecto</li>
+                                        <li><strong>orden_contrato:</strong> Número de orden o contrato</li>
+                                        <li><strong>dias_prometidos:</strong> Días prometidos</li>
+                                        <li><strong>tipo_negociacion:</strong> Tipo de negociación</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="alert alert-warning mt-3">
+                                <strong>Nota importante:</strong> El cliente debe existir previamente en el sistema. La plantilla incluye una hoja con los valores válidos para cada campo.
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'crm:trato_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Volver
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-file-import"></i> Importar Tratos
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validación del formulario
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+});
+</script>
+{% endblock %}

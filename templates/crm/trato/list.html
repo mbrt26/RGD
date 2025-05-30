@@ -3,7 +3,7 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block extra_css %}
-<style>
+<style type="text/css">
     .progress-container {
         height: 20px;
     }
@@ -26,6 +26,17 @@
         width: 100%;
     }
 </style>
+{% endblock %}
+
+{% block actions %}
+<div class="btn-group">
+    <a href="{% url 'crm:trato_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Nuevo Trato
+    </a>
+    <a href="{% url 'crm:trato_import' %}" class="btn btn-success">
+        <i class="fas fa-file-import me-1"></i> Importar Excel
+    </a>
+</div>
 {% endblock %}
 
 {% block table_header %}
@@ -59,7 +70,7 @@
         <td>
             <div class="progress progress-container">
                 <div class="progress-bar progress-bar-striped" role="progressbar" 
-                     style="width: {{ trato.probabilidad }}%;" 
+                     style="width: {{ trato.probabilidad }}%" 
                      aria-valuenow="{{ trato.probabilidad }}" 
                      aria-valuemin="0" 
                      aria-valuemax="100">
@@ -78,7 +89,9 @@
     </tr>
     {% empty %}
     <tr>
-        <td colspan="8" class="text-center">No hay tratos registrados.</td>
+        <td colspan="8" class="text-center">
+            No hay tratos registrados.
+        </td>
     </tr>
     {% endfor %}
 {% endblock %}

@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Entregables Filtrados | {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .filter-card {
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .entregable-row {
+        transition: background-color 0.15s ease-in-out;
+    }
+    
+    .entregable-row:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .badge-fase {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+    }
+    
+    .estado-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+    
+    .estado-pendiente { background-color: #6c757d; color: white; }
+    .estado-en_proceso { background-color: #ffc107; color: black; }
+    .estado-completado { background-color: #28a745; color: white; }
+    .estado-no_aplica { background-color: #17a2b8; color: white; }
+    
+    .vencido {
+        background-color: #fff5f5;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .proximo-vencer {
+        background-color: #fffdf5;
+        border-left: 4px solid #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1><i class="fas fa-filter me-2"></i>Entregables Filtrados</h1>
+                <div>
+                    <a href="{% url 'proyectos:entregables_dashboard' %}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-dashboard me-1"></i>Dashboard
+                    </a>
+                    <a href="{% url 'proyectos:reporte_entregables' %}" class="btn btn-success">
+                        <i class="fas fa-file-excel me-1"></i>Exportar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card filter-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-search me-2"></i>Filtros de Búsqueda</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="proyecto" class="form-label">Proyecto</label>
+                            <select name="proyecto" id="proyecto" class="form-select">
+                                <option value="">Todos los proyectos</option>
+                                {% for proyecto in proyectos %}
+                                    <option value="{{ proyecto.id }}" 
+                                            {% if filtros.proyecto == proyecto.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ proyecto.nombre_proyecto|truncatechars:40 }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label for="fase" class="form-label">Fase</label>
+                            <select name="fase" id="fase" class="form-select">
+                                <option value="">Todas las fases</option>
+                                {% for key, value in fases %}
+                                    <option value="{{ key }}" {% if filtros.fase == key %}selected{% endif %}>
+                                        {{ value }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label for="estado" class="form-label">Estado</label>
+                            <select name="estado" id="estado" class="form-select">
+                                <option value="">Todos los estados</option>
+                                {% for key, value in estados %}
+                                    <option value="{{ key }}" {% if filtros.estado == key %}selected{% endif %}>
+                                        {{ value }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label for="obligatorio" class="form-label">Tipo</label>
+                            <select name="obligatorio" id="obligatorio" class="form-select">
+                                <option value="">Todos</option>
+                                <option value="true" {% if filtros.obligatorio == "true" %}selected{% endif %}>
+                                    Obligatorios
+                                </option>
+                                <option value="false" {% if filtros.obligatorio == "false" %}selected{% endif %}>
+                                    Opcionales
+                                </option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label for="vencidos" class="form-label">Vencimiento</label>
+                            <select name="vencidos" id="vencidos" class="form-select">
+                                <option value="">Todos</option>
+                                <option value="true" {% if filtros.vencidos == "true" %}selected{% endif %}>
+                                    Solo Vencidos
+                                </option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-1">
+                            <label>&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    {% if request.GET %}
+                    <div class="mt-3">
+                        <a href="{% url 'proyectos:entregables_filtrados' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-times me-1"></i>Limpiar Filtros
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resultados -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            Resultados ({{ entregables|length }} entregables)
+                        </h5>
+                        {% if is_paginated %}
+                        <small class="text-muted">
+                            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                        </small>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if entregables %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Proyecto</th>
+                                    <th>Fase</th>
+                                    <th>Estado</th>
+                                    <th>Tipo</th>
+                                    <th>Fecha Entrega</th>
+                                    <th>Responsable</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entregable in entregables %}
+                                <tr class="entregable-row
+                                    {% if entregable.fecha_entrega and entregable.fecha_entrega < today and entregable.estado != 'completado' %}vencido{% endif %}
+                                    {% if entregable.fecha_entrega and entregable.fecha_entrega <= fecha_limite and entregable.fecha_entrega >= today and entregable.estado != 'completado' %}proximo-vencer{% endif %}">
+                                    <td>
+                                        <strong>{{ entregable.codigo }}</strong>
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 200px;" title="{{ entregable.nombre }}">
+                                            {{ entregable.nombre }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 150px;" title="{{ entregable.proyecto.nombre_proyecto }}">
+                                            {{ entregable.proyecto.nombre_proyecto }}
+                                        </div>
+                                        <small class="text-muted">{{ entregable.proyecto.cliente }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-fase bg-info">{{ entregable.fase }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="estado-badge estado-{{ entregable.estado }}">
+                                            {{ entregable.get_estado_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if entregable.obligatorio %}
+                                            <span class="badge bg-danger">Obligatorio</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Opcional</span>
+                                        {% endif %}
+                                        {% if entregable.seleccionado %}
+                                            <br><small class="text-success">Seleccionado</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if entregable.fecha_entrega %}
+                                            {{ entregable.fecha_entrega|date:"d/m/Y" }}
+                                            {% if entregable.fecha_entrega < today and entregable.estado != 'completado' %}
+                                                <br><small class="text-danger">Vencido</small>
+                                            {% elif entregable.fecha_entrega <= fecha_limite and entregable.fecha_entrega >= today and entregable.estado != 'completado' %}
+                                                <br><small class="text-warning">Próximo</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">Sin fecha</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ entregable.consolidador|truncatechars:20 }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'proyectos:entregable_proyecto_update' entregable.id %}" 
+                                               class="btn btn-outline-primary" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% if entregable.archivo %}
+                                            <a href="{{ entregable.archivo.url }}" 
+                                               class="btn btn-outline-success" title="Descargar" target="_blank">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Paginación -->
+                    {% if is_paginated %}
+                    <div class="card-footer">
+                        <nav aria-label="Paginación de entregables">
+                            <ul class="pagination justify-content-center mb-0">
+                                {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+                                        Anterior
+                                    </a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">
+                                            {{ num }}
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+                                        Siguiente
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+                    
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No se encontraron entregables</h5>
+                        <p class="text-muted">Prueba ajustando los filtros de búsqueda</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    // Mejorar selects con Select2
+    $('#proyecto').select2({
+        placeholder: 'Seleccione un proyecto...',
+        allowClear: true,
+        width: '100%'
+    });
+    
+    // Tooltips
+    $('[title]').tooltip();
+    
+    // Auto-submit en cambio de filtros principales
+    $('#vencidos, #obligatorio').on('change', function() {
+        $(this).closest('form').submit();
+    });
+});
+</script>
+{% endblock %}

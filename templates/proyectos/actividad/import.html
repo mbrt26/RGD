@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Importar Actividades{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">Importar Actividades desde Excel</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h5 class="mb-2"><i class="fas fa-download me-2"></i>¿Necesitas una plantilla?</h5>
+                                <p class="mb-0">Descarga nuestra plantilla de Excel con ejemplos y el formato correcto para facilitar la importación de actividades.</p>
+                            </div>
+                            <a href="{% url 'proyectos:actividad_plantilla_excel' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-file-excel me-1"></i> Descargar Plantilla
+                            </a>
+                        </div>
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data" id="importForm" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.proyecto.id_for_label }}" class="form-label">{{ form.proyecto.label }}</label>
+                            {{ form.proyecto }}
+                            {% if form.proyecto.help_text %}
+                            <div class="form-text">{{ form.proyecto.help_text }}</div>
+                            {% endif %}
+                            {% if form.proyecto.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.proyecto.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.archivo_excel.id_for_label }}" class="form-label">{{ form.archivo_excel.label }}</label>
+                            {{ form.archivo_excel }}
+                            {% if form.archivo_excel.help_text %}
+                            <div class="form-text">{{ form.archivo_excel.help_text }}</div>
+                            {% endif %}
+                            {% if form.archivo_excel.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.archivo_excel.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="alert alert-secondary">
+                            <h5>Formato del archivo Excel:</h5>
+                            <p>El archivo Excel debe contener las siguientes columnas:</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Campos obligatorios:</h6>
+                                    <ul>
+                                        <li><strong>actividad:</strong> Nombre o descripción de la actividad</li>
+                                        <li><strong>inicio:</strong> Fecha de inicio (formato YYYY-MM-DD)</li>
+                                        <li><strong>fin:</strong> Fecha de finalización (formato YYYY-MM-DD)</li>
+                                        <li><strong>estado:</strong> Estado (no_iniciado, en_proceso, finalizado)</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Campos opcionales:</h6>
+                                    <ul>
+                                        <li><strong>duracion:</strong> Duración en días (número entero)</li>
+                                        <li><strong>avance:</strong> Porcentaje de avance (0-100)</li>
+                                        <li><strong>predecesoras:</strong> Actividades predecesoras</li>
+                                        <li><strong>observaciones:</strong> Notas y comentarios adicionales</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="alert alert-warning mt-3">
+                                <strong>Nota importante:</strong> La plantilla incluye una hoja con información detallada sobre los valores válidos para cada campo y ejemplos de uso.
+                            </div>
+                        </div>
+
+                        <!-- Progress indicator -->
+                        <div id="progressIndicator" class="alert alert-info" style="display: none;">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm me-3" role="status">
+                                    <span class="visually-hidden">Cargando...</span>
+                                </div>
+                                <div>
+                                    <strong>Procesando archivo...</strong><br>
+                                    <small>Por favor espere mientras se importan las actividades. No cierre esta ventana ni navegue a otra página.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'proyectos:actividad_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Volver
+                            </a>
+                            <button type="submit" id="submitBtn" class="btn btn-primary">
+                                <i class="fas fa-file-import"></i> Importar Actividades
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('importForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const progressIndicator = document.getElementById('progressIndicator');
+    let isSubmitting = false;
+
+    // Validación del formulario
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+
+    // Prevenir múltiples envíos
+    form.addEventListener('submit', function(event) {
+        if (isSubmitting) {
+            event.preventDefault();
+            return false;
+        }
+
+        // Validar que se haya seleccionado un archivo y proyecto
+        const proyectoField = document.querySelector('select[name="proyecto"]');
+        const archivoField = document.querySelector('input[name="archivo_excel"]');
+        
+        if (!proyectoField.value) {
+            event.preventDefault();
+            alert('Por favor seleccione un proyecto.');
+            return false;
+        }
+        
+        if (!archivoField.files.length) {
+            event.preventDefault();
+            alert('Por favor seleccione un archivo Excel.');
+            return false;
+        }
+
+        // Confirmar antes de importar
+        if (!confirm('¿Está seguro de que desea importar las actividades desde este archivo? Esta acción creará nuevas actividades en el proyecto seleccionado.')) {
+            event.preventDefault();
+            return false;
+        }
+
+        // Activar estado de envío
+        isSubmitting = true;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+        progressIndicator.style.display = 'block';
+        
+        // Opcional: reactivar después de un timeout como respaldo
+        setTimeout(function() {
+            if (isSubmitting) {
+                isSubmitting = false;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-file-import"></i> Importar Actividades';
+                progressIndicator.style.display = 'none';
+                alert('La importación está tomando más tiempo del esperado. Si no ve resultados, verifique que el archivo sea válido e intente nuevamente.');
+            }
+        }, 30000); // 30 segundos timeout
+    });
+
+    // Prevenir navegación durante el procesamiento
+    window.addEventListener('beforeunload', function(event) {
+        if (isSubmitting) {
+            event.preventDefault();
+            event.returnValue = 'Hay una importación en progreso. ¿Está seguro de que desea salir?';
+            return event.returnValue;
+        }
+    });
+});
+</script>
+{% endblock %}

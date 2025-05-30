@@ -1,11 +1,20 @@
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
+from django.utils import timezone
+from django.db.models import Case, When, Value, IntegerField
+from datetime import timedelta
+import openpyxl
+from openpyxl.styles import Font, PatternFill
+import io
 from proyectos.models import EntregaDocumental, Proyecto, EntregableProyecto
+from proyectos.forms.entregable_forms import (
+    EntregableProyectoForm, ConfiguracionMasivaForm, FiltroEntregablesForm
+)
 
 
 class EntregaDocumentalListView(LoginRequiredMixin, ListView):
@@ -171,3 +180,181 @@ def cargar_entregables_proyecto(request, proyecto_id):
             'success': False,
             'error': 'Proyecto no encontrado'
         }, status=404)
+
+
+class EntregablesDashboardView(LoginRequiredMixin, TemplateView):
+    """Dashboard principal con estadísticas de entregables"""
+    template_name = 'proyectos/entregables/dashboard.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Estadísticas generales
+        context['stats'] = {
+            'proyectos_con_entregables': Proyecto.objects.filter(
+                entregables_proyecto__isnull=False
+            ).distinct().count(),
+            'entregables_pendientes': EntregableProyecto.objects.filter(
+                estado='pendiente', seleccionado=True
+            ).count(),
+            'entregables_completados': EntregableProyecto.objects.filter(
+                estado='completado'
+            ).count(),
+            'entregables_vencidos': EntregableProyecto.objects.filter(
+                fecha_entrega__lt=timezone.now().date(),
+                estado__in=['pendiente', 'en_proceso']
+            ).count()
+        }
+        
+        # Entregables próximos a vencer (próximos 7 días)
+        fecha_limite = timezone.now().date() + timedelta(days=7)
+        context['entregables_proximos'] = EntregableProyecto.objects.filter(
+            fecha_entrega__lte=fecha_limite,
+            fecha_entrega__gte=timezone.now().date(),
+            estado__in=['pendiente', 'en_proceso'],
+            seleccionado=True
+        ).select_related('proyecto')[:10]
+        
+        # Proyectos sin entregables configurados
+        context['proyectos_sin_entregables'] = Proyecto.objects.filter(
+            entregables_proyecto__isnull=True,
+            estado__in=['en_progreso', 'iniciado']
+        )[:5]
+        
+        return context
+
+
+class ConfiguracionMasivaEntregablesView(LoginRequiredMixin, TemplateView):
+    """Vista para configurar entregables en múltiples proyectos"""
+    template_name = 'proyectos/entregables/configuracion_masiva.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['proyectos'] = Proyecto.objects.filter(
+            estado__in=['en_progreso', 'iniciado']
+        ).order_by('-fecha_creacion')
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        proyectos_ids = request.POST.getlist('proyectos')
+        accion = request.POST.get('accion')
+        
+        if accion == 'cargar_entregables':
+            for proyecto_id in proyectos_ids:
+                try:
+                    proyecto = Proyecto.objects.get(id=proyecto_id)
+                    if not proyecto.entregables_proyecto.exists():
+                        EntregableProyecto.cargar_entregables_desde_json(proyecto)
+                except Proyecto.DoesNotExist:
+                    continue
+                    
+            messages.success(request, f'Entregables cargados para {len(proyectos_ids)} proyectos.')
+        
+        return redirect('proyectos:configuracion_masiva_entregables')
+
+
+class EntregablesFiltradosView(LoginRequiredMixin, ListView):
+    """Vista con filtros avanzados para entregables"""
+    model = EntregableProyecto
+    template_name = 'proyectos/entregables/filtrados.html'
+    context_object_name = 'entregables'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = EntregableProyecto.objects.select_related('proyecto')
+        
+        # Filtros
+        fase = self.request.GET.get('fase')
+        estado = self.request.GET.get('estado')
+        proyecto_id = self.request.GET.get('proyecto')
+        obligatorio = self.request.GET.get('obligatorio')
+        vencidos = self.request.GET.get('vencidos')
+        
+        if fase:
+            queryset = queryset.filter(fase=fase)
+        if estado:
+            queryset = queryset.filter(estado=estado)
+        if proyecto_id:
+            queryset = queryset.filter(proyecto_id=proyecto_id)
+        if obligatorio:
+            queryset = queryset.filter(obligatorio=obligatorio == 'true')
+        if vencidos == 'true':
+            queryset = queryset.filter(
+                fecha_entrega__lt=timezone.now().date(),
+                estado__in=['pendiente', 'en_proceso']
+            )
+            
+        return queryset.order_by('-fecha_actualizacion')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['proyectos'] = Proyecto.objects.all().order_by('nombre_proyecto')
+        context['fases'] = EntregableProyecto.PHASE_CHOICES
+        context['estados'] = EntregableProyecto.ESTADO_CHOICES
+        
+        # Fechas para comparación en template
+        context['today'] = timezone.now().date()
+        context['fecha_limite'] = timezone.now().date() + timedelta(days=7)
+        
+        # Mantener filtros seleccionados
+        context['filtros'] = {
+            'fase': self.request.GET.get('fase', ''),
+            'estado': self.request.GET.get('estado', ''),
+            'proyecto': self.request.GET.get('proyecto', ''),
+            'obligatorio': self.request.GET.get('obligatorio', ''),
+            'vencidos': self.request.GET.get('vencidos', ''),
+        }
+        
+        return context
+
+
+class ReporteEntregablesView(LoginRequiredMixin, TemplateView):
+    """Genera reportes de entregables en Excel"""
+    
+    def get(self, request, *args, **kwargs):
+        # Crear workbook
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Reporte Entregables"
+        
+        # Headers
+        headers = [
+            'Proyecto', 'Cliente', 'Código', 'Nombre', 'Fase', 'Estado',
+            'Obligatorio', 'Seleccionado', 'Fecha Entrega', 'Creador',
+            'Consolidador', 'Archivo'
+        ]
+        
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+        
+        # Datos
+        entregables = EntregableProyecto.objects.select_related('proyecto').all()
+        for row, entregable in enumerate(entregables, 2):
+            ws.cell(row=row, column=1, value=entregable.proyecto.nombre_proyecto)
+            ws.cell(row=row, column=2, value=entregable.proyecto.cliente)
+            ws.cell(row=row, column=3, value=entregable.codigo)
+            ws.cell(row=row, column=4, value=entregable.nombre)
+            ws.cell(row=row, column=5, value=entregable.fase)
+            ws.cell(row=row, column=6, value=entregable.get_estado_display())
+            ws.cell(row=row, column=7, value='Sí' if entregable.obligatorio else 'No')
+            ws.cell(row=row, column=8, value='Sí' if entregable.seleccionado else 'No')
+            ws.cell(row=row, column=9, value=entregable.fecha_entrega)
+            ws.cell(row=row, column=10, value=entregable.creador)
+            ws.cell(row=row, column=11, value=entregable.consolidador)
+            ws.cell(row=row, column=12, value='Sí' if entregable.archivo else 'No')
+        
+        # Respuesta
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename=reporte_entregables.xlsx'
+        
+        # Guardar en memoria
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        response.write(buffer.getvalue())
+        
+        return response

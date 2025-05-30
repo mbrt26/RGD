@@ -219,6 +219,13 @@ class Actividad(models.Model):
 
     def __str__(self):
         return f"{self.actividad} - {self.proyecto}"
+        
+    @property
+    def centro_costo(self):
+        """Returns the centro_costos of the associated project"""
+        if self.proyecto:
+            return self.proyecto.centro_costos
+        return None
 
 class Recurso(models.Model):
     material_herramienta = models.CharField('Material o Herramienta', max_length=200)

@@ -1,8 +1,20 @@
 from django import forms
-from django.forms import DateInput
-from proyectos.models import Actividad
+from django.forms import DateInput, Select
+from proyectos.models import Actividad, Proyecto
+
+class ProyectoChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        # Display both the project name and centro de costos in the dropdown
+        return f"{obj.nombre_proyecto} - Centro de costo: {obj.centro_costos}"
 
 class ActividadForm(forms.ModelForm):
+    # Override the proyecto field to use our custom field
+    proyecto = ProyectoChoiceField(
+        queryset=Proyecto.objects.all(),
+        label="Proyecto",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
     class Meta:
         model = Actividad
         fields = [

@@ -11,6 +11,8 @@ urlpatterns = [
     # Clientes
     path('clientes/', login_required(views.ClienteListView.as_view()), name='cliente_list'),
     path('clientes/nuevo/', login_required(views.ClienteCreateView.as_view()), name='cliente_create'),
+    path('clientes/importar/', login_required(views.ClienteImportView.as_view()), name='cliente_import'),
+    path('clientes/plantilla-excel/', login_required(views.ClientePlantillaExcelView.as_view()), name='cliente_plantilla_excel'),
     path('clientes/<int:pk>/', login_required(views.ClienteDetailView.as_view()), name='cliente_detail'),
     path('clientes/<int:pk>/editar/', login_required(views.ClienteUpdateView.as_view()), name='cliente_update'),
     path('clientes/<int:pk>/eliminar/', login_required(views.ClienteDeleteView.as_view()), name='cliente_delete'),
@@ -40,6 +42,8 @@ urlpatterns = [
     # Tratos
     path('tratos/', login_required(views.TratoListView.as_view()), name='trato_list'),
     path('tratos/nuevo/', login_required(views.TratoCreateView.as_view()), name='trato_create'),
+    path('tratos/importar/', login_required(views.TratoImportView.as_view()), name='trato_import'),
+    path('tratos/plantilla-excel/', login_required(views.TratoPlantillaExcelView.as_view()), name='trato_plantilla_excel'),
     path('tratos/<int:pk>/', login_required(views.TratoDetailView.as_view()), name='trato_detail'),
     path('tratos/<int:pk>/editar/', login_required(views.TratoUpdateView.as_view()), name='trato_update'),
 ]

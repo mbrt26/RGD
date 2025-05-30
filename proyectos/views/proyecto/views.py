@@ -99,16 +99,33 @@ class ProyectoCreateView(LoginRequiredMixin, CreateView):
     
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
+        
+        # Importar el modelo Trato desde crm
+        from crm.models import Trato
+        
         # Filtrar solo los tratos ganados
-        form.fields['trato'].queryset = form.fields['trato'].queryset.filter(estado='ganado')
+        tratos_ganados = Trato.objects.filter(estado='ganado').select_related('cliente')
+        form.fields['trato'].queryset = tratos_ganados
         
         # Obtener lista única de clientes de los tratos ganados
-        clientes = set(trato.cliente for trato in form.fields['trato'].queryset)
+        clientes_unicos = []
+        clientes_vistos = set()
+        
+        for trato in tratos_ganados:
+            cliente_nombre = str(trato.cliente)
+            if cliente_nombre not in clientes_vistos:
+                clientes_unicos.append((cliente_nombre, cliente_nombre))
+                clientes_vistos.add(cliente_nombre)
+        
+        # Ordenar alfabéticamente
+        clientes_unicos.sort(key=lambda x: x[1])
+        
         # Convertir el campo cliente en un select con las opciones de los clientes
         form.fields['cliente'] = forms.ChoiceField(
-            choices=[(cliente, cliente) for cliente in sorted(clientes)],
+            choices=[('', '--- Seleccione un cliente ---')] + clientes_unicos,
             required=True,
-            label='Cliente'
+            label='Cliente',
+            widget=forms.Select(attrs={'class': 'form-control'})
         )
 
         # Agregar widgets de calendario para las fechas
@@ -126,22 +143,36 @@ class ProyectoCreateView(LoginRequiredMixin, CreateView):
                 'min': timezone.now().date().isoformat()
             }
         )
+        
+        # Mejorar el widget del campo trato
+        form.fields['trato'].widget.attrs.update({'class': 'form-control'})
+        form.fields['trato'].empty_label = "--- Seleccione un trato ---"
+        
         return form
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        # Importar el modelo Trato desde crm
+        from crm.models import Trato
+        
         form = context['form']
         # Agregar datos de tratos para el autocompletado
         tratos_data = []
-        for trato in form.fields['trato'].queryset:
+        tratos_ganados = Trato.objects.filter(estado='ganado').select_related('cliente')
+        
+        for trato in tratos_ganados:
             try:
                 trato_dict = {
                     'id': trato.id,
+                    'numero_oferta': str(trato.numero_oferta) if trato.numero_oferta else '',
+                    'nombre': str(trato.nombre) if trato.nombre else '',
                     'cliente': str(trato.cliente),
                     'centro_costos': str(trato.centro_costos) if trato.centro_costos else '',
                     'nombre_proyecto': str(trato.nombre_proyecto) if trato.nombre_proyecto else '',
                     'orden_contrato': str(trato.orden_contrato) if trato.orden_contrato else '',
-                    'dias_prometidos': str(trato.dias_prometidos) if trato.dias_prometidos else ''
+                    'dias_prometidos': str(trato.dias_prometidos) if trato.dias_prometidos else '',
+                    'valor': float(trato.valor) if trato.valor else 0
                 }
                 tratos_data.append(trato_dict)
             except Exception as e:
