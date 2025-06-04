@@ -1,5 +1,6 @@
 from django import forms
-from ..models import Cotizacion, VersionCotizacion
+from django.forms import ValidationError
+from ..models import Cotizacion, VersionCotizacion, Cliente, Trato
 
 class CotizacionForm(forms.ModelForm):
     class Meta:
@@ -12,26 +13,35 @@ class VersionCotizacionForm(forms.ModelForm):
         model = VersionCotizacion
         fields = ['version', 'archivo', 'razon_cambio', 'valor']
 
-class CotizacionConVersionForm(forms.Form):
-    # Campos de Cotizacion
-    cliente = forms.ModelChoiceField(queryset=None, label='Cliente')
-    trato = forms.ModelChoiceField(queryset=None, required=False, label='Trato')
-    estado = forms.ChoiceField(choices=Cotizacion.ESTADO_CHOICES, initial='borrador', label='Estado')
-    notas = forms.CharField(widget=forms.Textarea, required=False, label='Notas')
-    
-    # Campos de VersionCotizacion
-    version = forms.IntegerField(min_value=1, initial=1, label='Número de Versión')
-    archivo = forms.FileField(label='Archivo')
-    razon_cambio = forms.CharField(widget=forms.Textarea, label='Razón del Cambio')
+
+class CotizacionConVersionForm(forms.ModelForm):
+    archivo = forms.FileField(label='Archivo', required=False)
+    razon_cambio = forms.CharField(widget=forms.Textarea, label='Razón del Cambio', required=False)
     valor = forms.DecimalField(max_digits=12, decimal_places=2, label='Valor')
 
+    class Meta:
+        model = Cotizacion
+        fields = ['cliente', 'trato', 'estado', 'notas', 'valor']
+
     def __init__(self, *args, **kwargs):
-        from ..models import Cliente, Trato
         super().__init__(*args, **kwargs)
         self.fields['cliente'].queryset = Cliente.objects.all()
+        
+        # Try to set trato queryset based on selected cliente
         if 'cliente' in self.data:
             try:
                 cliente_id = int(self.data.get('cliente'))
                 self.fields['trato'].queryset = Trato.objects.filter(cliente_id=cliente_id)
             except (ValueError, TypeError):
-                pass
+                self.fields['trato'].queryset = Trato.objects.none()
+        elif self.instance.pk and hasattr(self.instance, 'cliente') and self.instance.cliente is not None:
+            # Only try to filter tratos if we have a saved instance with a cliente
+            self.fields['trato'].queryset = Trato.objects.filter(cliente=self.instance.cliente)
+        else:
+            self.fields['trato'].queryset = Trato.objects.none()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not self.instance.pk and not cleaned_data.get('archivo'):
+            raise ValidationError('El archivo es requerido para crear una nueva cotización')
+        return cleaned_data

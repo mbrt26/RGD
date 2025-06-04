@@ -1,14 +1,15 @@
 {% extends "base/base.html" %}
 {% load static %}
+{% load humanize %}
 
-{% block title %}Dashboard CRM{% endblock title %}
+{% block inner_title %}Dashboard CRM{% endblock inner_title %}
 
-{% block extra_css %}
+{% block inner_css %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
-{% endblock extra_css %}
+{% endblock inner_css %}
 
-{% block content %}
+{% block inner_content %}
 {{ tratos_por_estado|json_script:"tratos-por-estado-data" }}
 {{ tratos_por_fuente|json_script:"tratos-por-fuente-data" }}
 {{ ultimos_tratos|json_script:"ultimos-tratos-data" }}
@@ -48,8 +49,8 @@
                     <select name="tipo_negociacion" id="tipo_negociacion" class="form-select">
                         <option value="">Todos los tipos</option>
                         {% for tipo, nombre in tipos_negociacion %}
-                            <option value="{{ tipo.id }}" {% if filtros.tipo_negociacion == tipo.id|stringformat:"s" %}selected{% endif %}>
-                                {{ tipo.nombre }}
+                            <option value="{{ tipo }}" {% if filtros.tipo_negociacion == tipo %}selected{% endif %}>
+                                {{ nombre }}
                             </option>
                         {% endfor %}
                     </select>
@@ -59,6 +60,8 @@
                     <select name="periodo" id="periodo" class="form-select">
                             <option value="mes" {% if filtros.periodo == 'mes' %}selected{% endif %}>Este mes</option>
                             <option value="trimestre" {% if filtros.periodo == 'trimestre' %}selected{% endif %}>Este trimestre</option>
+                            <option value="anio" {% if filtros.periodo == 'anio' %}selected{% endif %}>Este año</option>
+                            <option value="todo" {% if filtros.periodo == 'todo' %}selected{% endif %}>Todo el tiempo</option>
                     </select>
                 </div>
                 <div class="col-md-2" id="trimestre-container" style="display: none;">
@@ -111,7 +114,7 @@
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <h5 class="mb-0">${{ total_ganado|floatformat:2 }}</h5>
+                            <h5 class="mb-0">${{ total_ganado|floatformat:2|intcomma }}</h5>
                             <div class="small">Total Ganado</div>
                         </div>
                         <div class="fa-3x">
@@ -225,7 +228,7 @@
                                             {{ trato.cliente|truncatechars:30 }}
                                         </a>
                                     </td>
-                                    <td>${{ trato.valor|floatformat:2 }}</td>
+                                    <td>${{ trato.valor|floatformat:2|intcomma }}</td>
                                     <td>
                                         <span class="badge bg-{{ trato.estado }}">
                                             {{ trato.get_estado_display }}
@@ -291,12 +294,16 @@
         </div>
     </div>
 </div>
-{% endblock content %}
+{% endblock inner_content %}
 
-{% block extra_js %}
+{% block inner_js %}
 {{ block.super }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script>
+    // Registrar el plugin de etiquetas de datos
+    Chart.register(ChartDataLabels);
+    
     // Variables globales
     let tratosPorEstadoChart = null;
     let tratosPorFuenteChart = null;
@@ -373,17 +380,40 @@
     
     // Función para actualizar los gráficos con nuevos datos
     function updateCharts(data) {
+        if (!data) return;
+        
+        // Función para formatear valores monetarios
+        const formatCurrency = (value) => {
+            if (value === undefined || value === null || value === 0) return '$0';
+            return '$' + parseFloat(value).toLocaleString('es-CL', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+        };
+        
         // Actualizar gráfico de tratos por estado
-        if (tratosPorEstadoChart) {
-            tratosPorEstadoChart.data.datasets[0].data = Object.values(data.tratos_por_estado);
-            tratosPorEstadoChart.update();
+        if (window.tratosPorEstadoChart && data.tratos_por_estado) {
+            const estadoLabels = ['nuevo', 'cotizacion', 'negociacion', 'ganado', 'perdido', 'cancelado'];
+            const estadoData = estadoLabels.map(estado => data.tratos_por_estado[estado] || 0);
+            
+            // Encontrar el valor máximo y actualizar el eje Y para mantener el espacio adecuado
+            const maxValue = Math.max(...estadoData, 1); // Mínimo 1 para evitar escalas vacías
+            const yAxisMax = maxValue * 1.25; // Añadir 25% de espacio adicional
+            
+            window.tratosPorEstadoChart.options.scales.y.suggestedMax = yAxisMax;
+            window.tratosPorEstadoChart.data.datasets[0].data = estadoData;
+            window.tratosPorEstadoChart.update();
         }
         
         // Actualizar gráfico de tratos por fuente
-        if (tratosPorFuenteChart) {
-            tratosPorFuenteChart.data.labels = Object.keys(data.tratos_por_fuente);
-            tratosPorFuenteChart.data.datasets[0].data = Object.values(data.tratos_por_fuente);
-            tratosPorFuenteChart.update();
+        if (window.tratosPorFuenteChart && data.tratos_por_fuente) {
+            const fuentes = Object.entries(data.tratos_por_fuente);
+            const labels = fuentes.length > 0 ? fuentes.map(([fuente]) => fuente) : ['Sin datos'];
+            const values = fuentes.length > 0 ? fuentes.map(([_, total]) => total) : [0];
+            
+            window.tratosPorFuenteChart.data.labels = labels;
+            window.tratosPorFuenteChart.data.datasets[0].data = values;
+            window.tratosPorFuenteChart.update();
         }
     }
     
@@ -485,38 +515,77 @@
     // Función para inicializar los gráficos
     function initCharts() {
         // Obtener datos iniciales de los elementos JSON
-        const tratosPorEstadoData = JSON.parse(document.getElementById('tratos-por-estado-data')?.textContent || '{}');
-        const tratosPorFuenteData = JSON.parse(document.getElementById('tratos-por-fuente-data')?.textContent || '{}');
+        let tratosPorEstadoData;
+        let tratosPorFuenteData;
         
-        // Inicializar gráfico de tratos por estado
+        try {
+            const tratosPorEstadoDataEl = document.getElementById('tratos-por-estado-data');
+            const tratosPorFuenteDataEl = document.getElementById('tratos-por-fuente-data');
+            
+            if (tratosPorEstadoDataEl && tratosPorEstadoDataEl.textContent) {
+                tratosPorEstadoData = JSON.parse(tratosPorEstadoDataEl.textContent);
+                console.log("Datos de estado cargados:", tratosPorEstadoData);
+            } else {
+                console.warn("Elemento tratos-por-estado-data no encontrado o vacío");
+                tratosPorEstadoData = {};
+            }
+            
+            if (tratosPorFuenteDataEl && tratosPorFuenteDataEl.textContent) {
+                tratosPorFuenteData = JSON.parse(tratosPorFuenteDataEl.textContent);
+                console.log("Datos de fuente cargados:", tratosPorFuenteData);
+            } else {
+                console.warn("Elemento tratos-por-fuente-data no encontrado o vacío");
+                tratosPorFuenteData = {};
+            }
+        } catch (error) {
+            console.error("Error al parsear datos JSON:", error);
+            tratosPorEstadoData = {};
+            tratosPorFuenteData = {};
+        }
+        
+        // Función para formatear valores monetarios
+        const formatCurrency = (value) => {
+            if (value === undefined || value === null || value === 0) return '$0';
+            return '$' + parseFloat(value).toLocaleString('es-CL', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+        };
+        
+        // Inicializar gráfico de tratos por estado (ahora mostrando valores estimados)
         const tratosPorEstadoCtx = document.getElementById('tratosPorEstadoChart');
         if (tratosPorEstadoCtx) {
+            const estadoLabels = ['nuevo', 'cotizacion', 'negociacion', 'ganado', 'perdido', 'cancelado'];
+            const estadoDisplayLabels = ['Nuevo', 'Cotización', 'Negociación', 'Ganado', 'Perdido', 'Cancelado'];
+            
+            const estadoData = estadoLabels.map(estado => tratosPorEstadoData[estado] || 0);
+            
+            // Encontrar el valor máximo para ajustar el eje Y con espacio suficiente
+            const maxValue = Math.max(...estadoData, 1); // Mínimo 1 para evitar escalas vacías
+            const yAxisMax = maxValue * 1.25; // Añadir 25% de espacio adicional
+            
             window.tratosPorEstadoChart = new Chart(tratosPorEstadoCtx, {
                 type: 'bar',
                 data: {
-                    labels: ['Nuevo', 'Cotización', 'Negociación', 'Ganado', 'Perdido'],
+                    labels: estadoDisplayLabels,
                     datasets: [{
-                        label: 'Cantidad de Tratos',
-                        data: [
-                            tratosPorEstadoData.nuevo || 0,
-                            tratosPorEstadoData.cotizacion || 0,
-                            tratosPorEstadoData.negociacion || 0,
-                            tratosPorEstadoData.ganado || 0,
-                            tratosPorEstadoData.perdido || 0
-                        ],
+                        label: 'Valor Estimado',
+                        data: estadoData,
                         backgroundColor: [
                             'rgba(54, 162, 235, 0.7)',  // Azul - Nuevo
                             'rgba(255, 206, 86, 0.7)',  // Amarillo - Cotización
                             'rgba(255, 159, 64, 0.7)',  // Naranja - Negociación
                             'rgba(75, 192, 192, 0.7)',  // Verde - Ganado
-                            'rgba(255, 99, 132, 0.7)'   // Rojo - Perdido
+                            'rgba(255, 99, 132, 0.7)',  // Rojo - Perdido
+                            'rgba(153, 102, 255, 0.7)'  // Púrpura - Cancelado
                         ],
                         borderColor: [
                             'rgba(54, 162, 235, 1)',
                             'rgba(255, 206, 86, 1)',
                             'rgba(255, 159, 64, 1)',
                             'rgba(75, 192, 192, 1)',
-                            'rgba(255, 99, 132, 1)'
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(153, 102, 255, 1)'
                         ],
                         borderWidth: 1
                     }]
@@ -529,15 +598,33 @@
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return context.parsed.y + ' tratos';
+                                    return 'Valor Estimado: ' + formatCurrency(context.parsed.y);
                                 }
                             }
+                        },
+                        datalabels: {
+                            display: true,
+                            color: '#000',
+                            font: {
+                                weight: 'bold'
+                            },
+                            formatter: function(value) {
+                                return value > 0 ? formatCurrency(value) : '';  // No mostrar etiqueta si el valor es 0
+                            },
+                            padding: 6,
+                            anchor: 'end',
+                            align: 'top'
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: { stepSize: 1 }
+                            suggestedMax: yAxisMax, // Establecer un máximo sugerido con espacio adicional
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
                         }
                     }
                 }
@@ -547,7 +634,7 @@
         // Inicializar gráfico de tratos por fuente
         const tratosPorFuenteCtx = document.getElementById('tratosPorFuenteChart');
         if (tratosPorFuenteCtx) {
-            const fuentes = Object.entries(tratosPorFuenteData);
+            const fuentes = Object.entries(tratosPorFuenteData || {});
             const labels = fuentes.length > 0 ? fuentes.map(([fuente]) => fuente) : ['Sin datos'];
             const values = fuentes.length > 0 ? fuentes.map(([_, total]) => total) : [0];
             
@@ -562,7 +649,8 @@
                             'rgba(255, 99, 132, 0.7)',
                             'rgba(255, 206, 86, 0.7)',
                             'rgba(75, 192, 192, 0.7)',
-                            'rgba(153, 102, 255, 0.7)'
+                            'rgba(153, 102, 255, 0.7)',
+                            'rgba(255, 159, 64, 0.7)'
                         ],
                         borderWidth: 1
                     }]
@@ -578,6 +666,17 @@
                                     return context.label + ': ' + context.raw + ' tratos';
                                 }
                             }
+                        },
+                        datalabels: {
+                            display: true,
+                            color: '#fff',
+                            font: {
+                                weight: 'bold',
+                                size: 12
+                            },
+                            formatter: function(value) {
+                                return value > 0 ? value : '';  // No mostrar etiqueta si el valor es 0
+                            }
                         }
                     }
                 }
@@ -589,15 +688,26 @@
     function updateCharts(data) {
         if (!data) return;
         
+        // Función para formatear valores monetarios
+        const formatCurrency = (value) => {
+            if (value === undefined || value === null || value === 0) return '$0';
+            return '$' + parseFloat(value).toLocaleString('es-CL', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+        };
+        
         // Actualizar gráfico de tratos por estado
         if (window.tratosPorEstadoChart && data.tratos_por_estado) {
-            window.tratosPorEstadoChart.data.datasets[0].data = [
-                data.tratos_por_estado.nuevo || 0,
-                data.tratos_por_estado.cotizacion || 0,
-                data.tratos_por_estado.negociacion || 0,
-                data.tratos_por_estado.ganado || 0,
-                data.tratos_por_estado.perdido || 0
-            ];
+            const estadoLabels = ['nuevo', 'cotizacion', 'negociacion', 'ganado', 'perdido', 'cancelado'];
+            const estadoData = estadoLabels.map(estado => data.tratos_por_estado[estado] || 0);
+            
+            // Encontrar el valor máximo y actualizar el eje Y para mantener el espacio adecuado
+            const maxValue = Math.max(...estadoData, 1); // Mínimo 1 para evitar escalas vacías
+            const yAxisMax = maxValue * 1.25; // Añadir 25% de espacio adicional
+            
+            window.tratosPorEstadoChart.options.scales.y.suggestedMax = yAxisMax;
+            window.tratosPorEstadoChart.data.datasets[0].data = estadoData;
             window.tratosPorEstadoChart.update();
         }
         // Actualizar gráfico de tratos por fuente
@@ -609,54 +719,6 @@
             window.tratosPorFuenteChart.data.labels = labels;
             window.tratosPorFuenteChart.data.datasets[0].data = values;
             window.tratosPorFuenteChart.update();
-        }
-    }
-    
-    // Inicializar todo cuando el DOM esté listo
-    document.addEventListener('DOMContentLoaded', function() {
-        // Obtener referencias a los elementos del formulario
-        const periodoSelect = document.getElementById('periodo');
-        const trimestreContainer = document.getElementById('trimestre-container');
-        const filterForm = document.querySelector('form[method="get"]');
-        
-        // Inicializar selectores
-        if (periodoSelect && trimestreContainer) {
-            toggleTrimestreSelector();
-        }
-        
-        // Manejar cambios en el selector de período
-        if (periodoSelect) {
-            periodoSelect.addEventListener('change', function() {
-                toggleTrimestreSelector();
-                if (periodoSelect.value !== 'trimestre') {
-                    loadDashboardData();
-                }
-            });
-        }
-        
-        // Manejar cambios en los filtros
-        const filterInputs = document.querySelectorAll('select[name], input[name]');
-        filterInputs.forEach(function(element) {
-            if (element.id !== 'trimestre' || (periodoSelect && periodoSelect.value === 'trimestre')) {
-                element.addEventListener('change', loadDashboardData);
-            }
-        });
-        
-        // Prevenir envío del formulario tradicional
-        if (filterForm) {
-            filterForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                loadDashboardData();
-            });
-        }
-        
-        // Inicializar gráficos
-        initCharts();
-    });
-</script>
-{% endblock extra_js %}
-                }
-            });
         }
     }
     
@@ -699,3 +761,4 @@
         initCharts();
     });
 </script>
+{% endblock inner_js %}

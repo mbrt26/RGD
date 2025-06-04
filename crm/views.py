@@ -32,26 +32,29 @@ class CRMDashboardView(LoginRequiredMixin, TemplateView):
         cliente_id = request.GET.get('cliente')
         comercial_id = request.GET.get('comercial')
         tipo_negociacion = request.GET.get('tipo_negociacion')
-        periodo = request.GET.get('periodo', 'mes')  # mes o trimestre
-        trimestre = request.GET.get('trimestre')  # 1, 2, 3, 4
+        periodo = request.GET.get('periodo', 'mes')
+        trimestre = request.GET.get('trimestre')
 
         # Base queryset para tratos
-        tratos_qs = Trato.objects.all()  # Cambiado para incluir todos los tratos, no solo los ganados
+        tratos_qs = Trato.objects.all()
 
-        # Aplicar filtros
-        if cliente_id:
+        # Aplicar filtros solo si tienen valor
+        if cliente_id and cliente_id != '':
             tratos_qs = tratos_qs.filter(cliente_id=cliente_id)
-        if comercial_id:
+        if comercial_id and comercial_id != '':
             tratos_qs = tratos_qs.filter(responsable_id=comercial_id)
-        if tipo_negociacion:
+        if tipo_negociacion and tipo_negociacion != '':
             tratos_qs = tratos_qs.filter(tipo_negociacion=tipo_negociacion)
 
         # Filtrar por período
+        año_actual = today.year
+        
         if periodo == 'mes':
+            # Filtrar por el mes actual
             primer_dia_mes = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            tratos_qs = tratos_qs.filter(fecha_cierre__gte=primer_dia_mes)
-        elif periodo == 'trimestre' and trimestre:
-            año_actual = today.year
+            tratos_qs = tratos_qs.filter(fecha_creacion__gte=primer_dia_mes)
+        elif periodo == 'trimestre' and trimestre and trimestre != '':
+            # Filtrar por el trimestre seleccionado del año actual
             trimestres = {
                 '1': (1, 3),   # Enero - Marzo
                 '2': (4, 6),   # Abril - Junio
@@ -60,50 +63,90 @@ class CRMDashboardView(LoginRequiredMixin, TemplateView):
             }
             if trimestre in trimestres:
                 mes_inicio, mes_fin = trimestres[trimestre]
-                fecha_inicio = today.replace(month=mes_inicio, day=1, hour=0, minute=0, second=0, microsecond=0)
+                fecha_inicio = today.replace(year=año_actual, month=mes_inicio, day=1, hour=0, minute=0, second=0, microsecond=0)
                 if mes_fin == 12:
-                    fecha_fin = today.replace(month=mes_fin, day=31, hour=23, minute=59, second=59, microsecond=999999)
+                    fecha_fin = today.replace(year=año_actual, month=mes_fin, day=31, hour=23, minute=59, second=59, microsecond=999999)
                 else:
-                    fecha_fin = today.replace(month=mes_fin + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
-                tratos_qs = tratos_qs.filter(fecha_cierre__range=(fecha_inicio, fecha_fin))
+                    fecha_fin = today.replace(year=año_actual, month=mes_fin + 1, day=1, hour=0, minute=0, second=0, microsecond=0) - timezone.timedelta(microseconds=1)
+                tratos_qs = tratos_qs.filter(fecha_creacion__range=(fecha_inicio, fecha_fin))
+        elif periodo == 'anio':
+            # Filtrar por el año actual, pero si se especifica un trimestre, filtramos por ese trimestre
+            primer_dia_año = today.replace(year=año_actual, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            ultimo_dia_año = today.replace(year=año_actual, month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
+            
+            if trimestre and trimestre in ['1', '2', '3', '4']:
+                # Si se especificó un trimestre aunque el periodo sea 'anio', también filtramos por ese trimestre
+                trimestres = {
+                    '1': (1, 3),   # Enero - Marzo
+                    '2': (4, 6),   # Abril - Junio
+                    '3': (7, 9),   # Julio - Septiembre
+                    '4': (10, 12), # Octubre - Diciembre
+                }
+                mes_inicio, mes_fin = trimestres[trimestre]
+                fecha_inicio = today.replace(year=año_actual, month=mes_inicio, day=1, hour=0, minute=0, second=0, microsecond=0)
+                if mes_fin == 12:
+                    fecha_fin = today.replace(year=año_actual, month=mes_fin, day=31, hour=23, minute=59, second=59, microsecond=999999)
+                else:
+                    fecha_fin = today.replace(year=año_actual, month=mes_fin + 1, day=1, hour=0, minute=0, second=0, microsecond=0) - timezone.timedelta(microseconds=1)
+                
+                # Aplicamos el filtro de trimestre
+                tratos_qs = tratos_qs.filter(fecha_creacion__range=(fecha_inicio, fecha_fin))
+            else:
+                # Si no se especificó trimestre, filtramos por todo el año
+                tratos_qs = tratos_qs.filter(fecha_creacion__range=(primer_dia_año, ultimo_dia_año))
+        elif periodo == 'todo':
+            # No aplicar filtro de fecha, mostrar todos los registros
+            pass
+        
+        # Debug para ver cuantos tratos y qué valores hay
+        print(f"Filtros aplicados: periodo={periodo}, trimestre={trimestre}")
+        print(f"Total tratos en queryset: {tratos_qs.count()}")
+        ganados = tratos_qs.filter(estado='ganado')
+        print(f"Tratos ganados: {ganados.count()}, Valor total ganado: {ganados.aggregate(total=Sum('valor'))['total'] or 0}")
         
         return tratos_qs
 
     def get_dashboard_data(self, request):
         """Obtiene los datos del dashboard según los filtros aplicados"""
         tratos_qs = self.get_queryset_filters(request)
-        tratos_ganados_qs = tratos_qs.filter(estado='ganado')
         today = timezone.now()
         
+        # Debug
+        print(f"Filtros aplicados. Total tratos en queryset: {tratos_qs.count()}")
+        
         # Calcular métricas
-        total_ganado = tratos_ganados_qs.aggregate(total=Sum('valor'))['total'] or 0
+        total_ganado = tratos_qs.filter(estado='ganado').aggregate(total=Sum('valor'))['total'] or 0
         total_clientes = Cliente.objects.count()
         total_tratos = tratos_qs.count()
         tratos_abiertos = tratos_qs.exclude(estado__in=['ganado', 'perdido', 'cancelado']).count()
         valor_total_tratos = tratos_qs.aggregate(total=Sum('valor'))['total'] or 0
         
-        # Tratos por estado
-        tratos_por_estado = {
-            'nuevo': tratos_qs.filter(estado='nuevo').count(),
-            'cotizacion': tratos_qs.filter(estado='cotizacion').count(),
-            'negociacion': tratos_qs.filter(estado='negociacion').count(),
-            'ganado': tratos_qs.filter(estado='ganado').count(),
-            'perdido': tratos_qs.filter(estado='perdido').count(),
-        }
+        # Tratos por estado (ahora calculando la suma del valor, no solo contando)
+        tratos_por_estado = {}
+        tratos_por_estado_count = {}  # Mantener también el conteo para referencias
+        for estado_code, estado_name in Trato.ESTADO_CHOICES:
+            # Obtener suma del valor de tratos en este estado
+            valor_sum = tratos_qs.filter(estado=estado_code).aggregate(total=Sum('valor'))['total'] or 0
+            count = tratos_qs.filter(estado=estado_code).count()
+            tratos_por_estado[estado_code] = float(valor_sum)
+            tratos_por_estado_count[estado_code] = count
+            # Debug
+            print(f"Estado: {estado_name} ({estado_code}): {count} tratos, valor: ${valor_sum}")
         
         # Tratos por fuente
-        tratos_por_fuente = dict(Trato.FUENTE_CHOICES)
-        fuentes_data = {}
-        for fuente in tratos_por_fuente:
-            fuentes_data[tratos_por_fuente[fuente]] = tratos_qs.filter(fuente=fuente).count()
+        tratos_por_fuente = {}
+        for fuente_code, fuente_name in Trato.FUENTE_CHOICES:
+            count = tratos_qs.filter(fuente=fuente_code).count()
+            tratos_por_fuente[fuente_name] = count
+            # Debug
+            print(f"Fuente: {fuente_name} ({fuente_code}): {count} tratos")
         
         # Últimos tratos
         ultimos_tratos = []
         for trato in tratos_qs.order_by('-fecha_creacion')[:5]:
             ultimos_tratos.append({
                 'id': trato.id,
-                'nombre': trato.nombre,
-                'cliente': trato.cliente.nombre,
+                'cliente': str(trato.cliente),
                 'valor': float(trato.valor) if trato.valor else 0,
                 'estado': trato.get_estado_display(),
                 'fecha_creacion': trato.fecha_creacion.strftime('%d/%m/%Y')
@@ -122,26 +165,26 @@ class CRMDashboardView(LoginRequiredMixin, TemplateView):
             'tratos_abiertos': tratos_abiertos,
             'valor_total_tratos': float(valor_total_tratos),
             'tratos_por_estado': tratos_por_estado,
-            'tratos_por_fuente': fuentes_data,
+            'tratos_por_estado_count': tratos_por_estado_count,  # Incluimos también el conteo
+            'tratos_por_fuente': tratos_por_fuente,
             'ultimos_tratos': ultimos_tratos,
+            'tareas_atrasadas': tareas_atrasadas,
         }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         request = self.request
         
-        # Obtener datos del dashboard
+        # Obtener datos del dashboard con los filtros aplicados
         dashboard_data = self.get_dashboard_data(request)
-        
-        # Agregar datos del dashboard al contexto
         context.update(dashboard_data)
         
         # Agregar opciones para los filtros
-        context['clientes'] = list(Cliente.objects.values('id', 'nombre'))
-        context['comerciales'] = list(get_user_model().objects.filter(
+        context['clientes'] = Cliente.objects.all().order_by('nombre')
+        context['comerciales'] = get_user_model().objects.filter(
             tratos__isnull=False
-        ).distinct().values('id', 'first_name', 'last_name'))
-        context['tipos_negociacion'] = [{'id': k, 'nombre': v} for k, v in Trato.TIPO_CHOICES]
+        ).distinct().order_by('first_name', 'last_name')
+        context['tipos_negociacion'] = Trato.TIPO_CHOICES
         
         # Mantener filtros seleccionados en el contexto
         context['filtros'] = {
@@ -152,29 +195,25 @@ class CRMDashboardView(LoginRequiredMixin, TemplateView):
             'trimestre': request.GET.get('trimestre', '')
         }
         
-        # Asegurarse de que los datos de los gráficos estén en el formato correcto
-        if 'tratos_por_estado' not in context:
-            context['tratos_por_estado'] = {
-                'nuevo': 0,
-                'cotizacion': 0,
-                'negociacion': 0,
-                'ganado': 0,
-                'perdido': 0
-            }
-            
-        if 'tratos_por_fuente' not in context:
-            context['tratos_por_fuente'] = {}
-            
-        if 'ultimos_tratos' not in context:
-            context['ultimos_tratos'] = []
-        
         return context
     
     def get(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            # Si es una petición AJAX, devolver los datos en formato JSON
-            return JsonResponse(context, safe=False, json_dumps_params={'ensure_ascii': False})
+            # Si es una petición AJAX, devolver solo los datos necesarios en formato JSON
+            # Filtrar solo los datos que son serializables a JSON
+            json_data = {
+                'total_ganado': context.get('total_ganado', 0),
+                'total_clientes': context.get('total_clientes', 0),
+                'total_tratos': context.get('total_tratos', 0),
+                'tratos_abiertos': context.get('tratos_abiertos', 0),
+                'valor_total_tratos': context.get('valor_total_tratos', 0),
+                'tratos_por_estado': context.get('tratos_por_estado', {}),
+                'tratos_por_fuente': context.get('tratos_por_fuente', {}),
+                'ultimos_tratos': context.get('ultimos_tratos', []),
+                'tareas_atrasadas': context.get('tareas_atrasadas', 0),
+            }
+            return JsonResponse(json_data, json_dumps_params={'ensure_ascii': False})
         return self.render_to_response(context)
 
 # Vistas para Cliente
@@ -397,9 +436,18 @@ class CotizacionUpdateView(LoginRequiredMixin, UpdateView):
     form_class = CotizacionConVersionForm
     success_url = reverse_lazy('crm:cotizacion_list')
 
+    def get_initial(self):
+        initial = super().get_initial()
+        if self.object:
+            initial['valor'] = self.object.monto
+        return initial
+
     def form_valid(self, form):
         with transaction.atomic():
-            cotizacion = form.save()
+            cotizacion = form.save(commit=False)
+            cotizacion.monto = form.cleaned_data['valor']
+            cotizacion.save()
+            
             if 'archivo' in self.request.FILES:
                 # Obtener la última versión
                 ultima_version = VersionCotizacion.objects.filter(
@@ -408,13 +456,13 @@ class CotizacionUpdateView(LoginRequiredMixin, UpdateView):
                 
                 nuevo_numero_version = 1 if not ultima_version else ultima_version.version + 1
                 
-                # Crear nueva versión
+                # Crear nueva versión solo si se subió un archivo
                 VersionCotizacion.objects.create(
                     cotizacion=cotizacion,
                     version=nuevo_numero_version,
                     archivo=self.request.FILES['archivo'],
-                    razon_cambio=form.cleaned_data['razon_cambio'],
-                    valor=cotizacion.monto,
+                    razon_cambio=form.cleaned_data.get('razon_cambio', ''),
+                    valor=form.cleaned_data['valor'],
                     creado_por=self.request.user
                 )
             

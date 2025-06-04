@@ -2,6 +2,8 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% load humanize %}
+
 {% block extra_css %}
 <style type="text/css">
     .progress-container {
@@ -24,6 +26,32 @@
     }
     .progress-bar-100 {
         width: 100%;
+    }
+    
+    /* Estilos personalizados para badges de estado */
+    .badge.bg-nuevo {
+        background-color: #3498db !important; /* Azul */
+        color: white !important;
+    }
+    .badge.bg-cotizacion {
+        background-color: #f39c12 !important; /* Naranja */
+        color: white !important;
+    }
+    .badge.bg-negociacion {
+        background-color: #9b59b6 !important; /* Púrpura */
+        color: white !important;
+    }
+    .badge.bg-ganado {
+        background-color: #2ecc71 !important; /* Verde */
+        color: white !important;
+    }
+    .badge.bg-perdido {
+        background-color: #e74c3c !important; /* Rojo */
+        color: white !important;
+    }
+    .badge.bg-cancelado {
+        background-color: #7f8c8d !important; /* Gris */
+        color: white !important;
     }
 </style>
 {% endblock %}
@@ -59,7 +87,7 @@
             </a>
         </td>
         <td>{{ trato.cliente|default:'Sin cliente' }}</td>
-        <td>${{ trato.valor|default:0|floatformat:2 }}</td>
+        <td>${{ trato.valor|default:0|floatformat:2|intcomma }}</td>
         <td>
             <span class="badge bg-{{ trato.estado }}">
                 {{ trato.get_estado_display }}

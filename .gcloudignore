@@ -1,0 +1,11 @@
+x   .git
+.gitignore
+__pycache__/
+*.pyc
+env/
+.env
+.DS_Store
+*.sqlite3
+media/
+!requirements.txt
+!manage.py
