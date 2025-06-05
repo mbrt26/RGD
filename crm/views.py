@@ -862,3 +862,97 @@ class TratoPlantillaExcelView(LoginRequiredMixin, TemplateView):
         response['Content-Disposition'] = 'attachment; filename="plantilla_tratos.xlsx"'
         
         return response
+
+from django.http import HttpResponse
+from django.core.management import call_command
+from django.contrib.auth.decorators import user_passes_test
+from django.views.decorators.csrf import csrf_exempt
+import io
+import sys
+
+@csrf_exempt
+def setup_initial_config(request):
+    """
+    Vista para ejecutar la configuración inicial de RGD AIRE
+    Solo disponible para configuración inicial
+    """
+    if request.method != 'POST' and 'setup_key' not in request.GET:
+        return HttpResponse("""
+        <html>
+        <head><title>Configuración Inicial RGD AIRE</title></head>
+        <body>
+            <h1>🚀 Configuración Inicial RGD AIRE</h1>
+            <p>Esta página ejecuta la configuración inicial de la aplicación.</p>
+            <form method="post">
+                <input type="hidden" name="setup_key" value="rgd_aire_initial_setup">
+                <button type="submit" style="padding: 10px 20px; background: #007cba; color: white; border: none; border-radius: 5px;">
+                    ▶️ Ejecutar Configuración Inicial
+                </button>
+            </form>
+        </body>
+        </html>
+        """)
+    
+    # Capturar output
+    output = io.StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = output
+    
+    try:
+        print("🚀 Iniciando configuración de RGD AIRE...")
+        
+        # 1. Ejecutar migraciones
+        print("📊 Ejecutando migraciones de base de datos...")
+        call_command('migrate', verbosity=2, interactive=False)
+        print("✅ Migraciones completadas exitosamente")
+        
+        # 2. Crear superadministrador
+        print("👤 Configurando superadministrador...")
+        try:
+            call_command('create_secure_admin')
+            print("✅ Superadministrador configurado")
+        except Exception as e:
+            print(f"⚠️  Error al crear superadministrador: {e}")
+            print("💡 Puede que ya exista un administrador")
+        
+        # 3. Verificar configuración
+        print("🔍 Verificando configuración del sistema...")
+        call_command('check', deploy=True)
+        print("✅ Sistema verificado correctamente")
+        
+        print("🎉 ¡Configuración inicial completada exitosamente!")
+        print()
+        print("📋 Información de acceso:")
+        print("🌐 URL: https://rgd-aire-dot-appsindunnova.rj.r.appspot.com")
+        print("🔐 Admin: https://rgd-aire-dot-appsindunnova.rj.r.appspot.com/admin/")
+        print("👤 Usuario: rgd_admin")
+        print("📧 Email: admin@rgdaire.com")
+        
+    except Exception as e:
+        print(f"❌ Error durante la configuración: {e}")
+        import traceback
+        print(traceback.format_exc())
+    finally:
+        sys.stdout = old_stdout
+    
+    output_text = output.getvalue()
+    
+    return HttpResponse(f"""
+    <html>
+    <head>
+        <title>Configuración RGD AIRE - Completada</title>
+        <style>
+            body {{ font-family: monospace; margin: 20px; }}
+            .output {{ background: #f5f5f5; padding: 15px; border-radius: 5px; white-space: pre-wrap; }}
+            .success {{ color: green; }}
+            .error {{ color: red; }}
+        </style>
+    </head>
+    <body>
+        <h1>✅ Configuración RGD AIRE</h1>
+        <div class="output">{output_text}</div>
+        <p><a href="/">← Volver a la aplicación</a></p>
+        <p><a href="/admin/">🔐 Ir al panel de administración</a></p>
+    </body>
+    </html>
+    """)

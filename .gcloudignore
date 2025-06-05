@@ -1,11 +1,67 @@
-x   .git
-.gitignore
-__pycache__/
-*.pyc
-env/
-.env
+# Archivos y directorios que no se deben subir a App Engine
+# Este archivo reemplaza la sección skip_files en app.yaml para Python 3.12
+
+# Archivos temporales y de respaldo
+*~
+*.bak
+*.tmp
+*.log
 .DS_Store
-*.sqlite3
-media/
-!requirements.txt
-!manage.py
+
+# Archivos de Python compilados
+*.pyc
+*.pyo
+__pycache__/
+*.py[co]
+
+# Entornos virtuales
+venv/
+env/
+.venv/
+.env/
+
+# Control de versiones
+.git/
+.gitignore
+.gitattributes
+.hg/
+.svn/
+.bzr/
+
+# IDEs y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Archivos de testing
+.pytest_cache/
+.coverage
+.tox/
+.cache/
+htmlcov/
+
+# Dependencias de Node.js (si las hay)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Base de datos local
+db.sqlite3
+*.db
+
+# Archivos de configuración local
+local_settings.py
+.env
+.env.local
+
+# Documentación y README (opcional, descomenta si no quieres subirlos)
+# README.md
+# *.md
+
+# Archivos específicos del proyecto que no necesitas en producción
+app.yaml.backup
+migrate.sh
+update_*.py
+*.ds

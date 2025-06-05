@@ -8,6 +8,9 @@ urlpatterns = [
     # Dashboard
     path('', login_required(views.CRMDashboardView.as_view()), name='dashboard'),
     
+    # Configuración inicial (sin login requerido para setup inicial)
+    path('setup/', views.setup_initial_config, name='setup_initial'),
+    
     # Clientes
     path('clientes/', login_required(views.ClienteListView.as_view()), name='cliente_list'),
     path('clientes/nuevo/', login_required(views.ClienteCreateView.as_view()), name='cliente_create'),

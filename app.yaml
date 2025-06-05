@@ -1,0 +1,90 @@
+runtime: python312
+
+# Crear un servicio separado para RGD AIRE (no afecta el servicio default de ARCOPACK)
+service: rgd-aire
+
+# Configuración del entrypoint simplificado - el usuario admin se crea automáticamente en main.py
+entrypoint: >
+  bash -c "python manage.py migrate --noinput --settings=rgd_aire.settings_appengine \
+           && python manage.py collectstatic --noinput --settings=rgd_aire.settings_appengine \
+           && gunicorn rgd_aire.wsgi:application --bind 0.0.0.0:\$PORT"
+
+# Variables de entorno para RGD AIRE
+env_variables:
+  DJANGO_SETTINGS_MODULE: "rgd_aire.settings_appengine"
+  USE_CLOUD_SQL: "true"
+  # Variables configuradas con tus recursos reales:
+  DJANGO_SECRET_KEY: "RGD-Aire-2024-SuperSecure-Key-For-Production-9j8h7g6f5d4s3a2"
+  DB_NAME: "rgd_aire_db"
+  DB_USER: "postgres"
+  DB_PASSWORD: "RGD2024SecureDB!"
+  CLOUD_SQL_CONNECTION_NAME: "appsindunnova:us-central1:rgd-aire-db"
+  GS_BUCKET_NAME: "appsindunnova-rgd-aire-storage"
+  DEFAULT_FROM_EMAIL: "noreply@rgdaire.com"
+  # Credenciales del administrador principal
+  ADMIN_USERNAME: "rgd_admin"
+  ADMIN_EMAIL: "admin@rgdaire.com"
+  ADMIN_PASSWORD: "Catalina18"
+
+# Configuración de escalado automático para App Engine Standard
+automatic_scaling:
+  min_instances: 1
+  max_instances: 10
+  target_cpu_utilization: 0.6
+  target_throughput_utilization: 0.6
+  min_pending_latency: 30ms
+  max_pending_latency: 80ms
+
+# Configuración de recursos
+resources:
+  cpu: 1
+  memory_gb: 2
+  disk_size_gb: 10
+
+# Manejadores de URL optimizados para Django
+handlers:
+  # Health check endpoint
+  - url: /health/?
+    script: auto
+    secure: always
+
+  # Admin estático (Django admin CSS/JS)
+  - url: /static/admin
+    static_dir: staticfiles/admin
+    secure: always
+    expiration: 1d
+
+  # Archivos estáticos generales
+  - url: /static
+    static_dir: staticfiles
+    secure: always
+    expiration: 7d
+    http_headers:
+      Cache-Control: "public, max-age=604800"
+
+  # Archivos de media (aunque usaremos Cloud Storage)
+  - url: /media
+    static_dir: media
+    secure: always
+    expiration: 1d
+
+  # Todas las demás URLs van a Django
+  - url: /.*
+    script: auto
+    secure: always
+
+# Configuración de salud de la aplicación
+readiness_check:
+  path: "/health/"
+  check_interval_sec: 5
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+  app_start_timeout_sec: 300
+
+liveness_check:
+  path: "/health/"
+  check_interval_sec: 30
+  timeout_sec: 4
+  failure_threshold: 4
+  success_threshold: 2
