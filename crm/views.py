@@ -10,16 +10,17 @@ from django.contrib import messages
 from django.shortcuts import redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponseRedirect, HttpResponse
 from django.db import transaction
+from django.core.exceptions import ValidationError
 import pandas as pd
 import io
 from .models import (
     Cliente, Contacto, Cotizacion, TareaVenta, Trato, 
-    RepresentanteVentas, DocumentoCliente, VersionCotizacion
+    RepresentanteVentas, DocumentoCliente, VersionCotizacion, Lead
 )
 from .forms import (
-    CotizacionForm, VersionCotizacionForm, CotizacionConVersionForm,
-    ClienteImportForm, TratoImportForm
+    CotizacionForm, VersionCotizacionForm, CotizacionConVersionForm
 )
+from .forms.import_forms import ClienteImportForm, TratoImportForm, ContactoImportForm
 
 class CRMDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'crm/dashboard.html'
@@ -225,8 +226,8 @@ class ClienteListView(LoginRequiredMixin, ListView):
 class ClienteCreateView(LoginRequiredMixin, CreateView):
     model = Cliente
     template_name = 'crm/cliente/form.html'
-    fields = ['nombre', 'sector_actividad', 'correo', 'telefono', 'direccion_linea1', 'direccion_linea2', 
-              'ciudad', 'estado', 'pais', 'codigo_postal', 'rut', 'notas']
+    fields = ['nombre', 'sector_actividad', 'nit', 'correo', 'telefono', 'direccion', 
+              'ciudad', 'estado', 'rut', 'cedula', 'ef', 'camara', 'formulario_vinculacion', 'notas']
     success_url = reverse_lazy('crm:cliente_list')
 
     def post(self, request, *args, **kwargs):
@@ -260,8 +261,8 @@ class ClienteDetailView(LoginRequiredMixin, DetailView):
 class ClienteUpdateView(LoginRequiredMixin, UpdateView):
     model = Cliente
     template_name = 'crm/cliente/form.html'
-    fields = ['nombre', 'sector_actividad', 'correo', 'telefono', 'direccion_linea1', 'direccion_linea2', 
-              'ciudad', 'estado', 'pais', 'codigo_postal', 'rut', 'notas']
+    fields = ['nombre', 'sector_actividad', 'nit', 'correo', 'telefono', 'direccion', 
+              'ciudad', 'estado', 'rut', 'cedula', 'ef', 'camara', 'formulario_vinculacion', 'notas']
     success_url = reverse_lazy('crm:cliente_list')
 
     def post(self, request, *args, **kwargs):
@@ -292,46 +293,180 @@ class ClienteImportView(LoginRequiredMixin, FormView):
     success_url = reverse_lazy('crm:cliente_list')
     
     def form_valid(self, form):
+        archivo_excel = form.cleaned_data['archivo_excel']
+        import_id = str(timezone.now().timestamp()).replace('.', '')
+        
         try:
-            archivo_excel = form.cleaned_data['archivo_excel']
-            
-            # Leer el archivo Excel
+            # Leer el archivo Excel para validación inicial
             df = pd.read_excel(archivo_excel)
             
-            # Validar las columnas requeridas
-            required_columns = ['nombre', 'sector_actividad', 'correo', 'telefono', 'rut']
+            # Validar columnas requeridas
+            required_columns = ['nombre']
             if not all(col in df.columns for col in required_columns):
-                messages.error(self.request, 'El archivo Excel debe contener las columnas: ' + ', '.join(required_columns))
+                messages.error(self.request, f'El archivo Excel debe contener al menos la columna: {", ".join(required_columns)}')
                 return self.form_invalid(form)
             
-            # Procesar cada fila
-            clientes_creados = 0
-            for _, row in df.iterrows():
-                try:
-                    Cliente.objects.create(
-                        nombre=row['nombre'],
-                        sector_actividad=row.get('sector_actividad', ''),
-                        correo=row.get('correo', ''),
-                        telefono=row.get('telefono', ''),
-                        direccion_linea1=row.get('direccion_linea1', ''),
-                        direccion_linea2=row.get('direccion_linea2', ''),
-                        ciudad=row.get('ciudad', ''),
-                        estado=row.get('estado', ''),
-                        pais=row.get('pais', ''),
-                        codigo_postal=row.get('codigo_postal', ''),
-                        rut=row.get('rut', ''),
-                        notas=row.get('notas', '')
-                    )
-                    clientes_creados += 1
-                except Exception as e:
-                    messages.warning(self.request, f'Error al importar cliente {row.get("nombre", "desconocido")}: {str(e)}')
+            # Limpiar datos: reemplazar NaN con cadenas vacías
+            df = df.fillna('')
             
-            messages.success(self.request, f'Se importaron {clientes_creados} clientes exitosamente.')
-            return super().form_valid(form)
+            total_rows = len(df)
+            
+            # Convertir a diccionario y limpiar cualquier valor NaN restante
+            data_records = df.to_dict('records')
+            
+            # Limpiar datos para evitar problemas de serialización JSON
+            cleaned_records = []
+            for record in data_records:
+                cleaned_record = {}
+                for key, value in record.items():
+                    # Convertir NaN, None, y otros valores problemáticos a cadena vacía
+                    if pd.isna(value) or value is None:
+                        cleaned_record[key] = ''
+                    else:
+                        cleaned_record[key] = str(value).strip()
+                cleaned_records.append(cleaned_record)
+            
+            # Guardar datos en sesión
+            self.request.session[f'import_{import_id}'] = {
+                'status': 'ready',
+                'total': total_rows,
+                'processed': 0,
+                'created': 0,
+                'errors': [],
+                'data': cleaned_records  # Guardar datos limpios para procesamiento
+            }
+            
+            # Redirigir a la página de progreso
+            return redirect(reverse('crm:cliente_import_progress', kwargs={'import_id': import_id}) + f'?file={archivo_excel.name}')
             
         except Exception as e:
             messages.error(self.request, f'Error al procesar el archivo Excel: {str(e)}')
             return self.form_invalid(form)
+
+class ClienteImportProgressView(LoginRequiredMixin, TemplateView):
+    template_name = 'crm/cliente/import_progress.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['import_id'] = kwargs['import_id']
+        context['filename'] = self.request.GET.get('file', 'archivo.xlsx')
+        return context
+
+class ClienteImportProcessView(LoginRequiredMixin, TemplateView):
+    """Vista AJAX para iniciar el procesamiento de la importación"""
+    
+    def post(self, request, import_id):
+        import_data = request.session.get(f'import_{import_id}')
+        if not import_data:
+            return JsonResponse({'error': 'Importación no encontrada'}, status=404)
+        
+        if import_data['status'] != 'ready':
+            return JsonResponse({'error': 'La importación ya está en proceso o completada'}, status=400)
+        
+        # Marcar como en proceso
+        import_data['status'] = 'processing'
+        request.session[f'import_{import_id}'] = import_data
+        request.session.modified = True
+        
+        try:
+            data_rows = import_data['data']
+            total_rows = len(data_rows)
+            clientes_creados = 0
+            errores = []
+            batch_size = 5  # Procesar en lotes más pequeños para evitar timeouts
+            
+            # Procesar cada fila con manejo mejorado de errores
+            for index, row in enumerate(data_rows):
+                try:
+                    # Validar datos básicos antes de crear
+                    nombre = str(row.get('nombre', '')).strip()
+                    if not nombre or nombre.lower() in ['nan', 'none', 'null']:
+                        error_msg = f'Fila {index + 2}: El nombre del cliente es requerido'
+                        errores.append(error_msg)
+                        continue
+                    
+                    # Verificar si el cliente ya existe para evitar duplicados
+                    if Cliente.objects.filter(nombre=nombre).exists():
+                        error_msg = f'Fila {index + 2}: Cliente "{nombre}" ya existe'
+                        errores.append(error_msg)
+                        continue
+                    
+                    # Función helper para limpiar campos
+                    def clean_field(value):
+                        if value is None or pd.isna(value):
+                            return ''
+                        value_str = str(value).strip()
+                        return '' if value_str.lower() in ['nan', 'none', 'null'] else value_str
+                    
+                    # Crear cliente con validación de campos
+                    with transaction.atomic():
+                        Cliente.objects.create(
+                            nombre=nombre,
+                            sector_actividad=clean_field(row.get('sector_actividad', '')),
+                            nit=clean_field(row.get('nit', '')),
+                            correo=clean_field(row.get('correo', '')),
+                            telefono=clean_field(row.get('telefono', '')),
+                            direccion=clean_field(row.get('direccion', '')),
+                            ciudad=clean_field(row.get('ciudad', '')),
+                            estado=clean_field(row.get('estado', '')),
+                            notas=clean_field(row.get('notas', ''))
+                        )
+                    clientes_creados += 1
+                    
+                except Exception as e:
+                    error_msg = f'Fila {index + 2}: Error al importar cliente {row.get("nombre", "desconocido")}: {str(e)}'
+                    errores.append(error_msg)
+                
+                # Actualizar progreso cada lote o al final
+                if (index + 1) % batch_size == 0 or index == total_rows - 1:
+                    import_data.update({
+                        'processed': index + 1,
+                        'created': clientes_creados,
+                        'errors': errores
+                    })
+                    request.session[f'import_{import_id}'] = import_data
+                    request.session.modified = True
+                    
+                    # Forzar guardado de la sesión
+                    request.session.save()
+            
+            # Marcar como completado
+            import_data.update({
+                'status': 'completed',
+                'processed': total_rows,
+                'created': clientes_creados,
+                'errors': errores
+            })
+            request.session[f'import_{import_id}'] = import_data
+            request.session.modified = True
+            request.session.save()
+            
+            return JsonResponse({
+                'status': 'completed',
+                'total': total_rows,
+                'created': clientes_creados,
+                'errors': len(errores)
+            })
+            
+        except Exception as e:
+            import_data.update({
+                'status': 'error',
+                'error': str(e)
+            })
+            request.session[f'import_{import_id}'] = import_data
+            request.session.modified = True
+            request.session.save()
+            return JsonResponse({'error': str(e)}, status=500)
+
+class ClienteImportStatusView(LoginRequiredMixin, TemplateView):
+    """Vista AJAX para obtener el estado actual de la importación"""
+    
+    def get(self, request, import_id):
+        import_data = request.session.get(f'import_{import_id}')
+        if not import_data:
+            return JsonResponse({'error': 'Importación no encontrada'}, status=404)
+        
+        return JsonResponse(import_data)
 
 # Vistas para RepresentanteVentas
 class RepresentanteListView(LoginRequiredMixin, ListView):
@@ -379,15 +514,18 @@ class RepresentanteUpdateView(LoginRequiredMixin, UpdateView):
 
 # Vistas para Cotizacion
 class CotizacionListView(LoginRequiredMixin, ListView):
-    model = Cotizacion
+    model = VersionCotizacion
     template_name = 'crm/oferta/list.html'
-    context_object_name = 'cotizacion_list'
+    context_object_name = 'version_list'
     title = 'Lista de Ofertas'
     add_url = 'crm:cotizacion_create'
     
     def get_queryset(self):
-        queryset = super().get_queryset()
-        return queryset.select_related('cliente')
+        return VersionCotizacion.objects.select_related(
+            'cotizacion__cliente', 
+            'cotizacion__trato',
+            'creado_por'
+        ).order_by('-fecha_creacion')
         
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -402,21 +540,85 @@ class CotizacionCreateView(LoginRequiredMixin, CreateView):
     template_name = 'crm/oferta/form.html'
     form_class = CotizacionConVersionForm
     success_url = reverse_lazy('crm:cotizacion_list')
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        trato_id = self.request.GET.get('trato')
+        if trato_id:
+            try:
+                trato = Trato.objects.get(id=trato_id)
+                kwargs['initial_cliente'] = trato.cliente
+                kwargs['initial_trato'] = trato
+            except Trato.DoesNotExist:
+                pass
+        return kwargs
+    
+    def get_initial(self):
+        initial = super().get_initial()
+        trato_id = self.request.GET.get('trato')
+        if trato_id:
+            try:
+                trato = Trato.objects.get(id=trato_id)
+                initial['trato'] = trato
+                initial['cliente'] = trato.cliente
+                initial['valor'] = trato.valor  # Pre-fill the value as well
+            except Trato.DoesNotExist:
+                pass
+        return initial
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        trato_id = self.request.GET.get('trato')
+        if trato_id:
+            try:
+                trato = Trato.objects.get(id=trato_id)
+                context['trato_inicial'] = trato
+                context['cliente_inicial'] = trato.cliente
+            except Trato.DoesNotExist:
+                pass
+        return context
+
+    def get_success_url(self):
+        trato_id = self.request.GET.get('trato') or self.request.POST.get('trato_id')
+        if trato_id:
+            return reverse('crm:trato_detail', kwargs={'pk': trato_id})
+        return self.success_url
 
     def form_valid(self, form):
+        # Verificar que se haya proporcionado al menos un archivo
+        archivos = self.request.FILES.getlist('archivos')
+        
+        if not archivos:
+            form.add_error(None, 'Debe proporcionar al menos un archivo para la cotización.')
+            return self.form_invalid(form)
+        
         with transaction.atomic():
-            # Guardar la cotización
-            cotizacion = form.save()
+            # Asignar el valor del monto desde el campo valor del formulario
+            cotizacion = form.save(commit=False)
+            cotizacion.monto = form.cleaned_data['valor']
+            cotizacion.save()
             
-            # Crear la primera versión
-            VersionCotizacion.objects.create(
-                cotizacion=cotizacion,
-                version=1,
-                archivo=self.request.FILES['archivo'],
-                razon_cambio=form.cleaned_data['razon_cambio'],
-                valor=cotizacion.monto,
-                creado_por=self.request.user
-            )
+            # Obtener el número de la próxima versión basada en el trato
+            if cotizacion.trato:
+                # Buscar la última versión para este trato
+                ultima_version = VersionCotizacion.objects.filter(
+                    cotizacion__trato=cotizacion.trato
+                ).order_by('-version').first()
+                siguiente_version = 1 if not ultima_version else ultima_version.version + 1
+            else:
+                # Si no hay trato asociado, usar versiones de esta cotización
+                siguiente_version = 1
+            
+            # Crear versiones para cada archivo subido
+            for i, archivo in enumerate(archivos):
+                VersionCotizacion.objects.create(
+                    cotizacion=cotizacion,
+                    version=siguiente_version + i,
+                    archivo=archivo,
+                    razon_cambio=form.cleaned_data['razon_cambio'],
+                    valor=form.cleaned_data['valor'],
+                    creado_por=self.request.user
+                )
             
             messages.success(self.request, 'Cotización creada exitosamente.')
             return super().form_valid(form)
@@ -448,23 +650,34 @@ class CotizacionUpdateView(LoginRequiredMixin, UpdateView):
             cotizacion.monto = form.cleaned_data['valor']
             cotizacion.save()
             
-            if 'archivo' in self.request.FILES:
-                # Obtener la última versión
-                ultima_version = VersionCotizacion.objects.filter(
-                    cotizacion=cotizacion
-                ).order_by('-version').first()
+            # Manejar archivos subidos (solo si hay archivos nuevos)
+            archivos = self.request.FILES.getlist('archivos')
+            
+            if archivos:
+                # Obtener el número de la próxima versión basada en el trato
+                if cotizacion.trato:
+                    # Buscar la última versión para este trato
+                    ultima_version = VersionCotizacion.objects.filter(
+                        cotizacion__trato=cotizacion.trato
+                    ).order_by('-version').first()
+                    siguiente_version = 1 if not ultima_version else ultima_version.version + 1
+                else:
+                    # Si no hay trato asociado, usar versiones de esta cotización
+                    ultima_version = VersionCotizacion.objects.filter(
+                        cotizacion=cotizacion
+                    ).order_by('-version').first()
+                    siguiente_version = 1 if not ultima_version else ultima_version.version + 1
                 
-                nuevo_numero_version = 1 if not ultima_version else ultima_version.version + 1
-                
-                # Crear nueva versión solo si se subió un archivo
-                VersionCotizacion.objects.create(
-                    cotizacion=cotizacion,
-                    version=nuevo_numero_version,
-                    archivo=self.request.FILES['archivo'],
-                    razon_cambio=form.cleaned_data.get('razon_cambio', ''),
-                    valor=form.cleaned_data['valor'],
-                    creado_por=self.request.user
-                )
+                # Crear nuevas versiones para cada archivo
+                for i, archivo in enumerate(archivos):
+                    VersionCotizacion.objects.create(
+                        cotizacion=cotizacion,
+                        version=siguiente_version + i,
+                        archivo=archivo,
+                        razon_cambio=form.cleaned_data.get('razon_cambio', ''),
+                        valor=form.cleaned_data['valor'],
+                        creado_por=self.request.user
+                    )
             
             messages.success(self.request, 'Cotización actualizada exitosamente.')
             return super().form_valid(form)
@@ -498,11 +711,17 @@ class TareaVentaListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         queryset = super().get_queryset().select_related('cliente', 'responsable', 'trato')
         
-        # Filtros
+        # Filtros existentes
         cliente_id = self.request.GET.get('cliente')
         trato_id = self.request.GET.get('trato')
         responsable_id = self.request.GET.get('responsable')
         numero_oferta = self.request.GET.get('numero_oferta')
+        
+        # Nuevos filtros
+        tipo = self.request.GET.get('tipo')
+        estado = self.request.GET.get('estado')
+        fecha_desde = self.request.GET.get('fecha_desde')
+        fecha_hasta = self.request.GET.get('fecha_hasta')
         
         if cliente_id:
             queryset = queryset.filter(cliente_id=cliente_id)
@@ -512,8 +731,16 @@ class TareaVentaListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(responsable_id=responsable_id)
         if numero_oferta:
             queryset = queryset.filter(trato__numero_oferta__icontains=numero_oferta)
+        if tipo:
+            queryset = queryset.filter(tipo=tipo)
+        if estado:
+            queryset = queryset.filter(estado=estado)
+        if fecha_desde:
+            queryset = queryset.filter(fecha_vencimiento__gte=fecha_desde)
+        if fecha_hasta:
+            queryset = queryset.filter(fecha_vencimiento__lte=fecha_hasta)
             
-        return queryset
+        return queryset.order_by('-fecha_vencimiento')
         
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -528,11 +755,21 @@ class TareaVentaListView(LoginRequiredMixin, ListView):
             tareas_asignadas__isnull=False
         ).distinct().order_by('username')
         
-        # Mantener los filtros seleccionados
+        # Agregar opciones para los filtros
+        context['tipos_tarea'] = TareaVenta.TIPO_CHOICES
+        context['estados_tarea'] = TareaVenta.ESTADO_CHOICES
+        
+        # Mantener los filtros seleccionados (existentes)
         context['selected_cliente'] = self.request.GET.get('cliente')
         context['selected_trato'] = self.request.GET.get('trato')
         context['selected_responsable'] = self.request.GET.get('responsable')
         context['selected_numero_oferta'] = self.request.GET.get('numero_oferta')
+        
+        # Mantener los filtros seleccionados
+        context['selected_tipo'] = self.request.GET.get('tipo')
+        context['selected_estado'] = self.request.GET.get('estado')
+        context['selected_fecha_desde'] = self.request.GET.get('fecha_desde')
+        context['selected_fecha_hasta'] = self.request.GET.get('fecha_hasta')
         
         return context
 
@@ -540,99 +777,366 @@ class TareaVentaCreateView(LoginRequiredMixin, CreateView):
     model = TareaVenta
     template_name = 'crm/tarea/form.html'
     fields = ['titulo', 'cliente', 'trato', 'tipo', 'descripcion', 'fecha_vencimiento', 
-              'estado', 'prioridad', 'responsable', 'notas', 'fecha_ejecucion']
+              'estado', 'responsable', 'notas', 'fecha_ejecucion']
     success_url = reverse_lazy('crm:tarea_list')
     
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
+        
+        # Configurar campos de fecha con widgets mejorados
         form.fields['fecha_vencimiento'].widget = forms.DateTimeInput(
-            attrs={'type': 'datetime-local'},
+            attrs={
+                'type': 'datetime-local',
+                'class': 'form-control'
+            },
             format='%Y-%m-%dT%H:%M'
         )
+        form.fields['fecha_vencimiento'].input_formats = ['%Y-%m-%dT%H:%M']
+        
         form.fields['fecha_ejecucion'].widget = forms.DateTimeInput(
-            attrs={'type': 'datetime-local'},
+            attrs={
+                'type': 'datetime-local',
+                'class': 'form-control'
+            },
             format='%Y-%m-%dT%H:%M'
         )
+        form.fields['fecha_ejecucion'].input_formats = ['%Y-%m-%dT%H:%M']
+        
+        # Configurar ayuda para los campos
+        form.fields['titulo'].help_text = 'Título descriptivo para la tarea'
+        form.fields['descripcion'].help_text = 'Descripción detallada de la tarea a realizar'
+        form.fields['fecha_vencimiento'].help_text = 'Fecha y hora límite para completar la tarea'
+        form.fields['fecha_ejecucion'].help_text = 'Fecha y hora real de ejecución (opcional)'
+        form.fields['notas'].help_text = 'Notas adicionales o comentarios sobre la tarea'
+        
+        # Cambiar label del campo trato
+        form.fields['trato'].label = 'Proyecto'
+        
         return form
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Tarea creada exitosamente.')
+        return super().form_valid(form)
 
 class TareaVentaDetailView(LoginRequiredMixin, DetailView):
     model = TareaVenta
     template_name = 'crm/tarea/detail.html'
     context_object_name = 'tarea'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Si la tarea está asociada a un trato, verificar si hay un proyecto relacionado
+        if self.object.trato:
+            try:
+                # Intentar importar el modelo Proyecto solo si está disponible
+                from proyectos.models import Proyecto
+                proyecto = Proyecto.objects.filter(trato=self.object.trato).first()
+                context['proyecto_relacionado'] = proyecto
+            except ImportError:
+                # El módulo proyectos no está disponible
+                pass
+        
+        return context
 
 class TareaVentaUpdateView(LoginRequiredMixin, UpdateView):
     model = TareaVenta
     template_name = 'crm/tarea/form.html'
     fields = ['titulo', 'cliente', 'trato', 'tipo', 'descripcion', 'fecha_vencimiento', 
-              'estado', 'prioridad', 'responsable', 'notas', 'fecha_ejecucion']
+              'estado', 'responsable', 'notas', 'fecha_ejecucion']
     success_url = reverse_lazy('crm:tarea_list')
     
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
+        
+        # Configurar campos de fecha con widgets mejorados
         form.fields['fecha_vencimiento'].widget = forms.DateTimeInput(
-            attrs={'type': 'datetime-local'},
+            attrs={
+                'type': 'datetime-local',
+                'class': 'form-control'
+            },
             format='%Y-%m-%dT%H:%M'
         )
+        form.fields['fecha_vencimiento'].input_formats = ['%Y-%m-%dT%H:%M']
+        
         form.fields['fecha_ejecucion'].widget = forms.DateTimeInput(
-            attrs={'type': 'datetime-local'},
+            attrs={
+                'type': 'datetime-local',
+                'class': 'form-control'
+            },
             format='%Y-%m-%dT%H:%M'
         )
+        form.fields['fecha_ejecucion'].input_formats = ['%Y-%m-%dT%H:%M']
+        
+        # Configurar ayuda para los campos
+        form.fields['titulo'].help_text = 'Título descriptivo para la tarea'
+        form.fields['descripcion'].help_text = 'Descripción detallada de la tarea a realizar'
+        form.fields['fecha_vencimiento'].help_text = 'Fecha y hora límite para completar la tarea'
+        form.fields['fecha_ejecucion'].help_text = 'Fecha y hora real de ejecución (opcional)'
+        form.fields['notas'].help_text = 'Notas adicionales o comentarios sobre la tarea'
+        
+        # Cambiar label del campo trato
+        form.fields['trato'].label = 'Proyecto'
+        
         return form
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Tarea actualizada exitosamente.')
+        return super().form_valid(form)
 
 # Vistas para Trato
 class TratoListView(LoginRequiredMixin, ListView):
     model = Trato
     template_name = 'crm/trato/list.html'
     context_object_name = 'tratos'
-    title = 'Lista de Tratos'
+    title = 'Lista de ProyectosCRM'
     add_url = 'crm:trato_create'
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        queryset = queryset.select_related('responsable').order_by('-numero_oferta')
+        queryset = queryset.select_related('responsable', 'cliente').order_by('-numero_oferta')
         
-        # Filtro de búsqueda
+        # Filtro de búsqueda general
         search_query = self.request.GET.get('q')
         if search_query:
             queryset = queryset.filter(
                 Q(numero_oferta__icontains=search_query) |
-                Q(cliente__icontains=search_query) |
+                Q(cliente__nombre__icontains=search_query) |
                 Q(descripcion__icontains=search_query) |
                 Q(responsable__username__icontains=search_query) |
+                Q(responsable__first_name__icontains=search_query) |
+                Q(responsable__last_name__icontains=search_query) |
                 Q(nombre__icontains=search_query)
             )
+        
+        # Filtros específicos
+        cliente_id = self.request.GET.get('cliente')
+        if cliente_id:
+            queryset = queryset.filter(cliente_id=cliente_id)
+        
+        estado = self.request.GET.get('estado')
+        if estado:
+            queryset = queryset.filter(estado=estado)
+        
+        responsable_id = self.request.GET.get('responsable')
+        if responsable_id:
+            queryset = queryset.filter(responsable_id=responsable_id)
+        
+        fuente = self.request.GET.get('fuente')
+        if fuente:
+            queryset = queryset.filter(fuente=fuente)
+        
+        tipo_negociacion = self.request.GET.get('tipo_negociacion')
+        if tipo_negociacion:
+            queryset = queryset.filter(tipo_negociacion=tipo_negociacion)
+        
+        # Filtro por rango de probabilidad
+        probabilidad_min = self.request.GET.get('probabilidad_min')
+        if probabilidad_min:
+            try:
+                queryset = queryset.filter(probabilidad__gte=int(probabilidad_min))
+            except ValueError:
+                pass
+        
+        probabilidad_max = self.request.GET.get('probabilidad_max')
+        if probabilidad_max:
+            try:
+                queryset = queryset.filter(probabilidad__lte=int(probabilidad_max))
+            except ValueError:
+                pass
+        
+        # Filtro por rango de valor
+        valor_min = self.request.GET.get('valor_min')
+        if valor_min:
+            try:
+                queryset = queryset.filter(valor__gte=float(valor_min))
+            except ValueError:
+                pass
+        
+        valor_max = self.request.GET.get('valor_max')
+        if valor_max:
+            try:
+                queryset = queryset.filter(valor__lte=float(valor_max))
+            except ValueError:
+                pass
+        
+        # Filtro por fecha de cierre
+        fecha_desde = self.request.GET.get('fecha_desde')
+        if fecha_desde:
+            try:
+                queryset = queryset.filter(fecha_cierre__gte=fecha_desde)
+            except ValueError:
+                pass
+        
+        fecha_hasta = self.request.GET.get('fecha_hasta')
+        if fecha_hasta:
+            try:
+                queryset = queryset.filter(fecha_cierre__lte=fecha_hasta)
+            except ValueError:
+                pass
+        
         return queryset
         
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = self.title
         context['add_url'] = reverse_lazy(self.add_url)
+        
+        # Agregar opciones para filtros
+        context['clientes'] = Cliente.objects.all().order_by('nombre')
+        context['responsables'] = get_user_model().objects.filter(
+            tratos__isnull=False
+        ).distinct().order_by('first_name', 'last_name')
+        context['estados'] = Trato.ESTADO_CHOICES
+        context['fuentes'] = Trato.FUENTE_CHOICES
+        context['tipos_negociacion'] = Trato.TIPO_CHOICES
+        
+        # Mantener filtros seleccionados
+        context['filtros'] = {
+            'q': self.request.GET.get('q', ''),
+            'cliente': self.request.GET.get('cliente', ''),
+            'estado': self.request.GET.get('estado', ''),
+            'responsable': self.request.GET.get('responsable', ''),
+            'fuente': self.request.GET.get('fuente', ''),
+            'tipo_negociacion': self.request.GET.get('tipo_negociacion', ''),
+            'probabilidad_min': self.request.GET.get('probabilidad_min', ''),
+            'probabilidad_max': self.request.GET.get('probabilidad_max', ''),
+            'valor_min': self.request.GET.get('valor_min', ''),
+            'valor_max': self.request.GET.get('valor_max', ''),
+            'fecha_desde': self.request.GET.get('fecha_desde', ''),
+            'fecha_hasta': self.request.GET.get('fecha_hasta', ''),
+        }
+        
         return context
 
 class TratoCreateView(LoginRequiredMixin, CreateView):
     model = Trato
     template_name = 'crm/trato/form.html'
     fields = ['nombre', 'cliente', 'contacto', 'correo', 'telefono', 'descripcion', 
-              'valor', 'probabilidad', 'estado', 'fuente', 'fecha_cierre', 'responsable', 'notas',
-              'centro_costos', 'nombre_proyecto', 'orden_contrato', 'dias_prometidos', 'tipo_negociacion']
+              'valor', 'probabilidad', 'estado', 'fuente', 'fecha_creacion', 'fecha_cierre', 'fecha_envio_cotizacion', 'dias_prometidos', 'responsable', 'notas',
+              'centro_costos', 'nombre_proyecto', 'orden_contrato', 'tipo_negociacion']
     success_url = reverse_lazy('crm:trato_list')
     
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields['fecha_cierre'].widget = forms.DateInput(attrs={'type': 'date'})
+        form.fields['fecha_creacion'].widget = forms.DateInput(
+            attrs={'type': 'date'},
+            format='%Y-%m-%d'
+        )
+        form.fields['fecha_creacion'].input_formats = ['%Y-%m-%d']
+        form.fields['fecha_cierre'].widget = forms.DateInput(
+            attrs={'type': 'date'}, 
+            format='%Y-%m-%d'
+        )
+        form.fields['fecha_envio_cotizacion'].widget = forms.DateInput(
+            attrs={'type': 'date'}, 
+            format='%Y-%m-%d'
+        )
         return form
     
     def form_valid(self, form):
-        form.instance.creado_por = self.request.user
-        return super().form_valid(form)
+        try:
+            form.instance.creado_por = self.request.user
+            response = super().form_valid(form)
+            
+            # Si se marca como ganado y se crea un proyecto, mostrar mensaje de éxito
+            if form.instance.estado == 'ganado' and hasattr(form.instance, 'proyecto'):
+                messages.success(
+                    self.request, 
+                    f'Trato creado como ganado exitosamente. '
+                    f'Se ha creado automáticamente el proyecto: {form.instance.proyecto.nombre_proyecto}'
+                )
+            else:
+                messages.success(self.request, 'Trato creado exitosamente.')
+            
+            return response
+            
+        except ValidationError as e:
+            # Capturar el error de validación del signal y mostrarlo al usuario
+            form.add_error('centro_costos', str(e))
+            messages.error(
+                self.request, 
+                'No se puede crear el trato como "Ganado" sin especificar el Centro de Costos. '
+                'Este campo es obligatorio para crear el proyecto automáticamente.'
+            )
+            return self.form_invalid(form)
+        except Exception as e:
+            # Manejar otros errores inesperados
+            messages.error(
+                self.request, 
+                f'Error al crear el trato: {str(e)}'
+            )
+            return self.form_invalid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         User = get_user_model()
-        context['title'] = 'Nuevo Trato'
+        context['title'] = 'Nuevo ProyectoCRM'
         context['clientes'] = Cliente.objects.all()
         context['users'] = User.objects.filter(is_active=True)
         return context
+
+class TratoQuickCreateView(LoginRequiredMixin, CreateView):
+    model = Trato
+    template_name = 'crm/trato/quick_create.html'
+    fields = ['cliente', 'descripcion', 'fuente', 'contacto']
+    
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Hacer que descripción sea requerida
+        form.fields['descripcion'].required = True
+        form.fields['cliente'].required = True
+        
+        # Personalizar widgets
+        form.fields['descripcion'].widget = forms.Textarea(attrs={
+            'rows': 3,
+            'class': 'form-control',
+            'placeholder': 'Describe brevemente el proyecto o servicio...'
+        })
+        form.fields['cliente'].widget.attrs.update({'class': 'form-select'})
+        form.fields['fuente'].widget.attrs.update({'class': 'form-select'})
+        form.fields['contacto'].widget.attrs.update({'class': 'form-select'})
+        
+        return form
+    
+    def form_valid(self, form):
+        # Establecer valores por defecto para campos requeridos
+        form.instance.estado = 'revision_tecnica'  # Estado inicial
+        form.instance.probabilidad = 50  # Probabilidad por defecto
+        form.instance.valor = 0  # Valor inicial
+        form.instance.responsable = self.request.user
+        
+        # Determinar la acción del botón presionado
+        action = self.request.POST.get('action', 'quick')
+        
+        try:
+            response = super().form_valid(form)
+            
+            if action == 'complete':
+                # Redirigir al formulario completo para editar
+                messages.success(
+                    self.request,
+                    'Trato creado exitosamente. Completa la información adicional.'
+                )
+                return redirect('crm:trato_update', pk=self.object.pk)
+            else:
+                # Creación rápida completada
+                messages.success(
+                    self.request,
+                    f'Trato #{self.object.numero_oferta} creado exitosamente. '
+                    f'Puedes completar la información adicional desde el detalle del trato.'
+                )
+                return redirect('crm:trato_detail', pk=self.object.pk)
+                
+        except Exception as e:
+            messages.error(
+                self.request,
+                f'Error al crear el trato: {str(e)}'
+            )
+            return self.form_invalid(form)
+    
+    def get_success_url(self):
+        return reverse('crm:trato_detail', kwargs={'pk': self.object.pk})
 
 class TratoDetailView(LoginRequiredMixin, DetailView):
     model = Trato
@@ -649,19 +1153,64 @@ class TratoUpdateView(LoginRequiredMixin, UpdateView):
     model = Trato
     template_name = 'crm/trato/form.html'
     fields = ['nombre', 'cliente', 'contacto', 'correo', 'telefono', 'descripcion', 
-              'valor', 'probabilidad', 'estado', 'fuente', 'fecha_cierre', 'responsable', 'notas',
-              'centro_costos', 'nombre_proyecto', 'orden_contrato', 'dias_prometidos', 'tipo_negociacion']
+              'valor', 'probabilidad', 'estado', 'fuente', 'fecha_creacion', 'fecha_cierre', 'fecha_envio_cotizacion', 'dias_prometidos', 'responsable', 'notas',
+              'centro_costos', 'nombre_proyecto', 'orden_contrato', 'tipo_negociacion']
     success_url = reverse_lazy('crm:trato_list')
     
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields['fecha_cierre'].widget = forms.DateInput(attrs={'type': 'date'})
+        form.fields['fecha_creacion'].widget = forms.DateInput(
+            attrs={'type': 'date'},
+            format='%Y-%m-%d'
+        )
+        form.fields['fecha_creacion'].input_formats = ['%Y-%m-%d']
+        form.fields['fecha_cierre'].widget = forms.DateInput(
+            attrs={'type': 'date'}, 
+            format='%Y-%m-%d'
+        )
+        form.fields['fecha_envio_cotizacion'].widget = forms.DateInput(
+            attrs={'type': 'date'}, 
+            format='%Y-%m-%d'
+        )
         return form
+    
+    def form_valid(self, form):
+        try:
+            response = super().form_valid(form)
+            
+            # Si se marca como ganado y se crea un proyecto, mostrar mensaje de éxito
+            if form.instance.estado == 'ganado' and hasattr(form.instance, 'proyecto'):
+                messages.success(
+                    self.request, 
+                    f'Trato marcado como ganado exitosamente. '
+                    f'Se ha creado automáticamente el proyecto: {form.instance.proyecto.nombre_proyecto}'
+                )
+            else:
+                messages.success(self.request, 'Trato actualizado exitosamente.')
+            
+            return response
+            
+        except ValidationError as e:
+            # Capturar el error de validación del signal y mostrarlo al usuario
+            form.add_error('centro_costos', str(e))
+            messages.error(
+                self.request, 
+                'No se puede marcar el trato como "Ganado" sin especificar el Centro de Costos. '
+                'Este campo es obligatorio para crear el proyecto automáticamente.'
+            )
+            return self.form_invalid(form)
+        except Exception as e:
+            # Manejar otros errores inesperados
+            messages.error(
+                self.request, 
+                f'Error al actualizar el trato: {str(e)}'
+            )
+            return self.form_invalid(form)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         User = get_user_model()
-        context['title'] = f'Editar Trato: {self.object.nombre}'
+        context['title'] = f'Editar ProyectoCRM: {self.object.nombre}'
         context['clientes'] = Cliente.objects.all()
         context['users'] = User.objects.filter(is_active=True)
         context['tareas'] = TareaVenta.objects.filter(trato=self.object).order_by('-fecha_vencimiento')
@@ -685,6 +1234,21 @@ class TratoImportView(LoginRequiredMixin, FormView):
                 messages.error(self.request, 'El archivo Excel debe contener las columnas: ' + ', '.join(required_columns))
                 return self.form_invalid(form)
             
+            # Limpiar datos: reemplazar NaN con valores por defecto
+            df = df.fillna({
+                'correo': '',
+                'telefono': '',
+                'descripcion': '',
+                'probabilidad': 50,
+                'fuente': 'visita',
+                'notas': '',
+                'centro_costos': '',
+                'nombre_proyecto': '',
+                'orden_contrato': '',
+                'dias_prometidos': 0,
+                'tipo_negociacion': 'contrato'
+            })
+            
             # Procesar cada fila
             tratos_creados = 0
             for _, row in df.iterrows():
@@ -695,25 +1259,39 @@ class TratoImportView(LoginRequiredMixin, FormView):
                         messages.warning(self.request, f'Cliente no encontrado: {row["cliente"]}. Se omitirá este trato.')
                         continue
 
+                    # Función helper para limpiar campos numéricos
+                    def clean_numeric_field(value, default=0):
+                        if pd.isna(value) or value is None or value == '':
+                            return default
+                        try:
+                            return int(float(value))
+                        except (ValueError, TypeError):
+                            return default
+
+                    # Función helper para limpiar campos de texto
+                    def clean_text_field(value, default=''):
+                        if pd.isna(value) or value is None:
+                            return default
+                        return str(value).strip()
+
                     Trato.objects.create(
-                        nombre=row['nombre'],
+                        nombre=clean_text_field(row['nombre']),
                         cliente=cliente,
-                        correo=row.get('correo', ''),
-                        telefono=row.get('telefono', ''),
-                        descripcion=row.get('descripcion', ''),
-                        valor=row['valor'],
-                        probabilidad=row.get('probabilidad', 50),
-                        estado=row['estado'],
-                        fuente=row.get('fuente', ''),
+                        correo=clean_text_field(row.get('correo', '')),
+                        telefono=clean_text_field(row.get('telefono', '')),
+                        descripcion=clean_text_field(row.get('descripcion', '')),
+                        valor=clean_numeric_field(row['valor'], 0),
+                        probabilidad=clean_numeric_field(row.get('probabilidad', 50), 50),
+                        estado=clean_text_field(row['estado'], 'revision_tecnica'),
+                        fuente=clean_text_field(row.get('fuente', 'visita'), 'visita'),
                         fecha_cierre=row['fecha_cierre'],
                         responsable=self.request.user,
-                        notas=row.get('notas', ''),
-                        centro_costos=row.get('centro_costos', ''),
-                        nombre_proyecto=row.get('nombre_proyecto', ''),
-                        orden_contrato=row.get('orden_contrato', ''),
-                        dias_prometidos=row.get('dias_prometidos', 0),
-                        tipo_negociacion=row.get('tipo_negociacion', ''),
-                        creado_por=self.request.user
+                        notas=clean_text_field(row.get('notas', '')),
+                        centro_costos=clean_text_field(row.get('centro_costos', '')),
+                        nombre_proyecto=clean_text_field(row.get('nombre_proyecto', '')),
+                        orden_contrato=clean_text_field(row.get('orden_contrato', '')),
+                        dias_prometidos=clean_numeric_field(row.get('dias_prometidos', 0), 0),
+                        tipo_negociacion=clean_text_field(row.get('tipo_negociacion', 'contrato'), 'contrato')
                     )
                     tratos_creados += 1
                 except Exception as e:
@@ -726,7 +1304,57 @@ class TratoImportView(LoginRequiredMixin, FormView):
             messages.error(self.request, f'Error al procesar el archivo Excel: {str(e)}')
             return self.form_invalid(form)
 
+class ContactoListView(LoginRequiredMixin, ListView):
+    model = Contacto
+    template_name = 'crm/contacto/list.html'
+    context_object_name = 'contactos'
+    title = 'Lista de Contactos'
+    add_url = 'crm:contacto_create'
+    
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related('cliente')
+        
+        # Filtro de búsqueda
+        search_query = self.request.GET.get('q')
+        if search_query:
+            queryset = queryset.filter(
+                Q(nombre__icontains=search_query) |
+                Q(cliente__nombre__icontains=search_query) |
+                Q(correo__icontains=search_query) |
+                Q(cargo__icontains=search_query)
+            )
+        
+        # Filtro por cliente
+        cliente_id = self.request.GET.get('cliente')
+        if cliente_id:
+            queryset = queryset.filter(cliente_id=cliente_id)
+            
+        return queryset.order_by('cliente__nombre', 'nombre')
+        
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = self.title
+        context['add_url'] = self.add_url
+        
+        # Agregar clientes para filtro
+        context['clientes'] = Cliente.objects.all().order_by('nombre')
+        context['selected_cliente'] = self.request.GET.get('cliente')
+        context['search_query'] = self.request.GET.get('q', '')
+        
+        return context
+
 class ContactoCreateView(LoginRequiredMixin, CreateView):
+    model = Contacto
+    template_name = 'crm/contacto/form.html'
+    fields = ['cliente', 'nombre', 'cargo', 'correo', 'telefono', 'notas']
+    success_url = reverse_lazy('crm:contacto_list')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Nuevo Contacto'
+        return context
+
+class ContactoCreateFromClientView(LoginRequiredMixin, CreateView):
     model = Contacto
     fields = ['nombre', 'cargo', 'correo', 'telefono', 'notas']
     
@@ -738,24 +1366,240 @@ class ContactoCreateView(LoginRequiredMixin, CreateView):
     def get_success_url(self):
         return reverse_lazy('crm:cliente_detail', kwargs={'pk': self.kwargs['cliente_id']})
 
+class ContactoDetailView(LoginRequiredMixin, DetailView):
+    model = Contacto
+    template_name = 'crm/contacto/detail.html'
+    context_object_name = 'contacto'
+
+class ContactoUpdateView(LoginRequiredMixin, UpdateView):
+    model = Contacto
+    template_name = 'crm/contacto/form.html'
+    fields = ['cliente', 'nombre', 'cargo', 'correo', 'telefono', 'notas']
+    success_url = reverse_lazy('crm:contacto_list')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f'Editar Contacto: {self.object.nombre}'
+        return context
+
+class ContactoImportView(LoginRequiredMixin, FormView):
+    template_name = 'crm/contacto/import.html'
+    form_class = ContactoImportForm
+    success_url = reverse_lazy('crm:contacto_list')
+    
+    def form_valid(self, form):
+        archivo_excel = form.cleaned_data['archivo_excel']
+        import_id = str(timezone.now().timestamp()).replace('.', '')
+        
+        try:
+            # Leer el archivo Excel para validación inicial
+            df = pd.read_excel(archivo_excel)
+            
+            # Validar columnas requeridas
+            required_columns = ['nombre', 'cliente', 'cargo']
+            if not all(col in df.columns for col in required_columns):
+                messages.error(self.request, f'El archivo Excel debe contener al menos las columnas: {", ".join(required_columns)}')
+                return self.form_invalid(form)
+            
+            # Limpiar datos: reemplazar NaN con cadenas vacías
+            df = df.fillna('')
+            
+            total_rows = len(df)
+            
+            # Convertir a diccionario y limpiar cualquier valor NaN restante
+            data_records = df.to_dict('records')
+            
+            # Limpiar datos para evitar problemas de serialización JSON
+            cleaned_records = []
+            for record in data_records:
+                cleaned_record = {}
+                for key, value in record.items():
+                    # Convertir NaN, None, y otros valores problemáticos a cadena vacía
+                    if pd.isna(value) or value is None:
+                        cleaned_record[key] = ''
+                    else:
+                        cleaned_record[key] = str(value).strip()
+                cleaned_records.append(cleaned_record)
+            
+            # Guardar datos en sesión
+            self.request.session[f'import_contacto_{import_id}'] = {
+                'status': 'ready',
+                'total': total_rows,
+                'processed': 0,
+                'created': 0,
+                'errors': [],
+                'data': cleaned_records  # Guardar datos limpios para procesamiento
+            }
+            
+            # Redirigir a la página de progreso
+            return redirect(reverse('crm:contacto_import_progress', kwargs={'import_id': import_id}) + f'?file={archivo_excel.name}')
+            
+        except Exception as e:
+            messages.error(self.request, f'Error al procesar el archivo Excel: {str(e)}')
+            return self.form_invalid(form)
+
+class ContactoImportProgressView(LoginRequiredMixin, TemplateView):
+    template_name = 'crm/contacto/import_progress.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['import_id'] = kwargs['import_id']
+        context['filename'] = self.request.GET.get('file', 'archivo.xlsx')
+        return context
+
+class ContactoImportProcessView(LoginRequiredMixin, TemplateView):
+    """Vista AJAX para iniciar el procesamiento de la importación de contactos"""
+    
+    def post(self, request, import_id):
+        import_data = request.session.get(f'import_contacto_{import_id}')
+        if not import_data:
+            return JsonResponse({'error': 'Importación no encontrada'}, status=404)
+        
+        if import_data['status'] != 'ready':
+            return JsonResponse({'error': 'La importación ya está en proceso o completada'}, status=400)
+        
+        # Marcar como en proceso
+        import_data['status'] = 'processing'
+        request.session[f'import_contacto_{import_id}'] = import_data
+        request.session.modified = True
+        
+        try:
+            data_rows = import_data['data']
+            total_rows = len(data_rows)
+            contactos_creados = 0
+            errores = []
+            
+            # Procesar cada fila
+            for index, row in enumerate(data_rows):
+                try:
+                    # Función helper para limpiar campos
+                    def clean_field(value):
+                        if value is None or pd.isna(value):
+                            return ''
+                        value_str = str(value).strip()
+                        return '' if value_str.lower() in ['nan', 'none', 'null'] else value_str
+                    
+                    # Buscar el cliente por nombre
+                    cliente_nombre = clean_field(row.get('cliente', ''))
+                    if not cliente_nombre:
+                        error_msg = f'Fila {index + 2}: El nombre del cliente es requerido'
+                        errores.append(error_msg)
+                        continue
+                    
+                    # Buscar el cliente existente
+                    try:
+                        cliente = Cliente.objects.get(nombre=cliente_nombre)
+                    except Cliente.DoesNotExist:
+                        error_msg = f'Fila {index + 2}: Cliente "{cliente_nombre}" no encontrado'
+                        errores.append(error_msg)
+                        continue
+                    
+                    # Validar nombre del contacto
+                    nombre_contacto = clean_field(row.get('nombre', ''))
+                    if not nombre_contacto:
+                        error_msg = f'Fila {index + 2}: El nombre del contacto es requerido'
+                        errores.append(error_msg)
+                        continue
+                    
+                    # Crear contacto
+                    Contacto.objects.create(
+                        cliente=cliente,
+                        nombre=nombre_contacto,
+                        cargo=clean_field(row.get('cargo', '')),
+                        correo=clean_field(row.get('correo', '')),
+                        telefono=clean_field(row.get('telefono', '')),
+                        notas=clean_field(row.get('notas', ''))
+                    )
+                    contactos_creados += 1
+                except Exception as e:
+                    error_msg = f'Fila {index + 2}: Error al importar contacto {row.get("nombre", "desconocido")}: {str(e)}'
+                    errores.append(error_msg)
+                
+                # Actualizar progreso cada 10 registros o al final
+                if (index + 1) % 10 == 0 or index == total_rows - 1:
+                    import_data.update({
+                        'processed': index + 1,
+                        'created': contactos_creados,
+                        'errors': errores
+                    })
+                    request.session[f'import_contacto_{import_id}'] = import_data
+                    request.session.modified = True
+            
+            # Marcar como completado
+            import_data.update({
+                'status': 'completed',
+                'processed': total_rows,
+                'created': contactos_creados,
+                'errors': errores
+            })
+            request.session[f'import_contacto_{import_id}'] = import_data
+            request.session.modified = True
+            
+            return JsonResponse({
+                'status': 'completed',
+                'total': total_rows,
+                'created': contactos_creados,
+                'errors': len(errores)
+            })
+            
+        except Exception as e:
+            import_data.update({
+                'status': 'error',
+                'error': str(e)
+            })
+            request.session[f'import_contacto_{import_id}'] = import_data
+            request.session.modified = True
+            return JsonResponse({'error': str(e)}, status=500)
+
+class ContactoImportStatusView(LoginRequiredMixin, TemplateView):
+    """Vista AJAX para obtener el estado actual de la importación de contactos"""
+    
+    def get(self, request, import_id):
+        import_data = request.session.get(f'import_contacto_{import_id}')
+        if not import_data:
+            return JsonResponse({'error': 'Importación no encontrada'}, status=404)
+        
+        return JsonResponse(import_data)
+
+class ContactosPorClienteView(LoginRequiredMixin, TemplateView):
+    """Vista AJAX para obtener contactos de un cliente"""
+    
+    def get(self, request, cliente_id):
+        try:
+            cliente = Cliente.objects.get(id=cliente_id)
+            contactos = Contacto.objects.filter(cliente=cliente).values(
+                'id', 'nombre', 'cargo', 'correo', 'telefono'
+            )
+            return JsonResponse({
+                'success': True,
+                'contactos': list(contactos)
+            })
+        except Cliente.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Cliente no encontrado'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error interno: {str(e)}'
+            })
+
 # Vistas para descargar plantillas de Excel
 class ClientePlantillaExcelView(LoginRequiredMixin, TemplateView):
     """Vista para generar y descargar plantilla de Excel para clientes"""
     
     def get(self, request, *args, **kwargs):
-        # Crear un DataFrame con las columnas y datos de ejemplo
+        # Crear un DataFrame con las columnas y datos de ejemplo - CAMPOS ACTUALIZADOS
         datos_ejemplo = {
             'nombre': ['Ejemplo Empresa ABC', 'Cliente Muestra XYZ'],
             'sector_actividad': ['Tecnología', 'Comercio'],
+            'nit': ['900123456-1', '800987654-2'],
             'correo': ['contacto@empresa.com', 'info@cliente.com'],
             'telefono': ['+56912345678', '+56987654321'],
-            'rut': ['12345678-9', '98765432-1'],
-            'direccion_linea1': ['Av. Principal 123', 'Calle Secundaria 456'],
-            'direccion_linea2': ['Oficina 201', ''],
+            'direccion': ['Av. Principal 123, Oficina 201', 'Calle Secundaria 456'],
             'ciudad': ['Santiago', 'Valparaíso'],
             'estado': ['Región Metropolitana', 'Valparaíso'],
-            'pais': ['Chile', 'Chile'],
-            'codigo_postal': ['7500000', '2340000'],
             'notas': ['Cliente potencial importante', 'Referido por socio comercial']
         }
         
@@ -802,19 +1646,19 @@ class TratoPlantillaExcelView(LoginRequiredMixin, TemplateView):
             'nombre': ['Proyecto Implementación ERP', 'Desarrollo App Móvil'],
             'cliente': ['Ejemplo Empresa ABC', 'Cliente Muestra XYZ'],
             'valor': [150000, 85000],
-            'estado': ['nuevo', 'cotizacion'],
+            'estado': ['revision_tecnica', 'elaboracion_oferta'],
             'fecha_cierre': ['2025-08-15', '2025-07-30'],
             'correo': ['proyecto@empresa.com', 'desarrollo@cliente.com'],
             'telefono': ['+56912345678', '+56987654321'],
             'descripcion': ['Implementación completa de sistema ERP', 'Desarrollo de aplicación móvil nativa'],
             'probabilidad': [75, 60],
-            'fuente': ['referido', 'web'],
+            'fuente': ['visita', 'informe_tecnico'],
             'notas': ['Cliente con presupuesto aprobado', 'Proyecto urgente para Q3'],
             'centro_costos': ['CC001', 'CC002'],
             'nombre_proyecto': ['ERP-2025-001', 'APP-MOV-2025-002'],
             'orden_contrato': ['OC-2025-001', 'OC-2025-002'],
             'dias_prometidos': [90, 60],
-            'tipo_negociacion': ['licitacion', 'cotizacion_directa']
+            'tipo_negociacion': ['contrato', 'servicios']
         }
         
         df = pd.DataFrame(datos_ejemplo)
@@ -844,9 +1688,9 @@ class TratoPlantillaExcelView(LoginRequiredMixin, TemplateView):
             info_data = {
                 'Campo': ['estado', 'fuente', 'tipo_negociacion'],
                 'Valores_Válidos': [
-                    'nuevo, cotizacion, negociacion, ganado, perdido, cancelado',
-                    'web, referido, telefono, email, redes_sociales, evento, otro',
-                    'licitacion, cotizacion_directa, negociacion_abierta'
+                    'revision_tecnica, elaboracion_oferta, envio_negociacion, formalizacion, ganado, perdido, sin_informacion',
+                    'visita, informe_tecnico, email, telefono, whatsapp, otro',
+                    'contrato, control, diseno, filtros, mantenimiento, servicios'
                 ]
             }
             df_info = pd.DataFrame(info_data)
@@ -860,6 +1704,54 @@ class TratoPlantillaExcelView(LoginRequiredMixin, TemplateView):
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
         response['Content-Disposition'] = 'attachment; filename="plantilla_tratos.xlsx"'
+        
+        return response
+
+class ContactoPlantillaExcelView(LoginRequiredMixin, TemplateView):
+    """Vista para generar y descargar plantilla de Excel para contactos"""
+    
+    def get(self, request, *args, **kwargs):
+        # Crear un DataFrame con las columnas y datos de ejemplo
+        datos_ejemplo = {
+            'nombre': ['Juan Pérez', 'María González'],
+            'cliente': ['Ejemplo Empresa ABC', 'Cliente Muestra XYZ'],
+            'cargo': ['Gerente de Proyectos', 'Directora de Tecnología'],
+            'correo': ['juan.perez@empresa.com', 'maria.gonzalez@cliente.com'],
+            'telefono': ['+56912345678', '+56987654321'],
+            'notas': ['Contacto principal para proyectos', 'Decisor técnico final']
+        }
+        
+        df = pd.DataFrame(datos_ejemplo)
+        
+        # Crear archivo Excel en memoria
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Contactos')
+            
+            # Obtener la hoja de trabajo para formatear
+            worksheet = writer.sheets['Contactos']
+            
+            # Ajustar el ancho de las columnas
+            for column in worksheet.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                worksheet.column_dimensions[column_letter].width = adjusted_width
+        
+        buffer.seek(0)
+        
+        # Crear respuesta HTTP con el archivo
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="plantilla_contactos.xlsx"'
         
         return response
 
@@ -956,3 +1848,275 @@ def setup_initial_config(request):
     </body>
     </html>
     """)
+
+
+# ============================================================================
+# VISTAS PARA LEADS
+# ============================================================================
+
+class LeadListView(LoginRequiredMixin, ListView):
+    model = Lead
+    template_name = 'crm/lead/list.html'
+    context_object_name = 'leads'
+    paginate_by = 20
+
+    def get_queryset(self):
+        queryset = Lead.objects.all()
+        
+        # Filtros de búsqueda
+        search_query = self.request.GET.get('q')
+        if search_query:
+            queryset = queryset.filter(
+                Q(nombre__icontains=search_query) |
+                Q(empresa__icontains=search_query) |
+                Q(correo__icontains=search_query) |
+                Q(telefono__icontains=search_query)
+            )
+        
+        # Filtros específicos
+        estado = self.request.GET.get('estado')
+        if estado:
+            queryset = queryset.filter(estado=estado)
+            
+        fuente = self.request.GET.get('fuente')
+        if fuente:
+            queryset = queryset.filter(fuente=fuente)
+            
+        nivel_interes = self.request.GET.get('nivel_interes')
+        if nivel_interes:
+            queryset = queryset.filter(nivel_interes=nivel_interes)
+            
+        responsable_id = self.request.GET.get('responsable')
+        if responsable_id:
+            queryset = queryset.filter(responsable_id=responsable_id)
+            
+        sector = self.request.GET.get('sector')
+        if sector:
+            queryset = queryset.filter(sector_actividad=sector)
+
+        return queryset.order_by('-fecha_actualizacion')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Agregar opciones para filtros
+        context['estados_lead'] = Lead.ESTADO_CHOICES
+        context['fuentes_lead'] = Lead.FUENTE_CHOICES
+        context['niveles_interes'] = Lead.INTERES_CHOICES
+        context['sectores'] = Cliente.SECTOR_ACTIVIDAD_CHOICES
+        context['responsables'] = get_user_model().objects.filter(is_active=True).order_by('username')
+        
+        # Mantener filtros seleccionados
+        context['selected_estado'] = self.request.GET.get('estado')
+        context['selected_fuente'] = self.request.GET.get('fuente')
+        context['selected_nivel_interes'] = self.request.GET.get('nivel_interes')
+        context['selected_responsable'] = self.request.GET.get('responsable')
+        context['selected_sector'] = self.request.GET.get('sector')
+        context['search_query'] = self.request.GET.get('q', '')
+        
+        return context
+
+
+class LeadCreateView(LoginRequiredMixin, CreateView):
+    model = Lead
+    template_name = 'crm/lead/form.html'
+    fields = ['nombre', 'empresa', 'cargo', 'correo', 'telefono', 'sector_actividad',
+              'estado', 'fuente', 'nivel_interes', 'necesidad', 'presupuesto_estimado',
+              'fecha_contacto_inicial', 'responsable', 'notas']
+    success_url = reverse_lazy('crm:lead_list')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        
+        # Personalizar widgets
+        form.fields['fecha_contacto_inicial'].widget = forms.DateInput(
+            attrs={'type': 'date', 'class': 'form-control'}
+        )
+        form.fields['necesidad'].widget = forms.Textarea(
+            attrs={'rows': 3, 'class': 'form-control'}
+        )
+        form.fields['notas'].widget = forms.Textarea(
+            attrs={'rows': 3, 'class': 'form-control'}
+        )
+        
+        # Aplicar clases CSS
+        for field in form.fields.values():
+            if not hasattr(field.widget, 'attrs'):
+                field.widget.attrs = {}
+            field.widget.attrs.update({'class': 'form-control'})
+            
+        return form
+
+    def form_valid(self, form):
+        form.instance.creado_por = self.request.user
+        if not form.instance.responsable:
+            form.instance.responsable = self.request.user
+            
+        messages.success(self.request, 'Lead creado exitosamente.')
+        return super().form_valid(form)
+
+
+class LeadDetailView(LoginRequiredMixin, DetailView):
+    model = Lead
+    template_name = 'crm/lead/detail.html'
+    context_object_name = 'lead'
+
+
+class LeadUpdateView(LoginRequiredMixin, UpdateView):
+    model = Lead
+    template_name = 'crm/lead/form.html'
+    fields = ['nombre', 'empresa', 'cargo', 'correo', 'telefono', 'sector_actividad',
+              'estado', 'fuente', 'nivel_interes', 'necesidad', 'presupuesto_estimado',
+              'fecha_contacto_inicial', 'fecha_ultima_interaccion', 'responsable', 'notas']
+    success_url = reverse_lazy('crm:lead_list')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        
+        # Personalizar widgets
+        form.fields['fecha_contacto_inicial'].widget = forms.DateInput(
+            attrs={'type': 'date', 'class': 'form-control'}
+        )
+        form.fields['fecha_ultima_interaccion'].widget = forms.DateInput(
+            attrs={'type': 'date', 'class': 'form-control'}
+        )
+        form.fields['necesidad'].widget = forms.Textarea(
+            attrs={'rows': 3, 'class': 'form-control'}
+        )
+        form.fields['notas'].widget = forms.Textarea(
+            attrs={'rows': 3, 'class': 'form-control'}
+        )
+        
+        # Aplicar clases CSS
+        for field in form.fields.values():
+            if not hasattr(field.widget, 'attrs'):
+                field.widget.attrs = {}
+            field.widget.attrs.update({'class': 'form-control'})
+            
+        return form
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Lead actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class LeadDeleteView(LoginRequiredMixin, DeleteView):
+    model = Lead
+    template_name = 'crm/lead/confirm_delete.html'
+    success_url = reverse_lazy('crm:lead_list')
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'Lead eliminado exitosamente.')
+        return super().delete(request, *args, **kwargs)
+
+
+class LeadConvertView(LoginRequiredMixin, TemplateView):
+    template_name = 'crm/lead/convert.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['lead'] = get_object_or_404(Lead, pk=self.kwargs['pk'])
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        lead = get_object_or_404(Lead, pk=kwargs['pk'])
+        
+        print(f"DEBUG: Converting lead {lead.nombre}")
+        print(f"DEBUG: POST data: {request.POST}")
+        
+        if not lead.puede_convertir():
+            messages.error(request, 'Este lead no puede ser convertido.')
+            return redirect('crm:lead_detail', pk=lead.pk)
+        
+        conversion_type = request.POST.get('conversion_type')
+        print(f"DEBUG: Conversion type: {conversion_type}")
+        
+        try:
+            with transaction.atomic():
+                if conversion_type == 'cliente':
+                    # Convertir a Cliente
+                    cliente = Cliente.objects.create(
+                        nombre=lead.empresa or lead.nombre,
+                        sector_actividad=lead.sector_actividad,
+                        correo=lead.correo,
+                        telefono=lead.telefono,
+                        notas=f"Convertido desde Lead: {lead.nombre}\n\n{lead.notas}"
+                    )
+                    
+                    # Crear contacto asociado
+                    Contacto.objects.create(
+                        cliente=cliente,
+                        nombre=lead.nombre,
+                        cargo=lead.cargo,
+                        correo=lead.correo,
+                        telefono=lead.telefono,
+                        notas=f"Contacto principal del lead convertido"
+                    )
+                    
+                    # Actualizar lead
+                    lead.convertido_a_cliente = cliente
+                    lead.estado = 'convertido'
+                    lead.save()
+                    
+                    messages.success(request, f'Lead convertido exitosamente a Cliente: {cliente.nombre}')
+                    return redirect('crm:cliente_detail', pk=cliente.pk)
+                
+                elif conversion_type == 'trato':
+                    # Crear o buscar cliente existente
+                    cliente = None
+                    if lead.empresa:
+                        cliente, created = Cliente.objects.get_or_create(
+                            nombre=lead.empresa,
+                            defaults={
+                                'sector_actividad': lead.sector_actividad,
+                                'correo': lead.correo,
+                                'telefono': lead.telefono,
+                                'notas': f"Cliente creado desde Lead: {lead.nombre}"
+                            }
+                        )
+                    
+                    # Crear contacto si no existe
+                    contacto = None
+                    if cliente:
+                        contacto, created = Contacto.objects.get_or_create(
+                            cliente=cliente,
+                            correo=lead.correo,
+                            defaults={
+                                'nombre': lead.nombre,
+                                'cargo': lead.cargo,
+                                'telefono': lead.telefono,
+                                'notas': f"Contacto desde lead convertido"
+                            }
+                        )
+                    
+                    # Convertir a Trato
+                    trato = Trato.objects.create(
+                        nombre=lead.necesidad[:200] if lead.necesidad else f"Oportunidad de {lead.nombre}",
+                        cliente=cliente,
+                        contacto=contacto,
+                        correo=lead.correo,
+                        telefono=lead.telefono,
+                        descripcion=lead.necesidad or f"Trato convertido desde lead: {lead.nombre}",
+                        valor=lead.presupuesto_estimado or 0,
+                        probabilidad=70,  # Alta probabilidad para leads convertidos
+                        estado='revision_tecnica',
+                        fuente=lead.fuente if lead.fuente in dict(Trato.FUENTE_CHOICES) else 'otro',
+                        responsable=lead.responsable or request.user,
+                        notas=f"Convertido desde Lead: {lead.nombre}\n\n{lead.notas}"
+                    )
+                    
+                    # Actualizar lead
+                    lead.convertido_a_cliente = cliente
+                    lead.convertido_a_trato = trato
+                    lead.estado = 'convertido'
+                    lead.save()
+                    
+                    messages.success(request, f'Lead convertido exitosamente a ProyectoCRM #{trato.numero_oferta}')
+                    return redirect('crm:trato_detail', pk=trato.pk)
+                    
+        except Exception as e:
+            messages.error(request, f'Error al convertir el lead: {str(e)}')
+            return redirect('crm:lead_detail', pk=lead.pk)
+        
+        messages.error(request, 'Tipo de conversión no válido.')
+        return redirect('crm:lead_detail', pk=lead.pk)

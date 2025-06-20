@@ -1,0 +1,525 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Informe {{ informe.solicitud_servicio.numero_orden }} - Trabajo{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-file-alt me-2"></i>Informe {{ informe.solicitud_servicio.numero_orden }}
+        </h1>
+        <div>
+            <a href="{% url 'servicios:informe_update' informe.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit me-1"></i>Editar
+            </a>
+            <a href="{% url 'servicios:solicitud_detail' informe.solicitud_servicio.pk %}" class="btn btn-secondary">
+                <i class="fas fa-clipboard-list me-1"></i>Ver Solicitud
+            </a>
+            <a href="{% url 'servicios:informe_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Estado del Informe -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1">Estado del Informe</h5>
+                            <p class="mb-0 text-muted">{{ informe.solicitud_servicio.cliente_crm.nombre }}</p>
+                        </div>
+                        <div class="text-end">
+                            {% if informe.completado %}
+                                <span class="badge bg-success fs-6">Completado</span>
+                            {% else %}
+                                <span class="badge bg-warning fs-6">En progreso</span>
+                            {% endif %}
+                            <div class="mt-1">
+                                <small class="text-muted">{{ informe.fecha_servicio|date:"d/m/Y" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información Principal -->
+        <div class="col-lg-8">
+            <!-- Información del Servicio -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Información del Servicio</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-5">Orden de Servicio:</dt>
+                                <dd class="col-sm-7">
+                                    <a href="{% url 'servicios:solicitud_detail' informe.solicitud_servicio.pk %}">
+                                        {{ informe.solicitud_servicio.numero_orden }}
+                                    </a>
+                                </dd>
+
+                                <dt class="col-sm-5">Tipo de Servicio:</dt>
+                                <dd class="col-sm-7">{{ informe.solicitud_servicio.get_tipo_servicio_display }}</dd>
+
+                                <dt class="col-sm-5">Fecha de Servicio:</dt>
+                                <dd class="col-sm-7">{{ informe.fecha_servicio|date:"d/m/Y" }}</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-5">Hora de Ingreso:</dt>
+                                <dd class="col-sm-7">
+                                    {% if informe.hora_ingreso %}
+                                        {{ informe.hora_ingreso|date:"H:i" }}
+                                    {% else %}
+                                        <span class="text-muted">No registrada</span>
+                                    {% endif %}
+                                </dd>
+
+                                <dt class="col-sm-5">Hora de Salida:</dt>
+                                <dd class="col-sm-7">
+                                    {% if informe.hora_salida %}
+                                        {{ informe.hora_salida|date:"H:i" }}
+                                    {% else %}
+                                        <span class="text-muted">No registrada</span>
+                                    {% endif %}
+                                </dd>
+
+                                <dt class="col-sm-5">Tiempo Total:</dt>
+                                <dd class="col-sm-7">
+                                    {% if informe.tiempo_total_minutos %}
+                                        <span class="badge bg-info">{{ informe.tiempo_total_horas }}</span>
+                                    {% else %}
+                                        <span class="text-muted">No calculado</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnóstico y Trabajos -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Diagnóstico y Trabajos Realizados</h6>
+                </div>
+                <div class="card-body">
+                    {% if informe.descripcion_problema %}
+                    <div class="mb-4">
+                        <h6 class="font-weight-bold">Descripción del Problema:</h6>
+                        <p>{{ informe.descripcion_problema|linebreaksbr }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if informe.diagnostico_preliminar %}
+                    <div class="mb-4">
+                        <h6 class="font-weight-bold">Diagnóstico Preliminar:</h6>
+                        <p>{{ informe.diagnostico_preliminar|linebreaksbr }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if informe.detalle_trabajos %}
+                    <div class="mb-4">
+                        <h6 class="font-weight-bold">Detalle de Trabajos Realizados:</h6>
+                        <p>{{ informe.detalle_trabajos|linebreaksbr }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Análisis de Fallas -->
+                    {% if informe.causas_problema or informe.tipos_falla %}
+                    <div class="row">
+                        {% if informe.causas_problema %}
+                        <div class="col-md-6">
+                            <h6 class="font-weight-bold">Causas del Problema:</h6>
+                            <ul class="list-unstyled">
+                                {% for causa in informe.causas_problema %}
+                                    <li><i class="fas fa-chevron-right text-primary me-2"></i>{{ causa }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        {% if informe.tipos_falla %}
+                        <div class="col-md-6">
+                            <h6 class="font-weight-bold">Tipos de Falla:</h6>
+                            <ul class="list-unstyled">
+                                {% for tipo in informe.tipos_falla %}
+                                    <li><i class="fas fa-chevron-right text-danger me-2"></i>{{ tipo }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Materiales y Consumibles -->
+            {% if materiales %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Materiales y Consumibles Utilizados</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Descripción</th>
+                                    <th>Marca</th>
+                                    <th>Referencia</th>
+                                    <th>Cantidad</th>
+                                    <th>Suministrado por</th>
+                                    <th>Costo Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for material in materiales %}
+                                <tr>
+                                    <td>{{ material.descripcion }}</td>
+                                    <td>{{ material.marca|default:"-" }}</td>
+                                    <td>{{ material.referencia|default:"-" }}</td>
+                                    <td>{{ material.cantidad }} {{ material.unidad_medida }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if material.suministrado_por == 'cliente' %}bg-info
+                                            {% else %}bg-success{% endif %}">
+                                            {{ material.get_suministrado_por_display }}
+                                        </span>
+                                    </td>
+                                    <td>${{ material.costo_total|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Adjuntos -->
+            {% if adjuntos %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-paperclip me-2"></i>Adjuntos y Archivos
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for adjunto in adjuntos %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card border">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3 text-center" style="width: 40px;">
+                                            <i class="{{ adjunto.icono_tipo }} fa-2x text-primary"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">
+                                                <a href="{{ adjunto.archivo.url }}" target="_blank" class="text-decoration-none">
+                                                    {{ adjunto.nombre_original }}
+                                                </a>
+                                            </h6>
+                                            {% if adjunto.descripcion %}
+                                                <p class="mb-1 text-muted small">{{ adjunto.descripcion }}</p>
+                                            {% endif %}
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">
+                                                    <span class="badge bg-secondary">{{ adjunto.get_tipo_adjunto_display }}</span>
+                                                    {{ adjunto.tamaño_legible }}
+                                                </small>
+                                                <small class="text-muted">
+                                                    {{ adjunto.fecha_creacion|date:"d/m/Y H:i" }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if adjunto.es_imagen %}
+                                        <div class="mt-2">
+                                            <img src="{{ adjunto.archivo.url }}" alt="{{ adjunto.nombre_original }}" 
+                                                 class="img-fluid rounded" style="max-height: 150px; width: 100%; object-fit: cover;">
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recomendaciones -->
+            {% if informe.recomendaciones or informe.observaciones_adicionales %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Recomendaciones y Observaciones</h6>
+                </div>
+                <div class="card-body">
+                    {% if informe.recomendaciones %}
+                    <div class="mb-3">
+                        <h6 class="font-weight-bold">Recomendaciones:</h6>
+                        <p>{{ informe.recomendaciones|linebreaksbr }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if informe.observaciones_adicionales %}
+                    <div>
+                        <h6 class="font-weight-bold">Observaciones Adicionales:</h6>
+                        <p>{{ informe.observaciones_adicionales|linebreaksbr }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-lg-4">
+            <!-- Encuesta de Satisfacción -->
+            {% if informe.satisfaccion_cliente or informe.observaciones_encuesta %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-star me-2"></i>Encuesta de Satisfacción
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if informe.satisfaccion_cliente %}
+                    <div class="text-center mb-3">
+                        <div class="mb-3">
+                            {% if informe.satisfaccion_cliente == 'muy_satisfecho' %}
+                                <i class="fas fa-smile fa-3x text-success"></i>
+                            {% elif informe.satisfaccion_cliente == 'satisfecho' %}
+                                <i class="fas fa-smile fa-3x text-primary"></i>
+                            {% elif informe.satisfaccion_cliente == 'insatisfecho' %}
+                                <i class="fas fa-frown fa-3x text-warning"></i>
+                            {% elif informe.satisfaccion_cliente == 'muy_insatisfecho' %}
+                                <i class="fas fa-angry fa-3x text-danger"></i>
+                            {% endif %}
+                        </div>
+                        <h5 class="mb-0">{{ informe.get_satisfaccion_cliente_display }}</h5>
+                    </div>
+                    {% endif %}
+                    
+                    {% if informe.observaciones_encuesta %}
+                    <hr>
+                    <div>
+                        <h6 class="font-weight-bold">Observaciones del Cliente:</h6>
+                        <div class="bg-light p-3 rounded">
+                            <p class="mb-0">{{ informe.observaciones_encuesta|linebreaksbr }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Firmas -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Firmas</h6>
+                </div>
+                <div class="card-body">
+                    <!-- Firma del Técnico -->
+                    <div class="mb-4">
+                        <h6 class="font-weight-bold">Técnico</h6>
+                        {% if informe.tecnico_nombre %}
+                            <dl class="row mb-2">
+                                <dt class="col-sm-4">Nombre:</dt>
+                                <dd class="col-sm-8">{{ informe.tecnico_nombre }}</dd>
+                                
+                                {% if informe.tecnico_cargo %}
+                                <dt class="col-sm-4">Cargo:</dt>
+                                <dd class="col-sm-8">{{ informe.tecnico_cargo }}</dd>
+                                {% endif %}
+                                
+                                {% if informe.tecnico_fecha_firma %}
+                                <dt class="col-sm-4">Fecha:</dt>
+                                <dd class="col-sm-8">{{ informe.tecnico_fecha_firma|date:"d/m/Y" }}</dd>
+                                {% endif %}
+                            </dl>
+                            
+                            {% if informe.tecnico_firma %}
+                                <div class="text-center">
+                                    <img src="{{ informe.tecnico_firma.url }}" alt="Firma del Técnico" 
+                                         class="img-fluid border" style="max-height: 100px;">
+                                </div>
+                            {% else %}
+                                <div class="text-center py-3 border">
+                                    <i class="fas fa-signature text-muted"></i>
+                                    <p class="text-muted mb-0">Sin firma</p>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted">Información del técnico no registrada</p>
+                        {% endif %}
+                    </div>
+
+                    <hr>
+
+                    <!-- Firma del Cliente -->
+                    <div>
+                        <h6 class="font-weight-bold">Cliente</h6>
+                        {% if informe.cliente_nombre %}
+                            <dl class="row mb-2">
+                                <dt class="col-sm-4">Nombre:</dt>
+                                <dd class="col-sm-8">{{ informe.cliente_nombre }}</dd>
+                                
+                                {% if informe.cliente_cargo %}
+                                <dt class="col-sm-4">Cargo:</dt>
+                                <dd class="col-sm-8">{{ informe.cliente_cargo }}</dd>
+                                {% endif %}
+                                
+                                {% if informe.cliente_fecha_firma %}
+                                <dt class="col-sm-4">Fecha:</dt>
+                                <dd class="col-sm-8">{{ informe.cliente_fecha_firma|date:"d/m/Y" }}</dd>
+                                {% endif %}
+                            </dl>
+                            
+                            {% if informe.cliente_firma %}
+                                <div class="text-center">
+                                    <img src="{{ informe.cliente_firma.url }}" alt="Firma del Cliente" 
+                                         class="img-fluid border" style="max-height: 100px;">
+                                </div>
+                            {% else %}
+                                <div class="text-center py-3 border">
+                                    <i class="fas fa-signature text-muted"></i>
+                                    <p class="text-muted mb-0">Sin firma</p>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted">Información del cliente no registrada</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información de Entrega -->
+            {% if informe.entregado_por_nombre or informe.entregado_cliente_nombre %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-handshake me-2"></i>Información de Entrega
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Entregado Por -->
+                        {% if informe.entregado_por_nombre %}
+                        <div class="col-md-6">
+                            <h6 class="font-weight-bold text-success">
+                                <i class="fas fa-user-tie me-2"></i>Entregado Por
+                            </h6>
+                            <dl class="row mb-3">
+                                <dt class="col-sm-4">Nombre:</dt>
+                                <dd class="col-sm-8">{{ informe.entregado_por_nombre }}</dd>
+                                
+                                {% if informe.entregado_por_cargo %}
+                                <dt class="col-sm-4">Cargo:</dt>
+                                <dd class="col-sm-8">{{ informe.entregado_por_cargo }}</dd>
+                                {% endif %}
+                                
+                                {% if informe.entregado_por_fecha %}
+                                <dt class="col-sm-4">Fecha:</dt>
+                                <dd class="col-sm-8">{{ informe.entregado_por_fecha|date:"d/m/Y" }}</dd>
+                                {% endif %}
+                            </dl>
+                            
+                            {% if informe.entregado_por_firma %}
+                                <div class="text-center">
+                                    <img src="{{ informe.entregado_por_firma.url }}" alt="Firma de Entrega" 
+                                         class="img-fluid border" style="max-height: 80px;">
+                                </div>
+                            {% else %}
+                                <div class="text-center py-2 border">
+                                    <i class="fas fa-signature text-muted"></i>
+                                    <p class="text-muted mb-0 small">Sin firma</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Recibido Por (Cliente) -->
+                        {% if informe.entregado_cliente_nombre %}
+                        <div class="col-md-6">
+                            <h6 class="font-weight-bold text-primary">
+                                <i class="fas fa-user-check me-2"></i>Recibido Por (Cliente)
+                            </h6>
+                            <dl class="row mb-3">
+                                <dt class="col-sm-4">Nombre:</dt>
+                                <dd class="col-sm-8">{{ informe.entregado_cliente_nombre }}</dd>
+                                
+                                {% if informe.entregado_cliente_cargo %}
+                                <dt class="col-sm-4">Cargo:</dt>
+                                <dd class="col-sm-8">{{ informe.entregado_cliente_cargo }}</dd>
+                                {% endif %}
+                                
+                                {% if informe.entregado_cliente_fecha %}
+                                <dt class="col-sm-4">Fecha:</dt>
+                                <dd class="col-sm-8">{{ informe.entregado_cliente_fecha|date:"d/m/Y" }}</dd>
+                                {% endif %}
+                            </dl>
+                            
+                            {% if informe.entregado_cliente_firma %}
+                                <div class="text-center">
+                                    <img src="{{ informe.entregado_cliente_firma.url }}" alt="Firma de Recepción" 
+                                         class="img-fluid border" style="max-height: 80px;">
+                                </div>
+                            {% else %}
+                                <div class="text-center py-2 border">
+                                    <i class="fas fa-signature text-muted"></i>
+                                    <p class="text-muted mb-0 small">Sin firma</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Información de la Solicitud -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Solicitud Original</h6>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-5">N° Orden:</dt>
+                        <dd class="col-sm-7">{{ informe.solicitud_servicio.numero_orden }}</dd>
+
+                        <dt class="col-sm-5">Cliente:</dt>
+                        <dd class="col-sm-7">{{ informe.solicitud_servicio.cliente_crm.nombre }}</dd>
+
+                        <dt class="col-sm-5">Tipo:</dt>
+                        <dd class="col-sm-7">{{ informe.solicitud_servicio.get_tipo_servicio_display }}</dd>
+
+                        <dt class="col-sm-5">Programada:</dt>
+                        <dd class="col-sm-7">{{ informe.solicitud_servicio.fecha_programada|date:"d/m/Y H:i" }}</dd>
+                    </dl>
+                    
+                    <div class="text-center">
+                        <a href="{% url 'servicios:solicitud_detail' informe.solicitud_servicio.pk %}" 
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye me-1"></i>Ver Solicitud Completa
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

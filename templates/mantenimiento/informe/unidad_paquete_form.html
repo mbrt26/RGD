@@ -1,0 +1,702 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}Editar Informe{% else %}Nuevo Informe{% endif %} - Unidades Paquetes Condensados por Aire
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-clipboard-list me-2"></i>
+                {% if form.instance.pk %}Editar Informe{% else %}Nuevo Informe{% endif %} - Unidades Paquetes Condensados por Aire
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:dashboard' %}">Mantenimiento</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:actividad_list' %}">Actividades</a></li>
+                    {% if actividad %}
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:actividad_detail' actividad.pk %}">{{ actividad.codigo_actividad }}</a></li>
+                    {% endif %}
+                    <li class="breadcrumb-item active">Informe Unidad Paquete</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+    </div>
+    {% else %}
+
+    <form method="post" id="informeForm" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <!-- Progress Indicator -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="progress mb-3" style="height: 8px;">
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: 0%" id="formProgress"></div>
+                </div>
+                <div class="row text-center">
+                    <div class="col step-indicator active" data-step="1">
+                        <i class="fas fa-info-circle"></i><br>
+                        <small>Información General</small>
+                    </div>
+                    <div class="col step-indicator" data-step="2">
+                        <i class="fas fa-bolt"></i><br>
+                        <small>Voltaje y Observaciones</small>
+                    </div>
+                    <div class="col step-indicator" data-step="3">
+                        <i class="fas fa-snowflake"></i><br>
+                        <small>Evaporador</small>
+                    </div>
+                    <div class="col step-indicator" data-step="4">
+                        <i class="fas fa-compress"></i><br>
+                        <small>Condensador</small>
+                    </div>
+                    <div class="col step-indicator" data-step="5">
+                        <i class="fas fa-cogs"></i><br>
+                        <small>Refrigeración y Eléctrico</small>
+                    </div>
+                    <div class="col step-indicator" data-step="6">
+                        <i class="fas fa-signature"></i><br>
+                        <small>Firmas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 1: Información General del Equipo -->
+        <div class="form-section" data-section="1">
+            <div class="card mb-4" style="border-left: 4px solid #007bff;">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="m-0">
+                        <i class="fas fa-info-circle me-2"></i>1. Información General del Equipo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.fecha|as_crispy_field }}
+                            {{ form.marca|as_crispy_field }}
+                            {{ form.sistema_modelo|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.equipo_serie|as_crispy_field }}
+                                                        {{ form.usuario|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 2: Tipo de Mantenimiento, Voltaje y Observaciones -->
+        <div class="form-section" data-section="2" style="display: none;">
+            <div class="card mb-4" style="border-left: 4px solid #ffc107;">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="m-0">
+                        <i class="fas fa-tools me-2"></i>2. Tipo de Mantenimiento
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {{ form.tipo_mantenimiento|as_crispy_field }}
+                </div>
+            </div>
+
+            <div class="card mb-4" style="border-left: 4px solid #dc3545;">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="m-0">
+                        <i class="fas fa-bolt me-2"></i>3. Voltaje en Tableros Eléctricos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.voltaje_l1_l2|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.voltaje_l2_l3|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.voltaje_l1_l3|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4" style="border-left: 4px solid #6c757d;">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="m-0">
+                        <i class="fas fa-eye me-2"></i>4. Observaciones Previas al Mantenimiento
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {{ form.observaciones_previas|as_crispy_field }}
+                    <small class="form-text text-muted">
+                        Incluya hallazgos relevantes y/o anormales del equipo, lecturas de diferenciales de presión de pre y post filtración.
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 3: Evaporador -->
+        <div class="form-section" data-section="3" style="display: none;">
+            <div class="card mb-4" style="border-left: 4px solid #17a2b8;">
+                <div class="card-header bg-info text-white">
+                    <h5 class="m-0">
+                        <i class="fas fa-snowflake me-2"></i>5. Sección Evaporador
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Actividades de Mantenimiento -->
+                    <h6 class="text-info mb-3">Actividades de Mantenimiento</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            {{ form.evap_lavado|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.evap_desincrustante|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.evap_limpieza_bandeja|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.evap_limpieza_drenaje|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Conjunto Motor Ventilador Evaporador -->
+                    <h6 class="text-info mb-3">Conjunto Motor Ventilador Evaporador</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-2">
+                            {{ form.evap_motor_limpieza_rotores|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.evap_motor_lubricacion|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.evap_motor_rpm|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.evap_motor_amperaje|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.evap_motor_limpieza_ejes|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Rangos Permitidos -->
+                    <h6 class="text-info mb-3">Rangos Permitidos</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.evap_nivel_aceite|as_crispy_field }}
+                            {{ form.evap_cambio_aceite|as_crispy_field }}
+                            {{ form.evap_ajuste_control_capacidad|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.evap_amperaje_rla|as_crispy_field }}
+                            {{ form.evap_presion_succion|as_crispy_field }}
+                            {{ form.evap_presion_descarga|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.evap_limpieza|as_crispy_field }}
+                            {{ form.evap_presostato_alta|as_crispy_field }}
+                            {{ form.evap_presostato_baja|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 4: Condensador -->
+        <div class="form-section" data-section="4" style="display: none;">
+            <div class="card mb-4" style="border-left: 4px solid #28a745;">
+                <div class="card-header bg-success text-white">
+                    <h5 class="m-0">
+                        <i class="fas fa-compress me-2"></i>6. Sección Condensador
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Compresor No.1 -->
+                    <h6 class="text-success mb-3">Compresor No.1</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            {{ form.comp1_modelo|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.comp1_revision_placas_bornes|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.comp1_nivel_aceite|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.comp1_cambio_aceite|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.comp1_ajuste_control_capacidad|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conjunto Motor Ventilador Condensador 1 -->
+                    <h6 class="text-success mb-3">Conjunto Motor Ventilador Condensador 1</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-2">
+                            {{ form.cond1_limpieza_rotores|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.cond1_lubricacion|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.cond1_rpm|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.cond1_amperaje_motor|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.cond1_limpieza_ejes|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Rangos Permitidos Condensador 1 -->
+                    <h6 class="text-success mb-3">Rangos Permitidos - Condensador 1</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            {{ form.cond1_nivel_aceite|as_crispy_field }}
+                            {{ form.cond1_cambio_aceite|as_crispy_field }}
+                            {{ form.cond1_ajuste_control_capacidad|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.cond1_amperaje_rla|as_crispy_field }}
+                            {{ form.cond1_presion_succion|as_crispy_field }}
+                            {{ form.cond1_presion_descarga|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.cond1_limpieza|as_crispy_field }}
+                            {{ form.cond1_presostato_alta|as_crispy_field }}
+                            {{ form.cond1_presostato_baja|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Compresor No.2 -->
+                    <h6 class="text-success mb-3">Compresor No.2</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            {{ form.comp2_modelo|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.comp2_revision_placas_bornes|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.comp2_nivel_aceite|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.comp2_cambio_aceite|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.comp2_ajuste_control_capacidad|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conjunto Motor Ventilador Condensador 2 -->
+                    <h6 class="text-success mb-3">Conjunto Motor Ventilador Condensador 2</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-2">
+                            {{ form.cond2_limpieza_rotores|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.cond2_lubricacion|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.cond2_rpm|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.cond2_amperaje_motor|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.cond2_limpieza_ejes|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Rangos Permitidos Condensador 2 -->
+                    <h6 class="text-success mb-3">Rangos Permitidos - Condensador 2</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.cond2_nivel_aceite|as_crispy_field }}
+                            {{ form.cond2_cambio_aceite|as_crispy_field }}
+                            {{ form.cond2_ajuste_control_capacidad|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.cond2_amperaje_rla|as_crispy_field }}
+                            {{ form.cond2_presion_succion|as_crispy_field }}
+                            {{ form.cond2_presion_descarga|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.cond2_limpieza|as_crispy_field }}
+                            {{ form.cond2_presostato_alta|as_crispy_field }}
+                            {{ form.cond2_presostato_baja|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 5: Refrigeración y Sistema Eléctrico -->
+        <div class="form-section" data-section="5" style="display: none;">
+            <div class="card mb-4" style="border-left: 4px solid #fd7e14;">
+                <div class="card-header" style="background-color: #fd7e14; color: white;">
+                    <h5 class="m-0">
+                        <i class="fas fa-temperature-low me-2"></i>7. Circuito de Refrigeración
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.refrig_carga_refrigerante|as_crispy_field }}
+                            {{ form.refrig_valvulas_solenoide|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.refrig_aislamiento|as_crispy_field }}
+                            {{ form.refrig_pruebas_escapes|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.refrig_filtro_secador|as_crispy_field }}
+                            {{ form.refrig_valvula_expansion|as_crispy_field }}
+                            {{ form.refrig_chequear_humedad|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4" style="border-left: 4px solid #6f42c1;">
+                <div class="card-header" style="background-color: #6f42c1; color: white;">
+                    <h5 class="m-0">
+                        <i class="fas fa-plug me-2"></i>8. Sistema Eléctrico
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.elect_limpieza_tablero|as_crispy_field }}
+                            {{ form.elect_limpieza_contactor|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.elect_operacion_timer|as_crispy_field }}
+                            {{ form.elect_operacion_relevos|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.elect_revision_alambrado|as_crispy_field }}
+                            {{ form.elect_operacion_termostato|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4" style="border-left: 4px solid #20c997;">
+                <div class="card-header bg-teal text-white" style="background-color: #20c997;">
+                    <h5 class="m-0">
+                        <i class="fas fa-clipboard-check me-2"></i>9. Observaciones Posteriores al Mantenimiento
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {{ form.observaciones_posteriores|as_crispy_field }}
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            {{ form.prioridad|as_crispy_field }}
+                            <small class="form-text text-muted">
+                                Identificar si la prioridad de la actividad propuesta es ALTA o BAJA según sea la criticidad del hallazgo
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 6: Firmas y Responsables -->
+        <div class="form-section" data-section="6" style="display: none;">
+            <div class="card mb-4" style="border-left: 4px solid #e83e8c;">
+                <div class="card-header" style="background-color: #e83e8c; color: white;">
+                    <h5 class="m-0">
+                        <i class="fas fa-signature me-2"></i>10. Firmas y Responsables
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Ejecutado por -->
+                    <h6 class="text-primary mb-3">Ejecutado por</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            {{ form.ejecutado_por_nombre|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.ejecutado_por_fecha|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.ejecutado_por_firma|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Supervisado por -->
+                    <h6 class="text-warning mb-3">Supervisado por</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            {{ form.supervisado_por_nombre|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.supervisado_por_fecha|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.supervisado_por_firma|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Recibido por -->
+                    <h6 class="text-success mb-3">Recibido por</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.recibido_por_nombre|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.recibido_por_fecha|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.recibido_por_firma|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de Navegación -->
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        {% if actividad %}
+                        <a href="{% url 'mantenimiento:actividad_detail' actividad.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Cancelar
+                        </a>
+                        {% endif %}
+                        <button type="button" class="btn btn-outline-secondary" id="prevBtn" style="display: none;">
+                            <i class="fas fa-arrow-left me-1"></i>Anterior
+                        </button>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-outline-primary" id="saveAsDraftBtn">
+                            <i class="fas fa-save me-1"></i>Guardar Borrador
+                        </button>
+                        <button type="button" class="btn btn-primary" id="nextBtn">
+                            Siguiente<i class="fas fa-arrow-right ms-1"></i>
+                        </button>
+                        <button type="submit" class="btn btn-success" id="submitBtn" style="display: none;">
+                            <i class="fas fa-check me-1"></i>
+                            {% if form.instance.pk %}Actualizar{% else %}Crear{% endif %} Informe
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentSection = 1;
+    const totalSections = 6;
+    
+    // Elementos
+    const formSections = document.querySelectorAll('.form-section');
+    const stepIndicators = document.querySelectorAll('.step-indicator');
+    const progressBar = document.getElementById('formProgress');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const saveAsDraftBtn = document.getElementById('saveAsDraftBtn');
+    
+    // Función para mostrar sección
+    function showSection(section) {
+        // Ocultar todas las secciones
+        formSections.forEach(sec => sec.style.display = 'none');
+        
+        // Mostrar sección actual
+        const currentSec = document.querySelector(`[data-section="${section}"]`);
+        if (currentSec) {
+            currentSec.style.display = 'block';
+        }
+        
+        // Actualizar indicadores
+        stepIndicators.forEach((indicator, index) => {
+            indicator.classList.toggle('active', index + 1 === section);
+            indicator.classList.toggle('completed', index + 1 < section);
+        });
+        
+        // Actualizar barra de progreso
+        const progress = (section / totalSections) * 100;
+        progressBar.style.width = progress + '%';
+        
+        // Actualizar botones
+        prevBtn.style.display = section > 1 ? 'inline-block' : 'none';
+        nextBtn.style.display = section < totalSections ? 'inline-block' : 'none';
+        submitBtn.style.display = section === totalSections ? 'inline-block' : 'none';
+    }
+    
+    // Event listeners para navegación
+    nextBtn.addEventListener('click', function() {
+        if (currentSection < totalSections) {
+            currentSection++;
+            showSection(currentSection);
+        }
+    });
+    
+    prevBtn.addEventListener('click', function() {
+        if (currentSection > 1) {
+            currentSection--;
+            showSection(currentSection);
+        }
+    });
+    
+    // Navegación con indicadores
+    stepIndicators.forEach((indicator, index) => {
+        indicator.addEventListener('click', function() {
+            currentSection = index + 1;
+            showSection(currentSection);
+        });
+    });
+    
+    // Guardar como borrador
+    saveAsDraftBtn.addEventListener('click', function() {
+        // Aquí podrías implementar AJAX para guardar borrador
+        alert('Funcionalidad de borrador pendiente de implementar');
+    });
+    
+    // Validación del formulario
+    document.getElementById('informeForm').addEventListener('submit', function(e) {
+        const requiredFields = ['fecha', 'marca', 'sistema_modelo', 'equipo_serie', 'usuario', 'tipo_mantenimiento'];
+        let isValid = true;
+        let errors = [];
+        
+        requiredFields.forEach(fieldName => {
+            const field = document.getElementById(`id_${fieldName}`);
+            if (field && !field.value.trim()) {
+                isValid = false;
+                errors.push(`El campo ${field.previousElementSibling.textContent} es obligatorio.`);
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Por favor complete los siguientes campos obligatorios:\\n\\n' + errors.join('\\n'));
+            return false;
+        }
+    });
+    
+    // Auto-guardado cada 5 minutos
+    setInterval(function() {
+        if (typeof Storage !== "undefined") {
+            const formData = new FormData(document.getElementById('informeForm'));
+            const formObj = {};
+            formData.forEach((value, key) => {
+                formObj[key] = value;
+            });
+            localStorage.setItem('informe_draft', JSON.stringify(formObj));
+        }
+    }, 300000); // 5 minutos
+    
+    // Cargar borrador si existe
+    if (typeof Storage !== "undefined") {
+        const draft = localStorage.getItem('informe_draft');
+        if (draft && !{{ form.instance.pk|default:"false" }}) {
+            const confirmLoad = confirm('Se encontró un borrador guardado. ¿Desea cargarlo?');
+            if (confirmLoad) {
+                const formObj = JSON.parse(draft);
+                Object.keys(formObj).forEach(key => {
+                    const field = document.getElementById(`id_${key}`);
+                    if (field) {
+                        if (field.type === 'checkbox') {
+                            field.checked = formObj[key] === 'on';
+                        } else {
+                            field.value = formObj[key];
+                        }
+                    }
+                });
+            }
+        }
+    }
+    
+    // Inicializar primera sección
+    showSection(1);
+});
+</script>
+
+<style>
+.step-indicator {
+    opacity: 0.5;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.step-indicator.active {
+    opacity: 1;
+    background-color: #007bff;
+    color: white;
+}
+
+.step-indicator.completed {
+    opacity: 1;
+    background-color: #28a745;
+    color: white;
+}
+
+.step-indicator:hover {
+    background-color: #e9ecef;
+}
+
+.step-indicator.active:hover,
+.step-indicator.completed:hover {
+    opacity: 0.8;
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.form-check-input:checked {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.btn {
+    border-radius: 6px;
+}
+
+textarea {
+    min-height: 100px;
+}
+</style>
+{% endblock %}
+{% endblock %}

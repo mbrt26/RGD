@@ -1,0 +1,94 @@
+{% extends "base/list_base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block actions %}
+<div class="btn-group">
+    <a href="{% url 'crm:contacto_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Nuevo Contacto
+    </a>
+    <a href="{% url 'crm:contacto_import' %}" class="btn btn-success">
+        <i class="fas fa-file-import me-1"></i> Importar Excel
+    </a>
+    <a href="{% url 'crm:contacto_plantilla_excel' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-file-excel me-1"></i> Plantilla Excel
+    </a>
+</div>
+{% endblock %}
+
+{% block search %}
+<div class="row mb-3">
+    <div class="col-md-6">
+        <form method="get" class="d-flex">
+            <input type="text" name="q" class="form-control me-2" placeholder="Buscar por nombre, cliente, correo o cargo..." value="{{ search_query }}">
+            <button type="submit" class="btn btn-outline-secondary">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+    </div>
+    <div class="col-md-6">
+        <form method="get" class="d-flex">
+            <select name="cliente" class="form-select me-2">
+                <option value="">Todos los clientes</option>
+                {% for cliente in clientes %}
+                <option value="{{ cliente.id }}" {% if selected_cliente == cliente.id|stringformat:"s" %}selected{% endif %}>
+                    {{ cliente.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-outline-secondary">
+                <i class="fas fa-filter"></i>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block table_header %}
+    <th>Nombre</th>
+    <th>Cliente</th>
+    <th>Cargo</th>
+    <th>Correo</th>
+    <th>Teléfono</th>
+    <th>Acciones</th>
+{% endblock %}
+
+{% block table_body %}
+    {% for contacto in object_list %}
+    <tr>
+        <td>
+            <a href="{% url 'crm:contacto_detail' contacto.id %}">
+                {{ contacto.nombre }}
+            </a>
+        </td>
+        <td>
+            <a href="{% url 'crm:cliente_detail' contacto.cliente.id %}">
+                {{ contacto.cliente.nombre }}
+            </a>
+        </td>
+        <td>{{ contacto.cargo|default:'-' }}</td>
+        <td>
+            {% if contacto.correo %}
+                <a href="mailto:{{ contacto.correo }}">{{ contacto.correo }}</a>
+            {% else %}
+                -
+            {% endif %}
+        </td>
+        <td>{{ contacto.telefono|default:'-' }}</td>
+        <td>
+            <a href="{% url 'crm:contacto_detail' contacto.id %}" class="btn btn-sm btn-info" title="Ver">
+                <i class="fas fa-eye"></i>
+            </a>
+            <a href="{% url 'crm:contacto_update' contacto.id %}" class="btn btn-sm btn-primary" title="Editar">
+                <i class="fas fa-edit"></i>
+            </a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="6" class="text-center">
+            No hay contactos registrados.
+        </td>
+    </tr>
+    {% endfor %}
+{% endblock %}

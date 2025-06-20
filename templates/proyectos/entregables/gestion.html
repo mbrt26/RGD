@@ -54,6 +54,50 @@
     .estado-en_proceso { background-color: #ffc107; color: black; }
     .estado-completado { background-color: #28a745; color: white; }
     .estado-no_aplica { background-color: #17a2b8; color: white; }
+    
+    .fecha-entrega-container input {
+        border: 1px solid #ced4da;
+        transition: all 0.3s ease;
+    }
+    
+    .fecha-entrega-container input:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .archivo-upload-container {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .entregable-item.modified {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+    }
+    
+    .guardar-cambios.show {
+        display: inline-block !important;
+        animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+    
+    .status-saving {
+        color: #ffc107 !important;
+    }
+    
+    .status-saved {
+        color: #28a745 !important;
+    }
+    
+    .status-error {
+        color: #dc3545 !important;
+    }
 </style>
 {% endblock %}
 
@@ -88,19 +132,52 @@
                                 </button>
                             </form>
                         </div>
+                        <div class="col-md-4 text-end">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-warning" id="guardarTodosBtn" style="display: none;">
+                                    <i class="fas fa-save me-1"></i> Guardar Todos
+                                </button>
+                                <a href="{% url 'proyectos:entregable_import' %}" class="btn btn-success">
+                                    <i class="fas fa-file-import me-1"></i> Importar Excel
+                                </a>
+                                <a href="{% url 'proyectos:entregable_plantilla_excel' %}" class="btn btn-info">
+                                    <i class="fas fa-download me-1"></i> Plantilla
+                                </a>
+                                <a href="{% url 'proyectos:entregables_dashboard' %}" class="btn btn-primary">
+                                    <i class="fas fa-chart-bar me-1"></i> Dashboard
+                                </a>
+                            </div>
+                        </div>
                     </div>
 
                     {% if proyecto_seleccionado %}
                     <!-- Información del Proyecto -->
                     <div class="alert alert-info">
-                        <h5><i class="fas fa-project-diagram me-2"></i>{{ proyecto_seleccionado.nombre_proyecto }}</h5>
-                        <p class="mb-1"><strong>Cliente:</strong> {{ proyecto_seleccionado.cliente }}</p>
-                        <p class="mb-1"><strong>Centro de Costos:</strong> {{ proyecto_seleccionado.centro_costos }}</p>
-                        <p class="mb-0"><strong>Estado:</strong> 
-                            <span class="badge bg-{% if proyecto_seleccionado.estado == 'completado' %}success{% elif proyecto_seleccionado.estado == 'en_progreso' %}primary{% else %}secondary{% endif %}">
-                                {{ proyecto_seleccionado.get_estado_display }}
-                            </span>
-                        </p>
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h5><i class="fas fa-project-diagram me-2"></i>{{ proyecto_seleccionado.nombre_proyecto }}</h5>
+                                <p class="mb-1"><strong>Cliente:</strong> {{ proyecto_seleccionado.cliente }}</p>
+                                <p class="mb-1"><strong>Centro de Costos:</strong> {{ proyecto_seleccionado.centro_costos }}</p>
+                                <p class="mb-0"><strong>Estado:</strong> 
+                                    <span class="badge bg-{% if proyecto_seleccionado.estado == 'completado' %}success{% elif proyecto_seleccionado.estado == 'en_progreso' %}primary{% else %}secondary{% endif %}">
+                                        {{ proyecto_seleccionado.get_estado_display }}
+                                    </span>
+                                </p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="btn-group-vertical" role="group">
+                                    <a href="{% url 'proyectos:entregables_checklist' proyecto_seleccionado.id %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-tasks me-1"></i> Ver Checklist
+                                    </a>
+                                    <a href="{% url 'proyectos:entregable_personalizado_create' proyecto_seleccionado.id %}" class="btn btn-sm btn-success">
+                                        <i class="fas fa-plus me-1"></i> Agregar Personalizado
+                                    </a>
+                                    <a href="{% url 'proyectos:cambiar_tipo_entregable' proyecto_seleccionado.id %}" class="btn btn-sm btn-warning">
+                                        <i class="fas fa-cog me-1"></i> Configurar Tipos
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Formulario de Entregables -->
@@ -137,7 +214,7 @@
                             
                             <div class="fase-body">
                                 {% for entregable in entregables %}
-                                <div class="entregable-item">
+                                <div class="entregable-item" data-entregable-id="{{ entregable.id }}">
                                     <div class="row align-items-center">
                                         <div class="col-md-1">
                                             <div class="form-check">
@@ -153,7 +230,7 @@
                                         <div class="col-md-1">
                                             <strong>{{ entregable.codigo }}</strong>
                                         </div>
-                                        <div class="col-md-5">
+                                        <div class="col-md-3">
                                             <label for="entregable_{{ entregable.id }}" class="form-check-label">
                                                 {{ entregable.nombre }}
                                             </label>
@@ -162,35 +239,93 @@
                                             {% endif %}
                                         </div>
                                         <div class="col-md-2">
+                                            <!-- Fecha de Entrega Inline -->
+                                            <div class="fecha-entrega-container">
+                                                <input type="date" 
+                                                       class="form-control form-control-sm fecha-entrega-input" 
+                                                       data-entregable-id="{{ entregable.id }}"
+                                                       value="{% if entregable.fecha_entrega %}{{ entregable.fecha_entrega|date:'Y-m-d' }}{% endif %}"
+                                                       placeholder="Fecha entrega"
+                                                       title="Fecha de entrega">
+                                                <small class="text-muted d-block">Fecha entrega</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <!-- Estado Inline -->
+                                            <select class="form-select form-select-sm estado-select" 
+                                                    data-entregable-id="{{ entregable.id }}">
+                                                <option value="pendiente" {% if entregable.estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                                                <option value="en_proceso" {% if entregable.estado == 'en_proceso' %}selected{% endif %}>En Proceso</option>
+                                                <option value="completado" {% if entregable.estado == 'completado' %}selected{% endif %}>Completado</option>
+                                                <option value="no_aplica" {% if entregable.estado == 'no_aplica' %}selected{% endif %}>No Aplica</option>
+                                            </select>
+                                            <small class="text-muted d-block">Estado</small>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <!-- Upload de Archivo Inline -->
+                                            <div class="archivo-upload-container">
+                                                <input type="file" 
+                                                       class="form-control form-control-sm archivo-input d-none" 
+                                                       data-entregable-id="{{ entregable.id }}"
+                                                       id="archivo_{{ entregable.id }}">
+                                                <button type="button" 
+                                                        class="btn btn-sm {% if entregable.archivo %}btn-success{% else %}btn-outline-secondary{% endif %} archivo-btn"
+                                                        data-entregable-id="{{ entregable.id }}"
+                                                        title="{% if entregable.archivo %}Archivo cargado - Click para cambiar{% else %}Subir archivo{% endif %}">
+                                                    <i class="fas {% if entregable.archivo %}fa-check{% else %}fa-upload{% endif %}"></i>
+                                                </button>
+                                                {% if entregable.archivo %}
+                                                    <a href="{{ entregable.archivo.url }}" 
+                                                       class="btn btn-sm btn-outline-info ms-1" 
+                                                       target="_blank" 
+                                                       title="Ver archivo">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                            <small class="text-muted d-block">Archivo</small>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <div class="btn-group-vertical" role="group">
+                                                <!-- Botón de Guardar Cambios -->
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-success guardar-cambios d-none"
+                                                        data-entregable-id="{{ entregable.id }}"
+                                                        title="Guardar cambios">
+                                                    <i class="fas fa-save"></i>
+                                                </button>
+                                                <!-- Botón de Editar -->
+                                                <a href="{% url 'proyectos:entregable_proyecto_update' entregable.id %}" 
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   title="Editar completo">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Información adicional -->
+                                    <div class="row mt-2">
+                                        <div class="col-md-3">
+                                            <small class="text-muted">
+                                                <strong>Creador:</strong> {{ entregable.creador }}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small class="text-muted">
+                                                <strong>Consolidador:</strong> {{ entregable.consolidador }}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-3">
                                             {% if entregable.obligatorio %}
                                                 <span class="obligatorio-badge">Obligatorio</span>
                                             {% else %}
                                                 <span class="opcional-badge">Opcional</span>
                                             {% endif %}
                                         </div>
-                                        <div class="col-md-2">
-                                            <span class="estado-badge estado-{{ entregable.estado }}">
-                                                {{ entregable.get_estado_display }}
-                                            </span>
-                                        </div>
-                                        <div class="col-md-1">
-                                            <a href="{% url 'proyectos:entregable_proyecto_update' entregable.id %}" 
-                                               class="btn btn-sm btn-outline-primary"
-                                               title="Editar entregable">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row mt-2">
-                                        <div class="col-md-6">
-                                            <small class="text-muted">
-                                                <strong>Creador:</strong> {{ entregable.creador }}
-                                            </small>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <small class="text-muted">
-                                                <strong>Consolidador:</strong> {{ entregable.consolidador }}
+                                        <div class="col-md-3">
+                                            <small class="text-muted" id="status_{{ entregable.id }}">
+                                                <i class="fas fa-circle text-secondary"></i> Sin cambios
                                             </small>
                                         </div>
                                     </div>
@@ -255,6 +390,136 @@ $(document).ready(function() {
     
     // Tooltip para elementos informativos
     $('[title]').tooltip();
+    
+    // Funcionalidad para edición inline de entregables
+    initInlineEditing();
 });
+
+// Función para inicializar la edición inline
+function initInlineEditing() {
+    // Detectar cambios en fechas de entrega
+    $('.fecha-entrega-input').on('change', function() {
+        const entregableId = $(this).data('entregable-id');
+        markAsModified(entregableId);
+    });
+    
+    // Detectar cambios en estado
+    $('.estado-select').on('change', function() {
+        const entregableId = $(this).data('entregable-id');
+        markAsModified(entregableId);
+    });
+    
+    // Manejar click en botón de archivo
+    $('.archivo-btn').on('click', function() {
+        const entregableId = $(this).data('entregable-id');
+        $('#archivo_' + entregableId).click();
+    });
+    
+    // Detectar cambios en archivos
+    $('.archivo-input').on('change', function() {
+        const entregableId = $(this).data('entregable-id');
+        if (this.files.length > 0) {
+            markAsModified(entregableId);
+            // Cambiar apariencia del botón
+            const btn = $(`.archivo-btn[data-entregable-id="${entregableId}"]`);
+            btn.removeClass('btn-outline-secondary').addClass('btn-warning');
+            btn.find('i').removeClass('fa-upload').addClass('fa-clock');
+            btn.attr('title', 'Archivo seleccionado - Guardar para subir');
+        }
+    });
+    
+    // Manejar click en guardar cambios
+    $('.guardar-cambios').on('click', function() {
+        const entregableId = $(this).data('entregable-id');
+        saveEntregableChanges(entregableId);
+    });
+}
+
+// Función para marcar entregable como modificado
+function markAsModified(entregableId) {
+    const item = $(`.entregable-item[data-entregable-id="${entregableId}"]`);
+    const saveButton = $(`.guardar-cambios[data-entregable-id="${entregableId}"]`);
+    const status = $(`#status_${entregableId}`);
+    
+    item.addClass('modified');
+    saveButton.removeClass('d-none').addClass('show');
+    status.html('<i class="fas fa-edit text-warning"></i> Modificado - Guardar cambios');
+}
+
+// Función para guardar cambios de un entregable
+function saveEntregableChanges(entregableId) {
+    const item = $(`.entregable-item[data-entregable-id="${entregableId}"]`);
+    const saveButton = $(`.guardar-cambios[data-entregable-id="${entregableId}"]`);
+    const status = $(`#status_${entregableId}`);
+    
+    // Obtener datos del formulario
+    const fechaEntrega = $(`.fecha-entrega-input[data-entregable-id="${entregableId}"]`).val();
+    const estado = $(`.estado-select[data-entregable-id="${entregableId}"]`).val();
+    const archivoInput = $(`#archivo_${entregableId}`)[0];
+    
+    // Preparar FormData
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+    formData.append('fecha_entrega', fechaEntrega);
+    formData.append('estado', estado);
+    
+    if (archivoInput.files.length > 0) {
+        formData.append('archivo', archivoInput.files[0]);
+    }
+    
+    // Mostrar estado de guardado
+    status.html('<i class="fas fa-spinner fa-spin text-warning"></i> Guardando...');
+    saveButton.prop('disabled', true);
+    
+    // Realizar petición AJAX
+    $.ajax({
+        url: `/proyectos/entregables/proyecto-entregable/${entregableId}/update-inline/`,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                // Éxito
+                item.removeClass('modified');
+                saveButton.removeClass('show').addClass('d-none');
+                status.html('<i class="fas fa-check text-success"></i> Guardado exitosamente');
+                
+                // Actualizar botón de archivo si se subió
+                if (archivoInput.files.length > 0) {
+                    const btn = $(`.archivo-btn[data-entregable-id="${entregableId}"]`);
+                    btn.removeClass('btn-warning btn-outline-secondary').addClass('btn-success');
+                    btn.find('i').removeClass('fa-clock fa-upload').addClass('fa-check');
+                    btn.attr('title', 'Archivo cargado - Click para cambiar');
+                    
+                    // Agregar botón de ver archivo si no existe
+                    if (!btn.next('.btn-outline-info').length && response.archivo_url) {
+                        btn.after(`<a href="${response.archivo_url}" class="btn btn-sm btn-outline-info ms-1" target="_blank" title="Ver archivo"><i class="fas fa-eye"></i></a>`);
+                    }
+                }
+                
+                // Limpiar después de 3 segundos
+                setTimeout(() => {
+                    status.html('<i class="fas fa-circle text-secondary"></i> Sin cambios');
+                }, 3000);
+            } else {
+                // Error
+                status.html('<i class="fas fa-exclamation-triangle text-danger"></i> Error al guardar');
+                if (response.errors) {
+                    const errorMsg = Object.values(response.errors).join(', ');
+                    alert('Error: ' + errorMsg);
+                }
+            }
+        },
+        error: function(xhr) {
+            status.html('<i class="fas fa-exclamation-triangle text-danger"></i> Error de conexión');
+            console.error('Error al guardar:', xhr.responseText);
+            alert('Error de conexión. Por favor, intente nuevamente.');
+        },
+        complete: function() {
+            saveButton.prop('disabled', false);
+        }
+    });
+}
 </script>
 {% endblock %}

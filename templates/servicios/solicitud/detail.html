@@ -1,0 +1,352 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ solicitud.numero_orden }} - Solicitud de Servicio{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-clipboard-list me-2"></i>{{ solicitud.numero_orden }}
+        </h1>
+        <div>
+            <a href="{% url 'servicios:solicitud_update' solicitud.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit me-1"></i>Editar
+            </a>
+            {% if solicitud.estado == 'en_proceso' and not informe %}
+                <a href="{% url 'servicios:informe_create' %}?solicitud={{ solicitud.pk }}" class="btn btn-success">
+                    <i class="fas fa-file-alt me-1"></i>Crear Informe
+                </a>
+            {% endif %}
+            <a href="{% url 'servicios:solicitud_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Información General -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Información de la Solicitud</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Número de Orden:</dt>
+                                <dd class="col-sm-8"><strong>{{ solicitud.numero_orden }}</strong></dd>
+
+                                <dt class="col-sm-4">Estado:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge 
+                                        {% if solicitud.estado == 'pendiente' %}bg-secondary
+                                        {% elif solicitud.estado == 'en_ejecucion' %}bg-primary
+                                        {% elif solicitud.estado == 'atrasado' %}bg-warning
+                                        {% elif solicitud.estado == 'finalizado' %}bg-success
+                                        {% else %}bg-light{% endif %}">
+                                        {{ solicitud.get_estado_display }}
+                                    </span>
+                                </dd>
+
+                                <dt class="col-sm-4">Tipo de Servicio:</dt>
+                                <dd class="col-sm-8">{{ solicitud.get_tipo_servicio_display }}</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-5">Fecha Programada:</dt>
+                                <dd class="col-sm-7">{{ solicitud.fecha_programada|date:"d/m/Y H:i" }}</dd>
+
+                                <dt class="col-sm-5">Duración Estimada:</dt>
+                                <dd class="col-sm-7">{{ solicitud.duracion_estimada }} minutos</dd>
+
+                                <dt class="col-sm-5">Fecha de Creación:</dt>
+                                <dd class="col-sm-7">{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</dd>
+
+                                <dt class="col-sm-5">Creado por:</dt>
+                                <dd class="col-sm-7">
+                                    {% if solicitud.creado_por %}
+                                        {{ solicitud.creado_por.get_full_name|default:solicitud.creado_por.username }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información del Cliente -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Información del Cliente</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Cliente:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="{% url 'crm:cliente_detail' solicitud.cliente_crm.pk %}">
+                                        {{ solicitud.cliente_crm.nombre }}
+                                    </a>
+                                </dd>
+
+                                <dt class="col-sm-4">Contacto:</dt>
+                                <dd class="col-sm-8">
+                                    {% if solicitud.contacto_crm %}
+                                        <div>{{ solicitud.contacto_crm.nombre }}</div>
+                                        <small class="text-muted">{{ solicitud.contacto_crm.email }}</small>
+                                    {% else %}
+                                        <span class="text-muted">Sin contacto asignado</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-5">Centro de Costo:</dt>
+                                <dd class="col-sm-7">{{ solicitud.centro_costo|default:"-" }}</dd>
+
+                                {% if solicitud.nombre_proyecto %}
+                                <dt class="col-sm-5">Proyecto:</dt>
+                                <dd class="col-sm-7">{{ solicitud.nombre_proyecto }}</dd>
+                                {% endif %}
+                                
+                                {% if solicitud.trato_origen %}
+                                <dt class="col-sm-5">Trato de Origen:</dt>
+                                <dd class="col-sm-7">
+                                    <a href="{% url 'crm:trato_detail' solicitud.trato_origen.pk %}" class="text-decoration-none">
+                                        #{{ solicitud.trato_origen.numero_oferta }} - {{ solicitud.trato_origen.nombre|default:"Sin nombre" }}
+                                    </a>
+                                    <small class="text-muted d-block">{{ solicitud.trato_origen.fecha_creacion|date:"d/m/Y" }}</small>
+                                </dd>
+                                {% endif %}
+                                
+                                {% if solicitud.cotizacion_aprobada %}
+                                <dt class="col-sm-5">Cotización:</dt>
+                                <dd class="col-sm-7">
+                                    <a href="{% url 'crm:trato_detail' solicitud.cotizacion_aprobada.cotizacion.trato.pk %}" class="text-decoration-none">
+                                        {{ solicitud.cotizacion_aprobada.cotizacion.trato.numero_oferta }} - V{{ solicitud.cotizacion_aprobada.version }}
+                                    </a>
+                                    <small class="text-muted d-block">{{ solicitud.cotizacion_aprobada.fecha_creacion|date:"d/m/Y" }}</small>
+                                </dd>
+                                {% endif %}
+                            </dl>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6 class="font-weight-bold">Dirección del Servicio:</h6>
+                            <p class="mb-0">{{ solicitud.direccion_servicio }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Equipo del Proyecto -->
+            {% if solicitud.director_proyecto or solicitud.ingeniero_residente or solicitud.cronograma %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Equipo del Proyecto</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                {% if solicitud.director_proyecto %}
+                                <dt class="col-sm-4">Director:</dt>
+                                <dd class="col-sm-8">
+                                    <div>{{ solicitud.director_proyecto.nombre }}</div>
+                                    <small class="text-muted">{{ solicitud.director_proyecto.cargo }}</small>
+                                </dd>
+                                {% endif %}
+
+                                {% if solicitud.ingeniero_residente %}
+                                <dt class="col-sm-4">Ingeniero:</dt>
+                                <dd class="col-sm-8">
+                                    <div>{{ solicitud.ingeniero_residente.nombre }}</div>
+                                    <small class="text-muted">{{ solicitud.ingeniero_residente.cargo }}</small>
+                                </dd>
+                                {% endif %}
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            {% if solicitud.cronograma %}
+                            <dl class="row">
+                                <dt class="col-sm-4">Cronograma:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="{{ solicitud.cronograma.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                        <i class="fas fa-download me-1"></i>Descargar
+                                    </a>
+                                    <small class="text-muted d-block">{{ solicitud.cronograma.name|default:"cronograma.pdf" }}</small>
+                                </dd>
+                            </dl>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Observaciones -->
+            {% if solicitud.observaciones_internas %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Observaciones Internas</h6>
+                </div>
+                <div class="card-body">
+                    <p>{{ solicitud.observaciones_internas|linebreaksbr }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Informe de Trabajo -->
+            {% if informe %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Informe de Trabajo</h6>
+                    <a href="{% url 'servicios:informe_detail' informe.pk %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-eye me-1"></i>Ver Informe Completo
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-5">Fecha de Servicio:</dt>
+                                <dd class="col-sm-7">{{ informe.fecha_servicio|date:"d/m/Y" }}</dd>
+
+                                <dt class="col-sm-5">Tiempo Total:</dt>
+                                <dd class="col-sm-7">{{ informe.tiempo_total_horas }}</dd>
+
+                                <dt class="col-sm-5">Completado:</dt>
+                                <dd class="col-sm-7">
+                                    {% if informe.completado %}
+                                        <span class="badge bg-success">Sí</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">En progreso</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            {% if informe.satisfaccion_cliente %}
+                            <dl class="row">
+                                <dt class="col-sm-6">Satisfacción del Cliente:</dt>
+                                <dd class="col-sm-6">
+                                    <span class="badge 
+                                        {% if informe.satisfaccion_cliente == 'muy_satisfecho' %}bg-success
+                                        {% elif informe.satisfaccion_cliente == 'satisfecho' %}bg-primary
+                                        {% elif informe.satisfaccion_cliente == 'insatisfecho' %}bg-warning
+                                        {% elif informe.satisfaccion_cliente == 'muy_insatisfecho' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ informe.get_satisfaccion_cliente_display }}
+                                    </span>
+                                </dd>
+                            </dl>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if informe.descripcion_problema %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6 class="font-weight-bold">Descripción del Problema:</h6>
+                            <p class="mb-0">{{ informe.descripcion_problema|truncatewords:20 }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-lg-4">
+            <!-- Técnico Asignado -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Técnico Asignado</h6>
+                </div>
+                <div class="card-body">
+                    {% if solicitud.tecnico_asignado %}
+                        <div class="text-center">
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
+                                 style="width: 60px; height: 60px;">
+                                <i class="fas fa-user fa-2x text-white"></i>
+                            </div>
+                            <h6 class="mb-1">{{ solicitud.tecnico_asignado.codigo_tecnico }}</h6>
+                            <p class="text-muted mb-2">{{ solicitud.tecnico_asignado.nombre_completo }}</p>
+                            {% if solicitud.tecnico_asignado.telefono %}
+                                <small class="text-muted">{{ solicitud.tecnico_asignado.telefono }}</small>
+                            {% endif %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'servicios:tecnico_detail' solicitud.tecnico_asignado.pk %}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye me-1"></i>Ver Perfil
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-user-times fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No hay técnico asignado</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Geolocalización -->
+            {% if solicitud.latitud and solicitud.longitud %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Ubicación</h6>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Latitud:</dt>
+                        <dd class="col-sm-8">{{ solicitud.latitud }}</dd>
+
+                        <dt class="col-sm-4">Longitud:</dt>
+                        <dd class="col-sm-8">{{ solicitud.longitud }}</dd>
+                    </dl>
+                    {% if solicitud.direccion_gps %}
+                        <p class="text-muted"><small>{{ solicitud.direccion_gps }}</small></p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Ubicaciones del Técnico -->
+            {% if ubicaciones %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Tracking del Técnico</h6>
+                </div>
+                <div class="card-body">
+                    {% for ubicacion in ubicaciones %}
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="me-3">
+                            <i class="fas fa-map-marker-alt text-primary"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <small class="text-muted">{{ ubicacion.timestamp|date:"d/m/Y H:i" }}</small>
+                            <div style="font-size: 12px;">
+                                {{ ubicacion.latitud|floatformat:6 }}, {{ ubicacion.longitud|floatformat:6 }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

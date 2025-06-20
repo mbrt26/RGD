@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ equipo.nombre }} - Detalle del Equipo{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-fan me-2"></i>{{ equipo.marca }} {{ equipo.modelo }}
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:dashboard' %}">Mantenimiento</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:equipo_list' %}">Equipos</a></li>
+                    <li class="breadcrumb-item active">{{ equipo.marca }} {{ equipo.modelo }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{% url 'mantenimiento:equipo_update' equipo.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit me-1"></i>Editar
+            </a>
+            <a href="{% url 'mantenimiento:equipo_list' %}" class="btn btn-secondary">
+                <i class="fas fa-list me-1"></i>Volver al Listado
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información Principal -->
+        <div class="col-md-8">
+            <!-- Información Básica -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-info-circle me-2"></i>Información Básica</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td><strong>Nombre:</strong></td>
+                                    <td>{{ equipo.nombre }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Marca:</strong></td>
+                                    <td>{{ equipo.marca }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Modelo:</strong></td>
+                                    <td>{{ equipo.modelo }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Categoría:</strong></td>
+                                    <td>
+                                        <span class="badge bg-info">{{ equipo.get_categoria_display }}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Estado:</strong></td>
+                                    <td>
+                                        {% if equipo.activo %}
+                                            <span class="badge bg-success">Activo</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactivo</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless">
+                                {% if equipo.capacidad_btu %}
+                                <tr>
+                                    <td><strong>Capacidad:</strong></td>
+                                    <td>{{ equipo.capacidad_btu|floatformat:0 }} BTU/h</td>
+                                </tr>
+                                {% endif %}
+                                {% if equipo.voltaje %}
+                                <tr>
+                                    <td><strong>Voltaje:</strong></td>
+                                    <td>{{ equipo.voltaje }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if equipo.amperaje %}
+                                <tr>
+                                    <td><strong>Amperaje:</strong></td>
+                                    <td>{{ equipo.amperaje }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if equipo.refrigerante %}
+                                <tr>
+                                    <td><strong>Refrigerante:</strong></td>
+                                    <td>{{ equipo.refrigerante }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if equipo.peso_kg %}
+                                <tr>
+                                    <td><strong>Peso:</strong></td>
+                                    <td>{{ equipo.peso_kg }} kg</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información del Fabricante -->
+            {% if equipo.fabricante or equipo.pais_origen or equipo.vida_util_anos %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-industry me-2"></i>Información del Fabricante</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        {% if equipo.fabricante %}
+                        <tr>
+                            <td><strong>Fabricante:</strong></td>
+                            <td>{{ equipo.fabricante }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if equipo.pais_origen %}
+                        <tr>
+                            <td><strong>País de Origen:</strong></td>
+                            <td>{{ equipo.pais_origen }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if equipo.vida_util_anos %}
+                        <tr>
+                            <td><strong>Vida Útil:</strong></td>
+                            <td>{{ equipo.vida_util_anos }} año{{ equipo.vida_util_anos|pluralize }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Descripción -->
+            {% if equipo.descripcion %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-align-left me-2"></i>Descripción</h6>
+                </div>
+                <div class="card-body">
+                    {{ equipo.descripcion|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Fechas -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-calendar me-2"></i>Información de Registro</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td><strong>Fecha de Creación:</strong></td>
+                            <td>{{ equipo.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Última Actualización:</strong></td>
+                            <td>{{ equipo.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        {% if equipo.creado_por %}
+                        <tr>
+                            <td><strong>Creado por:</strong></td>
+                            <td>{{ equipo.creado_por.get_full_name|default:equipo.creado_por.username }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-md-4">
+            <!-- Estadísticas -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-chart-bar me-2"></i>Estadísticas</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td><strong>Equipos Instalados:</strong></td>
+                            <td>
+                                <span class="badge bg-primary">{{ hojas_vida.count }}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Equipos Operativos:</strong></td>
+                            <td>
+                                <span class="badge bg-success">{{ hojas_vida|length }}</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Instalaciones Recientes -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-clipboard-list me-2"></i>Instalaciones</h6>
+                </div>
+                <div class="card-body">
+                    {% if hojas_vida %}
+                        <p class="text-muted mb-3">Últimas instalaciones de este equipo:</p>
+                        {% for hoja_vida in hojas_vida %}
+                        <div class="border rounded p-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ hoja_vida.codigo_interno }}</strong>
+                                    <br><small class="text-muted">{{ hoja_vida.cliente.nombre }}</small>
+                                </div>
+                                {% if hoja_vida.estado == 'operativo' %}
+                                    <span class="badge bg-success">{{ hoja_vida.get_estado_display }}</span>
+                                {% elif hoja_vida.estado == 'mantenimiento' %}
+                                    <span class="badge bg-warning">{{ hoja_vida.get_estado_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ hoja_vida.get_estado_display }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="mt-2">
+                                <small>
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Instalado: {{ hoja_vida.fecha_instalacion|date:"d/m/Y" }}
+                                </small>
+                                <br>
+                                <small>
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    {{ hoja_vida.ubicacion_detallada }}
+                                </small>
+                            </div>
+                            <a href="{% url 'mantenimiento:hoja_vida_detail' hoja_vida.pk %}" class="btn btn-sm btn-outline-primary mt-2">
+                                <i class="fas fa-eye me-1"></i>Ver Hoja de Vida
+                            </a>
+                        </div>
+                        {% endfor %}
+                        
+                        {% if hojas_vida|length >= 5 %}
+                        <a href="{% url 'mantenimiento:hoja_vida_list' %}?equipo={{ equipo.pk }}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-list me-1"></i>Ver Todas las Instalaciones
+                        </a>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted mb-0">No hay instalaciones registradas para este equipo.</p>
+                        <a href="{% url 'mantenimiento:hoja_vida_create' %}?equipo={{ equipo.pk }}" class="btn btn-sm btn-outline-primary mt-2">
+                            <i class="fas fa-plus me-1"></i>Crear Primera Instalación
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Acciones Rápidas -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'mantenimiento:hoja_vida_create' %}?equipo={{ equipo.pk }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Nueva Instalación
+                        </a>
+                        <a href="{% url 'mantenimiento:equipo_update' equipo.pk %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-edit me-1"></i>Editar Equipo
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

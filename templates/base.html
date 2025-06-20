@@ -33,11 +33,17 @@
                                 <i class="fas fa-chart-line me-2"></i>Dashboard CRM
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'crm:lead_list' %}">
+                                <i class="fas fa-user-plus me-2"></i>Leads
+                            </a></li>
                             <li><a class="dropdown-item" href="{% url 'crm:trato_list' %}">
-                                <i class="fas fa-handshake me-2"></i>Tratos
+                                <i class="fas fa-handshake me-2"></i>ProyectosCRM
                             </a></li>
                             <li><a class="dropdown-item" href="{% url 'crm:cliente_list' %}">
                                 <i class="fas fa-users me-2"></i>Clientes
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'crm:contacto_list' %}">
+                                <i class="fas fa-address-book me-2"></i>Contactos
                             </a></li>
                             <li><a class="dropdown-item" href="{% url 'crm:cotizacion_list' %}">
                                 <i class="fas fa-file-invoice-dollar me-2"></i>Ofertas
@@ -89,6 +95,125 @@
                             </a></li>
                             <li><a class="dropdown-item" href="{% url 'proyectos:reporte_entregables' %}">
                                 <i class="fas fa-file-excel me-2"></i>Reportes Excel
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Comités</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'proyectos:comite_list' %}">
+                                <i class="fas fa-users me-2"></i>Comités de Proyectos
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'proyectos:comite_create' %}">
+                                <i class="fas fa-plus me-2"></i>Nuevo Comité
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Menú desplegable Servicios -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="serviciosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-tools me-1"></i>Servicios
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="serviciosDropdown">
+                            <li><a class="dropdown-item" href="{% url 'servicios:dashboard' %}">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard Servicios
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'servicios:solicitud_list' %}">
+                                <i class="fas fa-clipboard-list me-2"></i>Solicitudes de Servicio
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'servicios:tecnico_list' %}">
+                                <i class="fas fa-users me-2"></i>Técnicos
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'servicios:informe_list' %}">
+                                <i class="fas fa-file-alt me-2"></i>Informes de Trabajo
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Acciones Rápidas</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'servicios:solicitud_create' %}">
+                                <i class="fas fa-plus me-2"></i>Nueva Solicitud
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'servicios:tecnico_create' %}">
+                                <i class="fas fa-user-plus me-2"></i>Nuevo Técnico
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'servicios:informe_create' %}">
+                                <i class="fas fa-file-plus me-2"></i>Nuevo Informe
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Menú desplegable Mantenimiento -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="mantenimientoDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-cogs me-1"></i>Mantenimiento
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="mantenimientoDropdown">
+                            <li><a class="dropdown-item" href="{% url 'mantenimiento:dashboard' %}">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard Mantenimiento
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Gestión de Equipos</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'mantenimiento:equipo_list' %}">
+                                <i class="fas fa-database me-2"></i>Base de Datos de Equipos
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'mantenimiento:hoja_vida_list' %}">
+                                <i class="fas fa-clipboard-list me-2"></i>Hojas de Vida de Equipos
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Contratos y Actividades</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'mantenimiento:contrato_list' %}">
+                                <i class="fas fa-file-contract me-2"></i>Contratos de Mantenimiento
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'mantenimiento:actividad_list' %}">
+                                <i class="fas fa-calendar-check me-2"></i>Actividades Consolidadas
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Acciones Rápidas</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'mantenimiento:equipo_create' %}">
+                                <i class="fas fa-plus me-2"></i>Nuevo Equipo
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'mantenimiento:hoja_vida_create' %}">
+                                <i class="fas fa-clipboard-plus me-2"></i>Nueva Hoja de Vida
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'mantenimiento:contrato_create' %}">
+                                <i class="fas fa-file-plus me-2"></i>Nuevo Contrato
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'mantenimiento:actividad_create' %}">
+                                <i class="fas fa-tasks me-2"></i>Nueva Actividad
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Menú desplegable Insumos -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="insumosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-boxes me-1"></i>Insumos
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="insumosDropdown">
+                            <li><a class="dropdown-item" href="{% url 'insumos:dashboard' %}">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard Insumos
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Catálogo</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'insumos:producto_list' %}">
+                                <i class="fas fa-list me-2"></i>Productos
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'insumos:kit_list' %}">
+                                <i class="fas fa-toolbox me-2"></i>Kits de Mantenimiento
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Comercial</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'insumos:cotizacion_list' %}">
+                                <i class="fas fa-file-invoice me-2"></i>Cotizaciones
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'insumos:pedido_list' %}">
+                                <i class="fas fa-shopping-cart me-2"></i>Pedidos
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'insumos:recomendacion_list' %}">
+                                <i class="fas fa-lightbulb me-2"></i>Recomendaciones
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Acciones Rápidas</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'insumos:cotizacion_create' %}">
+                                <i class="fas fa-plus me-2"></i>Nueva Cotización
                             </a></li>
                         </ul>
                     </li>

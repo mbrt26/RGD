@@ -42,12 +42,21 @@
                                 </dd>
                                 
                                 <dt class="col-sm-4">Tipo:</dt>
-                                <dd class="col-sm-8">{{ tarea.get_tipo_display }}</dd>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-secondary">{{ tarea.get_tipo_display }}</span>
+                                </dd>
                                 
                                 <dt class="col-sm-4">Estado:</dt>
                                 <dd class="col-sm-8">
-                                    <span class="badge bg-{{ tarea.estado }}">
+                                    <span class="badge {{ tarea.get_estado_class }}">
                                         {{ tarea.get_estado_display }}
+                                    </span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Prioridad:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge {{ tarea.get_prioridad_class }}">
+                                        {{ tarea.get_prioridad_display }}
                                     </span>
                                 </dd>
                             </dl>
@@ -60,11 +69,16 @@
                                 <dt class="col-sm-4">Vencimiento:</dt>
                                 <dd class="col-sm-8">{{ tarea.fecha_vencimiento|date:"d/m/Y H:i" }}</dd>
                                 
+                                {% if tarea.fecha_ejecucion %}
+                                <dt class="col-sm-4">Ejecutada:</dt>
+                                <dd class="col-sm-8">{{ tarea.fecha_ejecucion|date:"d/m/Y H:i" }}</dd>
+                                {% endif %}
+                                
                                 {% if tarea.trato %}
-                                <dt class="col-sm-4">Trato:</dt>
+                                <dt class="col-sm-4">Proyecto:</dt>
                                 <dd class="col-sm-8">
                                     <a href="{% url 'crm:trato_detail' tarea.trato.id %}">
-                                        {{ tarea.trato }}
+                                        #{{ tarea.trato.numero_oferta }} - {{ tarea.trato.nombre|default:"Sin nombre" }}
                                     </a>
                                 </dd>
                                 {% endif %}
@@ -78,8 +92,74 @@
                             <p>{{ tarea.descripcion|linebreaksbr }}</p>
                         </div>
                     </div>
+                    
+                    {% if tarea.trato %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>Información del Proyecto:</h6>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <small><strong>Valor:</strong> ${{ tarea.trato.valor|floatformat:0 }}</small><br>
+                                            <small><strong>Estado:</strong> {{ tarea.trato.get_estado_display }}</small><br>
+                                            <small><strong>Probabilidad:</strong> {{ tarea.trato.probabilidad }}%</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <small><strong>Tipo:</strong> {{ tarea.trato.get_tipo_negociacion_display }}</small><br>
+                                            <small><strong>Fecha Cierre:</strong> {{ tarea.trato.fecha_cierre|date:"d/m/Y"|default:"Sin fecha" }}</small><br>
+                                            {% if tarea.trato.centro_costos %}
+                                                <small><strong>Centro Costos:</strong> {{ tarea.trato.centro_costos }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
+            
+            <!-- Proyecto Relacionado -->
+            {% if proyecto_relacionado %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-project-diagram me-2"></i>Proyecto Relacionado
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">{{ proyecto_relacionado.nombre_proyecto }}</h6>
+                            <p class="mb-2 text-muted">{{ proyecto_relacionado.cliente }}</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small><strong>Centro de Costos:</strong> {{ proyecto_relacionado.centro_costos }}</small><br>
+                                    <small><strong>Estado:</strong> 
+                                        <span class="badge bg-{{ proyecto_relacionado.estado }}">
+                                            {{ proyecto_relacionado.get_estado_display }}
+                                        </span>
+                                    </small><br>
+                                    <small><strong>Avance:</strong> {{ proyecto_relacionado.avance }}%</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <small><strong>Fecha Inicio:</strong> {{ proyecto_relacionado.fecha_inicio|date:"d/m/Y" }}</small><br>
+                                    <small><strong>Fecha Fin:</strong> {{ proyecto_relacionado.fecha_fin|date:"d/m/Y" }}</small><br>
+                                    <small><strong>Presupuesto:</strong> ${{ proyecto_relacionado.presupuesto|floatformat:0 }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <a href="/proyectos/proyectos/{{ proyecto_relacionado.id }}/" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-external-link-alt"></i> Ver Proyecto
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
             
             {% if tarea.notas %}
             <div class="card mb-4">

@@ -1,5 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from ..models import EntregableProyecto, Proyecto
 
 class EntregableProyectoForm(forms.ModelForm):
@@ -63,10 +64,28 @@ class EntregableProyectoForm(forms.ModelForm):
                 )
         return archivo
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Hacer fecha_entrega obligatoria
+        self.fields['fecha_entrega'].required = True
+        
+        # Mejorar widget de fecha si no tiene fecha asignada
+        if not self.instance.fecha_entrega:
+            self.fields['fecha_entrega'].widget.attrs.update({
+                'min': timezone.now().date().strftime('%Y-%m-%d')
+            })
+
     def clean(self):
         cleaned_data = super().clean()
         estado = cleaned_data.get('estado')
         archivo = cleaned_data.get('archivo')
+        fecha_entrega = cleaned_data.get('fecha_entrega')
+        
+        # Fecha de entrega es obligatoria
+        if not fecha_entrega:
+            raise ValidationError({
+                'fecha_entrega': 'La fecha de entrega es obligatoria.'
+            })
         
         # Si el estado es completado, debe haber un archivo
         if estado == 'completado':
@@ -246,3 +265,171 @@ class FiltroEntregablesForm(forms.Form):
             })
         
         return cleaned_data
+
+
+class EntregablePersonalizadoForm(forms.ModelForm):
+    """Formulario para crear entregables personalizados adicionales"""
+    
+    class Meta:
+        model = EntregableProyecto
+        fields = ['codigo', 'nombre', 'fase', 'creador', 'consolidador', 'medio', 'dossier_cliente', 'observaciones', 'fecha_entrega']
+        widgets = {
+            'codigo': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: 5.0, A.1, CUSTOM-1',
+                'pattern': r'^[A-Za-z0-9\.\-_]+$',
+                'title': 'Solo letras, números, puntos, guiones y guiones bajos'
+            }),
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre del entregable personalizado',
+                'maxlength': 300
+            }),
+            'fase': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'creador': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Responsable de crear el entregable',
+                'maxlength': 200
+            }),
+            'consolidador': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Responsable de consolidar el entregable',
+                'maxlength': 200
+            }),
+            'medio': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: Digital, Físico, Digital/Físico',
+                'maxlength': 50
+            }),
+            'dossier_cliente': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'observaciones': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Observaciones adicionales sobre este entregable...'
+            }),
+            'fecha_entrega': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+                'required': True
+            })
+        }
+        labels = {
+            'codigo': 'Código del Entregable *',
+            'nombre': 'Nombre del Entregable *',
+            'fase': 'Fase del Proyecto *',
+            'creador': 'Responsable de Creación *',
+            'consolidador': 'Responsable de Consolidación *',
+            'medio': 'Medio de Entrega',
+            'dossier_cliente': 'Incluir en Dossier del Cliente',
+            'observaciones': 'Observaciones',
+            'fecha_entrega': 'Fecha de Entrega Estimada *'
+        }
+        help_texts = {
+            'codigo': 'Código único para identificar este entregable (no debe existir en el proyecto)',
+            'nombre': 'Descripción clara del entregable personalizado',
+            'fase': 'Seleccione en qué fase del proyecto se entregará',
+            'creador': 'Persona o área responsable de crear este entregable',
+            'consolidador': 'Persona o área responsable de la versión final',
+            'medio': 'Forma de entrega: Digital, Físico, etc.',
+            'dossier_cliente': 'Marque si este entregable debe incluirse en el dossier final del cliente',
+            'fecha_entrega': 'Fecha estimada de entrega del entregable'
+        }
+
+    def __init__(self, *args, proyecto=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.proyecto = proyecto
+        
+        # Hacer campos obligatorios
+        self.fields['codigo'].required = True
+        self.fields['nombre'].required = True
+        self.fields['fase'].required = True
+        self.fields['creador'].required = True
+        self.fields['consolidador'].required = True
+        self.fields['fecha_entrega'].required = True
+
+    def clean_codigo(self):
+        codigo = self.cleaned_data.get('codigo')
+        if codigo and self.proyecto:
+            # Verificar que el código no exista ya en el proyecto
+            if EntregableProyecto.objects.filter(
+                proyecto=self.proyecto, 
+                codigo__iexact=codigo
+            ).exclude(pk=self.instance.pk if self.instance else None).exists():
+                raise ValidationError(
+                    f'Ya existe un entregable con el código "{codigo}" en este proyecto.'
+                )
+        return codigo
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data.get('nombre')
+        if nombre and self.proyecto:
+            # Verificar que el nombre no sea muy similar a uno existente
+            if EntregableProyecto.objects.filter(
+                proyecto=self.proyecto, 
+                nombre__iexact=nombre
+            ).exclude(pk=self.instance.pk if self.instance else None).exists():
+                raise ValidationError(
+                    f'Ya existe un entregable con el nombre "{nombre}" en este proyecto.'
+                )
+        return nombre
+
+    def save(self, commit=True):
+        entregable = super().save(commit=False)
+        if self.proyecto:
+            entregable.proyecto = self.proyecto
+        
+        # Los entregables personalizados por defecto son opcionales
+        entregable.obligatorio = False
+        entregable.seleccionado = True  # Se seleccionan automáticamente al crear
+        entregable.estado = 'pendiente'
+        
+        if commit:
+            entregable.save()
+        return entregable
+
+
+class EntregableImportForm(forms.Form):
+    """Formulario para importar entregables desde Excel"""
+    
+    proyecto = forms.ModelChoiceField(
+        queryset=Proyecto.objects.all(),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Proyecto *',
+        help_text='Seleccione el proyecto al que se agregarán los entregables'
+    )
+    
+    archivo_excel = forms.FileField(
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': '.xlsx,.xls',
+            'required': True
+        }),
+        label='Archivo Excel *',
+        help_text='Archivo Excel con la estructura de entregables. Máximo 5MB.'
+    )
+    
+    reemplazar_existentes = forms.BooleanField(
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        label='Reemplazar entregables existentes',
+        help_text='Si se marca, se actualizarán los entregables con códigos duplicados'
+    )
+
+    def clean_archivo_excel(self):
+        archivo = self.cleaned_data.get('archivo_excel')
+        if archivo:
+            # Validar tamaño (5MB máximo)
+            if archivo.size > 5 * 1024 * 1024:
+                raise ValidationError('El archivo no puede ser mayor a 5MB.')
+            
+            # Validar extensión
+            nombre_archivo = archivo.name.lower()
+            if not (nombre_archivo.endswith('.xlsx') or nombre_archivo.endswith('.xls')):
+                raise ValidationError('Solo se permiten archivos Excel (.xlsx, .xls)')
+        
+        return archivo

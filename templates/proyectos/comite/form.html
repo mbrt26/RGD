@@ -1,0 +1,385 @@
+{% extends "base/form_base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .info-card {
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border-left: 4px solid #2196f3;
+    }
+    .colaborador-item {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .colaborador-item:hover {
+        background-color: #f8f9fa;
+        border-color: #0d6efd;
+    }
+    .colaborador-item.selected {
+        background-color: #e7f3ff;
+        border-color: #0d6efd;
+        color: #0d6efd;
+    }
+    .colaborador-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #6c757d;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+        font-weight: bold;
+    }
+    .datetime-container {
+        position: relative;
+    }
+    .suggestion-template {
+        background: #f8f9fa;
+        border: 1px dashed #6c757d;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block form_content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>{{ form_title }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="comiteForm">
+                    {% csrf_token %}
+                    
+                    <!-- Información básica -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.nombre.id_for_label }}" class="form-label">
+                                {{ form.nombre.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.nombre }}
+                            {% if form.nombre.errors %}
+                                <div class="text-danger small">{{ form.nombre.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.tipo_comite.id_for_label }}" class="form-label">
+                                {{ form.tipo_comite.label }}
+                            </label>
+                            {{ form.tipo_comite }}
+                            {% if form.tipo_comite.errors %}
+                                <div class="text-danger small">{{ form.tipo_comite.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.fecha_comite.id_for_label }}" class="form-label">
+                                {{ form.fecha_comite.label }} <span class="text-danger">*</span>
+                            </label>
+                            <div class="datetime-container">
+                                {{ form.fecha_comite }}
+                            </div>
+                            {% if form.fecha_comite.errors %}
+                                <div class="text-danger small">{{ form.fecha_comite.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.lugar.id_for_label }}" class="form-label">
+                                {{ form.lugar.label }}
+                            </label>
+                            {{ form.lugar }}
+                            <div class="form-text">Dejar vacío para reunión virtual</div>
+                            {% if form.lugar.errors %}
+                                <div class="text-danger small">{{ form.lugar.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.coordinador.id_for_label }}" class="form-label">
+                                {{ form.coordinador.label }}
+                            </label>
+                            {{ form.coordinador }}
+                            {% if form.coordinador.errors %}
+                                <div class="text-danger small">{{ form.coordinador.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        {% if form.estado %}
+                        <div class="col-md-6">
+                            <label for="{{ form.estado.id_for_label }}" class="form-label">
+                                {{ form.estado.label }}
+                            </label>
+                            {{ form.estado }}
+                            {% if form.estado.errors %}
+                                <div class="text-danger small">{{ form.estado.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.agenda.id_for_label }}" class="form-label">
+                            {{ form.agenda.label }}
+                        </label>
+                        {{ form.agenda }}
+                        <div class="form-text">Agenda detallada del comité</div>
+                        {% if form.agenda.errors %}
+                            <div class="text-danger small">{{ form.agenda.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.observaciones.id_for_label }}" class="form-label">
+                            {{ form.observaciones.label }}
+                        </label>
+                        {{ form.observaciones }}
+                        {% if form.observaciones.errors %}
+                            <div class="text-danger small">{{ form.observaciones.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'proyectos:comite_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            {% if object %}Actualizar Comité{% else %}Crear Comité{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Información de ayuda -->
+        <div class="card info-card mb-4">
+            <div class="card-body">
+                <h6><i class="fas fa-info-circle me-2"></i>Información</h6>
+                <ul class="mb-0 small">
+                    <li>Al crear el comité se auto-desplegarán todos los proyectos activos</li>
+                    <li>Los participantes se pueden gestionar después de crear el comité</li>
+                    <li>La duración se calcula automáticamente según los proyectos</li>
+                    <li>Se puede duplicar para crear comités similares</li>
+                </ul>
+            </div>
+        </div>
+
+        {% if proyectos_activos %}
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-project-diagram me-2"></i>Proyectos que se incluirán
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info small">
+                    <i class="fas fa-magic me-2"></i>
+                    Se incluirán automáticamente <strong>{{ proyectos_activos }}</strong> proyectos activos al crear este comité.
+                </div>
+                <div class="text-muted small">
+                    Los proyectos se ordenarán por fecha de finalización y nombre. Podrá modificar el orden después de crear el comité.
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Sugerencias de nombres -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Sugerencias
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small mb-2">Nombres sugeridos:</p>
+                <div class="suggestion-template small" onclick="aplicarSugerencia(this)" style="cursor: pointer;">
+                    <strong>Comité Semanal - Semana {{ "now"|date:"W/Y" }}</strong>
+                </div>
+                <div class="suggestion-template small" onclick="aplicarSugerencia(this)" style="cursor: pointer;">
+                    <strong>Comité Mensual - {{ "now"|date:"F Y" }}</strong>
+                </div>
+                <div class="suggestion-template small" onclick="aplicarSugerencia(this)" style="cursor: pointer;">
+                    <strong>Revisión de Proyectos - {{ "now"|date:"d/m/Y" }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lugares frecuentes -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-map-marker-alt me-2"></i>Lugares frecuentes
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small text-muted mb-2">Haga clic para seleccionar:</div>
+                <div class="d-flex flex-wrap gap-1">
+                    <span class="badge bg-light text-dark" style="cursor: pointer;" onclick="aplicarLugar('Sala de Juntas Principal')">Sala Principal</span>
+                    <span class="badge bg-light text-dark" style="cursor: pointer;" onclick="aplicarLugar('Sala de Conferencias')">Sala Conferencias</span>
+                    <span class="badge bg-light text-dark" style="cursor: pointer;" onclick="aplicarLugar('Microsoft Teams')">Teams</span>
+                    <span class="badge bg-light text-dark" style="cursor: pointer;" onclick="aplicarLugar('Google Meet')">Google Meet</span>
+                    <span class="badge bg-light text-dark" style="cursor: pointer;" onclick="aplicarLugar('Zoom')">Zoom</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Configurar el campo de fecha y hora
+document.addEventListener('DOMContentLoaded', function() {
+    const fechaComiteField = document.querySelector('#id_fecha_comite');
+    if (fechaComiteField) {
+        fechaComiteField.type = 'datetime-local';
+        fechaComiteField.classList.add('form-control');
+        
+        // Si no hay valor, establecer el próximo lunes a las 9:00 AM
+        if (!fechaComiteField.value) {
+            const now = new Date();
+            const nextMonday = new Date(now);
+            nextMonday.setDate(now.getDate() + (1 + 7 - now.getDay()) % 7);
+            nextMonday.setHours(9, 0, 0, 0);
+            
+            // Formatear para datetime-local
+            const year = nextMonday.getFullYear();
+            const month = String(nextMonday.getMonth() + 1).padStart(2, '0');
+            const day = String(nextMonday.getDate()).padStart(2, '0');
+            const hours = String(nextMonday.getHours()).padStart(2, '0');
+            const minutes = String(nextMonday.getMinutes()).padStart(2, '0');
+            
+            fechaComiteField.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+    }
+
+    // Configurar otros campos
+    const nombreField = document.querySelector('#id_nombre');
+    if (nombreField) {
+        nombreField.classList.add('form-control');
+    }
+
+    const tipoField = document.querySelector('#id_tipo_comite');
+    if (tipoField) {
+        tipoField.classList.add('form-select');
+    }
+
+    const lugarField = document.querySelector('#id_lugar');
+    if (lugarField) {
+        lugarField.classList.add('form-control');
+    }
+
+    const coordinadorField = document.querySelector('#id_coordinador');
+    if (coordinadorField) {
+        coordinadorField.classList.add('form-select');
+    }
+
+    const estadoField = document.querySelector('#id_estado');
+    if (estadoField) {
+        estadoField.classList.add('form-select');
+    }
+
+    const agendaField = document.querySelector('#id_agenda');
+    if (agendaField) {
+        agendaField.classList.add('form-control');
+        agendaField.rows = 4;
+    }
+
+    const observacionesField = document.querySelector('#id_observaciones');
+    if (observacionesField) {
+        observacionesField.classList.add('form-control');
+        observacionesField.rows = 3;
+    }
+});
+
+function aplicarSugerencia(element) {
+    const nombreField = document.querySelector('#id_nombre');
+    const texto = element.querySelector('strong').textContent;
+    if (nombreField) {
+        nombreField.value = texto;
+        nombreField.focus();
+        
+        // Destacar temporalmente
+        element.style.background = '#d4edda';
+        setTimeout(() => {
+            element.style.background = '#f8f9fa';
+        }, 1000);
+    }
+}
+
+function aplicarLugar(lugar) {
+    const lugarField = document.querySelector('#id_lugar');
+    if (lugarField) {
+        lugarField.value = lugar;
+        lugarField.focus();
+    }
+}
+
+// Validación del formulario
+document.querySelector('#comiteForm').addEventListener('submit', function(e) {
+    const nombreField = document.querySelector('#id_nombre');
+    const fechaField = document.querySelector('#id_fecha_comite');
+    
+    if (!nombreField.value.trim()) {
+        e.preventDefault();
+        alert('El nombre del comité es obligatorio');
+        nombreField.focus();
+        return;
+    }
+    
+    if (!fechaField.value) {
+        e.preventDefault();
+        alert('La fecha y hora del comité es obligatoria');
+        fechaField.focus();
+        return;
+    }
+    
+    // Validar que la fecha no sea en el pasado (para nuevos comités)
+    {% if not object %}
+    const fechaComite = new Date(fechaField.value);
+    const ahora = new Date();
+    
+    if (fechaComite < ahora) {
+        e.preventDefault();
+        alert('La fecha del comité no puede ser en el pasado');
+        fechaField.focus();
+        return;
+    }
+    {% endif %}
+});
+
+// Auto-completar nombre basado en tipo y fecha
+document.querySelector('#id_tipo_comite').addEventListener('change', function() {
+    const nombreField = document.querySelector('#id_nombre');
+    const fechaField = document.querySelector('#id_fecha_comite');
+    
+    if (!nombreField.value && fechaField.value) {
+        const tipo = this.options[this.selectedIndex].text;
+        const fecha = new Date(fechaField.value);
+        const fechaTexto = fecha.toLocaleDateString('es-ES');
+        
+        nombreField.value = `${tipo} - ${fechaTexto}`;
+    }
+});
+</script>
+{% endblock %}

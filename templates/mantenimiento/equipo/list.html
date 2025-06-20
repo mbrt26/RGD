@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+
+{% block title %}Equipos HVAC - Mantenimiento{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-fan me-2"></i>Equipos HVAC
+        </h1>
+        <div>
+            <a href="{% url 'mantenimiento:equipo_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Nuevo Equipo
+            </a>
+        </div>
+    </div>
+
+    <!-- Card with table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Lista de Equipos HVAC</h6>
+        </div>
+        <div class="card-body">
+
+            <!-- Filters -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <form method="get" class="d-flex">
+                        <input type="text" class="form-control" name="q" placeholder="Buscar equipos..." 
+                               value="{{ request.GET.q }}">
+                        <button type="submit" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                </div>
+                <div class="col-md-2">
+                    <form method="get">
+                        <select name="cliente" class="form-control" onchange="this.form.submit()">
+                            <option value="">Todos los clientes</option>
+                            {% for cliente in clientes %}
+                                <option value="{{ cliente.id }}" {% if request.GET.cliente == cliente.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ cliente.nombre|truncatechars:25 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        <input type="hidden" name="tipo" value="{{ request.GET.tipo }}">
+                        <input type="hidden" name="estado" value="{{ request.GET.estado }}">
+                    </form>
+                </div>
+                <div class="col-md-2">
+                    <form method="get">
+                        <select name="tipo" class="form-control" onchange="this.form.submit()">
+                            <option value="">Todos los tipos</option>
+                            {% for tipo in tipos_equipo %}
+                                <option value="{{ tipo.id }}" {% if request.GET.tipo == tipo.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ tipo.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        <input type="hidden" name="cliente" value="{{ request.GET.cliente }}">
+                        <input type="hidden" name="estado" value="{{ request.GET.estado }}">
+                    </form>
+                </div>
+                <div class="col-md-2">
+                    <form method="get">
+                        <select name="estado" class="form-control" onchange="this.form.submit()">
+                            <option value="">Todos los estados</option>
+                            {% for estado_key, estado_label in estados %}
+                                <option value="{{ estado_key }}" {% if request.GET.estado == estado_key %}selected{% endif %}>
+                                    {{ estado_label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        <input type="hidden" name="cliente" value="{{ request.GET.cliente }}">
+                        <input type="hidden" name="tipo" value="{{ request.GET.tipo }}">
+                    </form>
+                </div>
+                <div class="col-md-3">
+                    <form method="get">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="requiere_mantenimiento" value="1" 
+                                   {% if request.GET.requiere_mantenimiento == '1' %}checked{% endif %}
+                                   onchange="this.form.submit()">
+                            <label class="form-check-label text-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Solo equipos que requieren mantenimiento
+                            </label>
+                        </div>
+                        <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        <input type="hidden" name="cliente" value="{{ request.GET.cliente }}">
+                        <input type="hidden" name="tipo" value="{{ request.GET.tipo }}">
+                        <input type="hidden" name="estado" value="{{ request.GET.estado }}">
+                    </form>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Código</th>
+                            <th>Cliente</th>
+                            <th>Tipo</th>
+                            <th>Marca/Modelo</th>
+                            <th>Capacidad</th>
+                            <th>Estado</th>
+                            <th>Instalación</th>
+                            <th>Mantenimiento</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for equipo in equipos %}
+                        <tr>
+                            <td>
+                                <strong>{{ equipo.codigo_equipo }}</strong>
+                                <br><small class="text-muted">{{ equipo.numero_serie }}</small>
+                            </td>
+                            <td>
+                                <div>
+                                    <div>{{ equipo.cliente.nombre|truncatechars:25 }}</div>
+                                    <small class="text-muted">{{ equipo.ubicacion_cliente|truncatechars:20 }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <span class="badge bg-info">{{ equipo.tipo_equipo.get_categoria_display }}</span>
+                                    <br><small>{{ equipo.tipo_equipo.nombre|truncatechars:20 }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ equipo.marca }}</strong>
+                                    <br><small class="text-muted">{{ equipo.modelo }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ equipo.capacidad_btu|floatformat:0 }} BTU/h</span>
+                            </td>
+                            <td>
+                                {% if equipo.estado == 'operativo' %}
+                                    <span class="badge bg-success">{{ equipo.get_estado_display }}</span>
+                                {% elif equipo.estado == 'mantenimiento' %}
+                                    <span class="badge bg-warning">{{ equipo.get_estado_display }}</span>
+                                {% elif equipo.estado == 'fuera_servicio' %}
+                                    <span class="badge bg-danger">{{ equipo.get_estado_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ equipo.get_estado_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ equipo.fecha_instalacion|date:"d/m/Y" }}</div>
+                                {% if equipo.en_garantia %}
+                                    <small class="text-success"><i class="fas fa-shield-alt me-1"></i>En garantía</small>
+                                {% else %}
+                                    <small class="text-muted">{{ equipo.edad_anos }} años</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if equipo.requiere_mantenimiento %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>Requiere
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Al día
+                                    </span>
+                                {% endif %}
+                                {% if equipo.proximo_preventivo %}
+                                    <br><small class="text-muted">Próximo: {{ equipo.proximo_preventivo|date:"d/m/Y" }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'mantenimiento:equipo_detail' equipo.pk %}" 
+                                       class="btn btn-outline-info btn-sm" title="Ver detalle">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'mantenimiento:equipo_update' equipo.pk %}" 
+                                       class="btn btn-outline-primary btn-sm" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-fan fa-3x mb-3"></i>
+                                    <p>No se encontraron equipos HVAC.</p>
+                                    <a href="{% url 'mantenimiento:equipo_create' %}" class="btn btn-primary">
+                                        <i class="fas fa-plus me-1"></i>Registrar Primer Equipo
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.requiere_mantenimiento %}&requiere_mantenimiento={{ request.GET.requiere_mantenimiento }}{% endif %}">Primera</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.requiere_mantenimiento %}&requiere_mantenimiento={{ request.GET.requiere_mantenimiento }}{% endif %}">Anterior</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.requiere_mantenimiento %}&requiere_mantenimiento={{ request.GET.requiere_mantenimiento }}{% endif %}">Siguiente</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.requiere_mantenimiento %}&requiere_mantenimiento={{ request.GET.requiere_mantenimiento }}{% endif %}">Última</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

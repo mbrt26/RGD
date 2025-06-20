@@ -1,0 +1,102 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ contacto.nombre }} - Detalle{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">{{ contacto.nombre }}</h1>
+        <div>
+            <a href="{% url 'crm:contacto_update' contacto.id %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Editar
+            </a>
+            <a href="{% url 'crm:contacto_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver a Lista
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información del Contacto -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Información del Contacto</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-sm-4"><strong>Cliente:</strong></div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'crm:cliente_detail' contacto.cliente.id %}">
+                                {{ contacto.cliente.nombre }}
+                            </a>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>Cargo:</strong></div>
+                        <div class="col-sm-8">{{ contacto.cargo|default:"No especificado" }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>Correo:</strong></div>
+                        <div class="col-sm-8">
+                            {% if contacto.correo %}
+                                <a href="mailto:{{ contacto.correo }}">{{ contacto.correo }}</a>
+                            {% else %}
+                                No especificado
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>Teléfono:</strong></div>
+                        <div class="col-sm-8">{{ contacto.telefono|default:"No especificado" }}</div>
+                    </div>
+                    {% if contacto.notas %}
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>Notas:</strong></div>
+                        <div class="col-sm-8">{{ contacto.notas|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Información del Cliente -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Información del Cliente</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-sm-4"><strong>Sector:</strong></div>
+                        <div class="col-sm-8">{{ contacto.cliente.sector_actividad|default:"No especificado" }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>NIT:</strong></div>
+                        <div class="col-sm-8">{{ contacto.cliente.nit|default:"No especificado" }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>Teléfono:</strong></div>
+                        <div class="col-sm-8">{{ contacto.cliente.telefono|default:"No especificado" }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>Dirección:</strong></div>
+                        <div class="col-sm-8">{{ contacto.cliente.direccion|default:"No especificada" }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>Ciudad:</strong></div>
+                        <div class="col-sm-8">{{ contacto.cliente.ciudad|default:"No especificada" }}</div>
+                    </div>
+                    <div class="row mt-2 text-center">
+                        <div class="col-12">
+                            <a href="{% url 'crm:cliente_detail' contacto.cliente.id %}" class="btn btn-outline-primary">
+                                <i class="fas fa-eye"></i> Ver Detalle Completo del Cliente
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

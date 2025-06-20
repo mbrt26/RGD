@@ -1,0 +1,217 @@
+{% extends 'base/form_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}Editar Actividad{% else %}Nueva Actividad de Mantenimiento{% endif %} - Mantenimiento
+{% endblock %}
+
+{% block form_title %}
+    <i class="fas fa-tasks me-2"></i>
+    {% if form.instance.pk %}Editar Actividad{% else %}Nueva Actividad de Mantenimiento{% endif %}
+{% endblock %}
+
+{% block form_content %}
+<form method="post" enctype="multipart/form-data" id="actividadForm">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Información Básica</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.contrato|as_crispy_field }}
+                    {{ form.hoja_vida_equipo|as_crispy_field }}
+                    {{ form.rutina_origen|as_crispy_field }}
+                    {{ form.tipo_actividad|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Detalles de la Actividad</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.titulo|as_crispy_field }}
+                    {{ form.prioridad|as_crispy_field }}
+                    {{ form.tecnico_asignado|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Programación</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.fecha_programada|as_crispy_field }}
+                    {{ form.fecha_limite|as_crispy_field }}
+                    {{ form.duracion_estimada_horas|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Descripción</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.descripcion|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if form.instance.pk %}
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0">Estado y Seguimiento</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form.estado|as_crispy_field }}
+                    {{ form.fecha_inicio_real|as_crispy_field }}
+                    {{ form.fecha_fin_real|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.requiere_seguimiento|as_crispy_field }}
+                    {{ form.motivo_reprogramacion|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0">Observaciones</h6>
+        </div>
+        <div class="card-body">
+            {{ form.observaciones|as_crispy_field }}
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'mantenimiento:actividad_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>
+                    {% if form.instance.pk %}Actualizar{% else %}Crear{% endif %} Actividad
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validación del formulario
+    document.getElementById('actividadForm').addEventListener('submit', function(e) {
+        const contrato = document.getElementById('id_contrato').value;
+        const hojaVidaEquipo = document.getElementById('id_hoja_vida_equipo').value;
+        const tipoActividad = document.getElementById('id_tipo_actividad').value;
+        const titulo = document.getElementById('id_titulo').value.trim();
+        const fechaProgramada = document.getElementById('id_fecha_programada').value;
+        const duracionEstimada = document.getElementById('id_duracion_estimada_horas').value;
+        
+        let errors = [];
+        
+        if (!contrato) {
+            errors.push('Debe seleccionar un contrato.');
+        }
+        
+        if (!hojaVidaEquipo) {
+            errors.push('Debe seleccionar un equipo.');
+        }
+        
+        if (!tipoActividad) {
+            errors.push('Debe seleccionar un tipo de actividad.');
+        }
+        
+        if (!titulo) {
+            errors.push('El título es obligatorio.');
+        }
+        
+        if (!fechaProgramada) {
+            errors.push('La fecha programada es obligatoria.');
+        }
+        
+        if (!duracionEstimada || parseFloat(duracionEstimada) <= 0) {
+            errors.push('La duración estimada debe ser mayor a 0.');
+        }
+        
+        if (errors.length > 0) {
+            e.preventDefault();
+            alert('Por favor corrija los siguientes errores:\n\n' + errors.join('\n'));
+            return false;
+        }
+    });
+    
+    // Auto-generar título basado en el tipo de actividad y equipo
+    const tipoField = document.getElementById('id_tipo_actividad');
+    const equipoField = document.getElementById('id_hoja_vida_equipo');
+    const tituloField = document.getElementById('id_titulo');
+    
+    function generarTitulo() {
+        if (tituloField.value.trim() === '' && tipoField.value && equipoField.value) {
+            const tipoOption = tipoField.options[tipoField.selectedIndex];
+            const equipoOption = equipoField.options[equipoField.selectedIndex];
+            
+            if (tipoOption && equipoOption) {
+                const tipoText = tipoOption.text;
+                const equipoText = equipoOption.text;
+                
+                // Extraer código del equipo (texto entre paréntesis al final)
+                const codigoMatch = equipoText.match(/\(([^)]+)\)$/);
+                const codigoEquipo = codigoMatch ? codigoMatch[1] : equipoText.split(' - ')[0];
+                
+                tituloField.value = `${tipoText} - ${codigoEquipo}`;
+            }
+        }
+    }
+    
+    tipoField.addEventListener('change', generarTitulo);
+    equipoField.addEventListener('change', generarTitulo);
+    
+    // Filtrar equipos por contrato
+    const contratoField = document.getElementById('id_contrato');
+    
+    contratoField.addEventListener('change', function() {
+        const contratoId = this.value;
+        if (contratoId) {
+            // Aquí podrías hacer una llamada AJAX para filtrar los equipos por contrato
+            // Por ahora, solo limpiamos la selección del equipo
+            equipoField.value = '';
+            tituloField.value = '';
+        }
+    });
+    
+    // Configurar fecha mínima para fecha programada (hoy)
+    const fechaProgramadaField = document.getElementById('id_fecha_programada');
+    if (fechaProgramadaField && fechaProgramadaField.type === 'datetime-local') {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        
+        const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+        fechaProgramadaField.min = minDateTime;
+    }
+});
+</script>
+{% endblock %}

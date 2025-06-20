@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Actividades de Mantenimiento{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-tasks me-2"></i>Actividades de Mantenimiento
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:dashboard' %}">Mantenimiento</a></li>
+                    <li class="breadcrumb-item active">Actividades</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{% url 'mantenimiento:actividad_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Nueva Actividad
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <form method="get" class="mb-4">
+        <div class="row g-3">
+            <div class="col-md-2">
+                <input type="text" name="q" class="form-control" placeholder="Buscar..." 
+                       value="{{ request.GET.q }}">
+            </div>
+            <div class="col-md-2">
+                <select name="cliente" class="form-select">
+                    <option value="">Todos los clientes</option>
+                    {% for cliente in clientes %}
+                    <option value="{{ cliente.id }}" {% if request.GET.cliente == cliente.id|stringformat:"s" %}selected{% endif %}>
+                        {{ cliente.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="estado" class="form-select">
+                    <option value="">Todos los estados</option>
+                    {% for value, label in estados %}
+                    <option value="{{ value }}" {% if request.GET.estado == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="tipo" class="form-select">
+                    <option value="">Todos los tipos</option>
+                    {% for value, label in tipos %}
+                    <option value="{{ value }}" {% if request.GET.tipo == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="fecha_desde" class="form-control" 
+                       value="{{ request.GET.fecha_desde }}" placeholder="Desde">
+            </div>
+            <div class="col-md-2">
+                <div class="btn-group w-100">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="fas fa-filter"></i>
+                    </button>
+                    <a href="{% url 'mantenimiento:actividad_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="row g-2 mt-2">
+            <div class="col-auto">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="atrasadas" value="1" 
+                           {% if request.GET.atrasadas %}checked{% endif %} id="atrasadas">
+                    <label class="form-check-label" for="atrasadas">Solo atrasadas</label>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="pendientes" value="1" 
+                           {% if request.GET.pendientes %}checked{% endif %} id="pendientes">
+                    <label class="form-check-label" for="pendientes">Solo pendientes</label>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="ejecutadas" value="1" 
+                           {% if request.GET.ejecutadas %}checked{% endif %} id="ejecutadas">
+                    <label class="form-check-label" for="ejecutadas">Solo ejecutadas</label>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Código</th>
+                            <th>Título</th>
+                            <th>Cliente/Equipo</th>
+                            <th>Tipo</th>
+                            <th>Estado</th>
+                            <th>Fecha Programada</th>
+                            <th>Técnico</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for actividad in actividades %}
+                        <tr {% if actividad.atrasada %}class="table-warning"{% endif %}>
+                            <td>
+                                <strong>{{ actividad.codigo_actividad }}</strong>
+                                {% if actividad.atrasada %}
+                                    <br><small class="text-danger">
+                                        <i class="fas fa-exclamation-triangle"></i> Atrasada {{ actividad.dias_atraso }} día{{ actividad.dias_atraso|pluralize }}
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ actividad.titulo }}</div>
+                                {% if actividad.prioridad == 'alta' or actividad.prioridad == 'critica' %}
+                                    <span class="badge bg-danger">{{ actividad.get_prioridad_display }}</span>
+                                {% elif actividad.prioridad == 'media' %}
+                                    <span class="badge bg-warning">{{ actividad.get_prioridad_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-info">{{ actividad.get_prioridad_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>
+                                    <a href="{% url 'crm:cliente_detail' actividad.hoja_vida_equipo.cliente.pk %}" class="text-decoration-none">
+                                        {{ actividad.hoja_vida_equipo.cliente.nombre }}
+                                    </a>
+                                </div>
+                                <small class="text-muted">{{ actividad.hoja_vida_equipo.codigo_interno }}</small>
+                            </td>
+                            <td>{{ actividad.get_tipo_actividad_display }}</td>
+                            <td>
+                                {% if actividad.estado == 'completada' %}
+                                    <span class="badge bg-success">{{ actividad.get_estado_display }}</span>
+                                {% elif actividad.estado == 'en_proceso' %}
+                                    <span class="badge bg-warning">{{ actividad.get_estado_display }}</span>
+                                {% elif actividad.estado == 'programada' %}
+                                    <span class="badge bg-info">{{ actividad.get_estado_display }}</span>
+                                {% elif actividad.estado == 'cancelada' %}
+                                    <span class="badge bg-danger">{{ actividad.get_estado_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ actividad.get_estado_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ actividad.fecha_programada|date:"d/m/Y" }}</div>
+                                <small class="text-muted">{{ actividad.fecha_programada|time:"H:i" }}</small>
+                            </td>
+                            <td>
+                                {% if actividad.tecnico_asignado %}
+                                    {{ actividad.tecnico_asignado.nombre }}
+                                {% else %}
+                                    <span class="text-muted">Sin asignar</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'mantenimiento:actividad_detail' actividad.pk %}" 
+                                       class="btn btn-outline-info" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'mantenimiento:actividad_update' actividad.pk %}" 
+                                       class="btn btn-outline-primary" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% if actividad.estado != 'completada' %}
+                                    <a href="{% url 'mantenimiento:informe_create' %}?actividad={{ actividad.pk }}" 
+                                       class="btn btn-outline-success" title="Crear informe">
+                                        <i class="fas fa-clipboard-check"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fas fa-tasks fa-2x mb-3"></i>
+                                <p>No hay actividades registradas con los filtros seleccionados.</p>
+                                <a href="{% url 'mantenimiento:actividad_create' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-1"></i>Crear Primera Actividad
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}">Primera</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}">Anterior</a>
+                </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">
+                    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                </span>
+            </li>
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}">Siguiente</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}">Última</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    <!-- Information Card -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="alert alert-info">
+                <h6 class="alert-heading">
+                    <i class="fas fa-info-circle me-2"></i>Información sobre Actividades
+                </h6>
+                <p class="mb-0">
+                    Esta tabla muestra todas las actividades de mantenimiento programadas y ejecutadas. 
+                    Las actividades atrasadas aparecen resaltadas en amarillo. 
+                    Use los filtros para encontrar actividades específicas.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

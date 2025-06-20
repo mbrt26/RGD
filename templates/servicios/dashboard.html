@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Dashboard - Servicios{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-tools me-2"></i>Dashboard Servicios
+        </h1>
+    </div>
+
+    <!-- Tarjetas de Estadísticas -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Técnicos Activos
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_tecnicos }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Servicios Hoy
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ servicios_hoy }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-day fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Solicitudes Pendientes
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ solicitudes_pendientes }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Informes Pendientes
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ informes_pendientes }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-file-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Servicios de la Semana y Técnicos Activos -->
+    <div class="row">
+        <!-- Servicios de la Semana -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Servicios de la Semana</h6>
+                    <a href="{% url 'servicios:solicitud_list' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-list me-1"></i>Ver Todos
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if servicios_semana %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Orden</th>
+                                    <th>Cliente</th>
+                                    <th>Tipo</th>
+                                    <th>Fecha</th>
+                                    <th>Técnico</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for servicio in servicios_semana %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'servicios:solicitud_detail' servicio.pk %}">
+                                            {{ servicio.numero_orden }}
+                                        </a>
+                                    </td>
+                                    <td>{{ servicio.cliente_crm.nombre|truncatechars:30 }}</td>
+                                    <td>{{ servicio.get_tipo_servicio_display }}</td>
+                                    <td>{{ servicio.fecha_programada|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        {% if servicio.tecnico_asignado %}
+                                            {{ servicio.tecnico_asignado.codigo_tecnico }}
+                                        {% else %}
+                                            <span class="text-muted">Sin asignar</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if servicio.estado == 'planeada' %}bg-secondary
+                                            {% elif servicio.estado == 'en_proceso' %}bg-warning
+                                            {% elif servicio.estado == 'ejecutada' %}bg-success
+                                            {% else %}bg-danger{% endif %}">
+                                            {{ servicio.get_estado_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay servicios programados para esta semana.</p>
+                        <a href="{% url 'servicios:solicitud_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>Crear Solicitud
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Técnicos Más Activos -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Técnicos Más Activos</h6>
+                    <a href="{% url 'servicios:tecnico_list' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-users me-1"></i>Ver Todos
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if tecnicos_activos %}
+                    {% for tecnico in tecnicos_activos %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="me-3">
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" 
+                                 style="width: 40px; height: 40px;">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0">{{ tecnico.codigo_tecnico }}</h6>
+                            <small class="text-muted">{{ tecnico.nombre_completo }}</small>
+                        </div>
+                        <div>
+                            <span class="badge bg-success">{{ tecnico.servicios_mes }} servicios</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-user-times fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay técnicos activos registrados.</p>
+                        <a href="{% url 'servicios:tecnico_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>Registrar Técnico
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-bolt me-2"></i>Acciones Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'servicios:solicitud_create' %}" class="btn btn-success w-100 h-100 d-flex flex-column justify-content-center">
+                                <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                                <div>Nueva Solicitud</div>
+                                <small class="text-light">Crear orden de servicio</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'servicios:tecnico_create' %}" class="btn btn-info w-100 h-100 d-flex flex-column justify-content-center">
+                                <i class="fas fa-user-plus fa-2x mb-2"></i>
+                                <div>Nuevo Técnico</div>
+                                <small class="text-light">Registrar técnico</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'servicios:informe_create' %}" class="btn btn-warning w-100 h-100 d-flex flex-column justify-content-center">
+                                <i class="fas fa-file-alt fa-2x mb-2"></i>
+                                <div>Nuevo Informe</div>
+                                <small class="text-dark">Crear informe de trabajo</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'servicios:solicitud_list' %}" class="btn btn-primary w-100 h-100 d-flex flex-column justify-content-center">
+                                <i class="fas fa-search fa-2x mb-2"></i>
+                                <div>Ver Solicitudes</div>
+                                <small class="text-light">Gestionar servicios</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

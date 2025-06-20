@@ -1,0 +1,232 @@
+{% extends "base/base.html" %}
+
+{% block title %}Convertir Lead: {{ lead.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.conversion-option {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+.conversion-option:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.conversion-option.selected {
+    border-color: #0d6efd;
+    background-color: #f8f9ff;
+}
+.conversion-preview {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="conversion-preview text-center">
+                <h2 class="mb-3"><i class="fas fa-exchange-alt me-2"></i>Convertir Lead</h2>
+                <h4>{{ lead.nombre }}{% if lead.empresa %} - {{ lead.empresa }}{% endif %}</h4>
+                <p class="mb-0">Selecciona el tipo de conversión que deseas realizar</p>
+            </div>
+            
+            <form method="post" id="conversionForm">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="card conversion-option h-100" data-conversion="cliente">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-building fa-3x text-primary"></i>
+                                </div>
+                                <h5 class="card-title">Convertir a Cliente</h5>
+                                <p class="card-text text-muted">
+                                    Crea un nuevo cliente en el sistema con la información del lead.
+                                    También se creará un contacto asociado.
+                                </p>
+                                <div class="conversion-details mt-3">
+                                    <h6 class="text-primary">Se creará:</h6>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check text-success me-2"></i>Cliente: {{ lead.empresa|default:lead.nombre }}</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>Contacto: {{ lead.nombre }}</li>
+                                        {% if lead.sector_actividad %}
+                                        <li><i class="fas fa-check text-success me-2"></i>Sector: {{ lead.get_sector_actividad_display }}</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <div class="card conversion-option h-100" data-conversion="trato">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-handshake fa-3x text-success"></i>
+                                </div>
+                                <h5 class="card-title">Convertir a ProyectoCRM</h5>
+                                <p class="card-text text-muted">
+                                    Crea un nuevo proyecto CRM (trato) listo para seguimiento comercial.
+                                    Incluye cliente y contacto si es necesario.
+                                </p>
+                                <div class="conversion-details mt-3">
+                                    <h6 class="text-success">Se creará:</h6>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check text-success me-2"></i>ProyectoCRM con 70% probabilidad</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>Cliente: {{ lead.empresa|default:lead.nombre }}</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>Contacto: {{ lead.nombre }}</li>
+                                        {% if lead.presupuesto_estimado %}
+                                        <li><i class="fas fa-check text-success me-2"></i>Valor: ${{ lead.presupuesto_estimado|floatformat:2 }}</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Información del Lead -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información del Lead</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-4">Nombre:</dt>
+                                    <dd class="col-8">{{ lead.nombre }}</dd>
+                                    
+                                    {% if lead.empresa %}
+                                    <dt class="col-4">Empresa:</dt>
+                                    <dd class="col-8">{{ lead.empresa }}</dd>
+                                    {% endif %}
+                                    
+                                    <dt class="col-4">Email:</dt>
+                                    <dd class="col-8">{{ lead.correo }}</dd>
+                                    
+                                    {% if lead.telefono %}
+                                    <dt class="col-4">Teléfono:</dt>
+                                    <dd class="col-8">{{ lead.telefono }}</dd>
+                                    {% endif %}
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-4">Estado:</dt>
+                                    <dd class="col-8">
+                                        <span class="badge {{ lead.get_estado_class }}">{{ lead.get_estado_display }}</span>
+                                    </dd>
+                                    
+                                    <dt class="col-4">Fuente:</dt>
+                                    <dd class="col-8">{{ lead.get_fuente_display }}</dd>
+                                    
+                                    <dt class="col-4">Interés:</dt>
+                                    <dd class="col-8">
+                                        <span class="badge {{ lead.get_interes_class }}">{{ lead.get_nivel_interes_display }}</span>
+                                    </dd>
+                                    
+                                    {% if lead.presupuesto_estimado %}
+                                    <dt class="col-4">Presupuesto:</dt>
+                                    <dd class="col-8">
+                                        <strong class="text-success">${{ lead.presupuesto_estimado|floatformat:2 }}</strong>
+                                    </dd>
+                                    {% endif %}
+                                </dl>
+                            </div>
+                        </div>
+                        
+                        {% if lead.necesidad %}
+                        <div class="mt-3">
+                            <strong>Necesidad/Problema:</strong>
+                            <p class="text-muted">{{ lead.necesidad }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <input type="hidden" name="conversion_type" id="conversionType" value="">
+                
+                <div class="text-center">
+                    <a href="{% url 'crm:lead_detail' lead.id %}" class="btn btn-secondary me-3">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success btn-lg" id="convertBtn" disabled>
+                        <i class="fas fa-exchange-alt me-2"></i>Convertir Lead
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const conversionOptions = document.querySelectorAll('.conversion-option');
+    const conversionTypeInput = document.getElementById('conversionType');
+    const convertBtn = document.getElementById('convertBtn');
+    
+    conversionOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            console.log('Conversion option clicked:', this.dataset.conversion);
+            
+            // Remover selección previa
+            conversionOptions.forEach(opt => opt.classList.remove('selected'));
+            
+            // Seleccionar opción actual
+            this.classList.add('selected');
+            
+            // Actualizar input hidden
+            const conversionType = this.dataset.conversion;
+            conversionTypeInput.value = conversionType;
+            
+            // Habilitar botón
+            convertBtn.disabled = false;
+            
+            // Actualizar texto del botón
+            if (conversionType === 'cliente') {
+                convertBtn.innerHTML = '<i class="fas fa-building me-2"></i>Convertir a Cliente';
+            } else if (conversionType === 'trato') {
+                convertBtn.innerHTML = '<i class="fas fa-handshake me-2"></i>Convertir a ProyectoCRM';
+            }
+            
+            console.log('Button enabled, conversion type set to:', conversionType);
+        });
+    });
+    
+    // Confirmación antes de enviar
+    document.getElementById('conversionForm').addEventListener('submit', function(e) {
+        const conversionType = conversionTypeInput.value;
+        console.log('Form submitted with conversion type:', conversionType);
+        
+        if (!conversionType) {
+            alert('Por favor selecciona un tipo de conversión.');
+            e.preventDefault();
+            return;
+        }
+        
+        let message = '';
+        
+        if (conversionType === 'cliente') {
+            message = '¿Estás seguro de convertir este lead a Cliente?';
+        } else if (conversionType === 'trato') {
+            message = '¿Estás seguro de convertir este lead a ProyectoCRM?';
+        }
+        
+        if (!confirm(message)) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

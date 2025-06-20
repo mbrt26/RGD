@@ -51,9 +51,9 @@
     <div class="card-header">
         <h3 class="card-title mb-0">
             {% if form.instance.pk %}
-                Editar Trato #{{ form.instance.numero_oferta }}
+                Editar Proyecto #{{ form.instance.numero_oferta }}
             {% else %}
-                Nuevo Trato
+                Nuevo Proyecto
             {% endif %}
         </h3>
     </div>
@@ -110,28 +110,17 @@
                     <div class="col-md-6">
                         {{ form.estado|as_crispy_field }}
                         {{ form.fuente|as_crispy_field }}
-                        <div class="form-group">
-                            <label for="id_fecha_creacion" class="form-label">Fecha de Creación</label>
-                            {% if form.instance.pk %}
-                                <input type="date" id="id_fecha_creacion" class="form-control" value="{{ form.instance.fecha_creacion|date:'Y-m-d' }}" disabled>
-                            {% else %}
-                                <input type="date" id="id_fecha_creacion" class="form-control" value="{{ now|date:'Y-m-d' }}" disabled>
-                            {% endif %}
-                        </div>
+                        {{ form.fecha_creacion|as_crispy_field }}
+                        {{ form.dias_prometidos|as_crispy_field }}
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="id_fecha_cierre" class="form-label">Fecha de Cierre</label>
-                            {{ form.fecha_cierre }}
-                            <div class="form-text">
-                                Fecha estimada de cierre del trato
-                            </div>
-                        </div>
+                        {{ form.fecha_cierre|as_crispy_field }}
+                        {{ form.fecha_envio_cotizacion|as_crispy_field }}
                     </div>
                 </div>
             </div>
             
-            <div class="form-section">
+            <div class="form-section" id="seccion-proyecto" style="display: none;">
                 <h5>Información de Proyecto</h5>
                 <div class="row">
                     <div class="col-md-6">
@@ -140,7 +129,6 @@
                     </div>
                     <div class="col-md-6">
                         {{ form.orden_contrato|as_crispy_field }}
-                        {{ form.dias_prometidos|as_crispy_field }}
                     </div>
                 </div>
             </div>
@@ -301,4 +289,138 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Buscar elementos por diferentes métodos para mayor compatibilidad
+    const clienteSelect = document.getElementById('id_cliente') || document.querySelector('select[name="cliente"]');
+    const contactoSelect = document.getElementById('id_contacto') || document.querySelector('select[name="contacto"]');
+    const correoInput = document.getElementById('id_correo') || document.querySelector('input[name="correo"]');
+    const telefonoInput = document.getElementById('id_telefono') || document.querySelector('input[name="telefono"]');
+    
+    // Función para cargar contactos cuando se selecciona un cliente
+    function cargarContactos(clienteId, selectedContactoId = null) {
+        if (!clienteId) {
+            // Limpiar el select de contactos si no hay cliente seleccionado
+            contactoSelect.innerHTML = '<option value="">---------</option>';
+            correoInput.value = '';
+            telefonoInput.value = '';
+            return;
+        }
+        
+        // Guardar el contacto actualmente seleccionado si no se especifica uno
+        if (selectedContactoId === null) {
+            selectedContactoId = contactoSelect.value;
+        }
+        
+        // Mostrar loading
+        contactoSelect.innerHTML = '<option value="">Cargando contactos...</option>';
+        contactoSelect.disabled = true;
+        
+        // Hacer petición AJAX para obtener contactos
+        const url = `/crm/api/clientes/${clienteId}/contactos/`;
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                contactoSelect.disabled = false;
+                
+                if (data.success) {
+                    // Limpiar y agregar opción vacía
+                    contactoSelect.innerHTML = '<option value="">---------</option>';
+                    
+                    // Agregar contactos
+                    data.contactos.forEach(contacto => {
+                        const option = document.createElement('option');
+                        option.value = contacto.id;
+                        option.textContent = `${contacto.nombre} - ${contacto.cargo || 'Sin cargo'}`;
+                        option.dataset.correo = contacto.correo || '';
+                        option.dataset.telefono = contacto.telefono || '';
+                        contactoSelect.appendChild(option);
+                    });
+                    
+                    // Restaurar la selección si había un contacto seleccionado
+                    if (selectedContactoId) {
+                        contactoSelect.value = selectedContactoId;
+                        // Actualizar correo y teléfono del contacto seleccionado
+                        llenarDatosContacto();
+                    }
+                    
+                    if (data.contactos.length === 0) {
+                        const option = document.createElement('option');
+                        option.value = '';
+                        option.textContent = 'No hay contactos para este cliente';
+                        contactoSelect.appendChild(option);
+                    }
+                } else {
+                    contactoSelect.innerHTML = '<option value="">Error al cargar contactos</option>';
+                }
+            })
+            .catch(error => {
+                contactoSelect.disabled = false;
+                contactoSelect.innerHTML = '<option value="">Error al cargar contactos</option>';
+                console.error('Error al cargar contactos:', error);
+            });
+    }
+    
+    // Función para llenar correo y teléfono cuando se selecciona un contacto
+    function llenarDatosContacto() {
+        const selectedOption = contactoSelect.options[contactoSelect.selectedIndex];
+        
+        if (selectedOption && selectedOption.value) {
+            correoInput.value = selectedOption.dataset.correo || '';
+            telefonoInput.value = selectedOption.dataset.telefono || '';
+        } else {
+            correoInput.value = '';
+            telefonoInput.value = '';
+        }
+    }
+    
+    // Event listeners - solo si los elementos existen
+    if (clienteSelect && contactoSelect && correoInput && telefonoInput) {
+        clienteSelect.addEventListener('change', function() {
+            const clienteId = this.value;
+            cargarContactos(clienteId);
+            // Solo limpiar correo y teléfono cuando cambia el cliente (nuevo cliente seleccionado)
+            if (clienteId) {
+                correoInput.value = '';
+                telefonoInput.value = '';
+            }
+        });
+        
+        contactoSelect.addEventListener('change', llenarDatosContacto);
+        
+        // Cargar contactos si ya hay un cliente seleccionado (para modo edición)
+        if (clienteSelect.value) {
+            // Guardar el contacto actualmente seleccionado antes de recargar la lista
+            const currentContactoId = contactoSelect.value;
+            cargarContactos(clienteSelect.value, currentContactoId);
+        }
+    }
+    
+    // Controlar visibilidad de la sección de proyecto según el estado
+    const estadoSelect = document.getElementById('id_estado') || document.querySelector('select[name="estado"]');
+    const seccionProyecto = document.getElementById('seccion-proyecto');
+    
+    function toggleSeccionProyecto() {
+        if (estadoSelect && seccionProyecto) {
+            if (estadoSelect.value === 'ganado') {
+                seccionProyecto.style.display = 'block';
+            } else {
+                seccionProyecto.style.display = 'none';
+            }
+        }
+    }
+    
+    if (estadoSelect) {
+        // Configurar el estado inicial
+        toggleSeccionProyecto();
+        
+        // Agregar listener para cambios
+        estadoSelect.addEventListener('change', toggleSeccionProyecto);
+    }
+});
+</script>
 {% endblock %}

@@ -1,0 +1,667 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}Editar Informe{% else %}Nuevo Informe{% endif %} - Mantenimiento Colección de Polvo
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-filter me-2"></i>
+                {% if form.instance.pk %}Editar Informe{% else %}Nuevo Informe{% endif %} - Mantenimiento Colección de Polvo
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:dashboard' %}">Mantenimiento</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:actividad_list' %}">Actividades</a></li>
+                    {% if actividad %}
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:actividad_detail' actividad.pk %}">{{ actividad.codigo_actividad }}</a></li>
+                    {% endif %}
+                    <li class="breadcrumb-item active">Informe Colección de Polvo</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+    </div>
+    {% else %}
+
+    <form method="post" id="informeForm" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <!-- Progress Indicator -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="progress mb-3" style="height: 8px;">
+                    <div class="progress-bar bg-warning" role="progressbar" style="width: 0%" id="formProgress"></div>
+                </div>
+                <div class="row text-center">
+                    <div class="col step-indicator active" data-step="1">
+                        <i class="fas fa-info-circle"></i><br>
+                        <small>Header</small>
+                    </div>
+                    <div class="col step-indicator" data-step="2">
+                        <i class="fas fa-bolt"></i><br>
+                        <small>Voltaje y Observaciones</small>
+                    </div>
+                    <div class="col step-indicator" data-step="3">
+                        <i class="fas fa-cogs"></i><br>
+                        <small>Conjunto Motor</small>
+                    </div>
+                    <div class="col step-indicator" data-step="4">
+                        <i class="fas fa-filter"></i><br>
+                        <small>Colectores de Polvo</small>
+                    </div>
+                    <div class="col step-indicator" data-step="5">
+                        <i class="fas fa-plug"></i><br>
+                        <small>Sistema Eléctrico</small>
+                    </div>
+                    <div class="col step-indicator" data-step="6">
+                        <i class="fas fa-tools"></i><br>
+                        <small>Varios</small>
+                    </div>
+                    <div class="col step-indicator" data-step="7">
+                        <i class="fas fa-clipboard-check"></i><br>
+                        <small>Observaciones</small>
+                    </div>
+                    <div class="col step-indicator" data-step="8">
+                        <i class="fas fa-signature"></i><br>
+                        <small>Firmas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 1: Header -->
+        <div class="form-section" data-section="1">
+            <div class="card mb-4" style="border-left: 4px solid #ffc107;">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="m-0">
+                        <i class="fas fa-info-circle me-2"></i>1. Header
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.fecha|as_crispy_field }}
+                            {{ form.marca|as_crispy_field }}
+                            {{ form.modelo|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.serie|as_crispy_field }}
+                            {{ form.cliente|as_crispy_field }}
+                            {{ form.ubicacion|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 2: Tipo de Mantenimiento, Voltaje y Observaciones -->
+        <div class="form-section" data-section="2" style="display: none;">
+            <div class="card mb-4" style="border-left: 4px solid #17a2b8;">
+                <div class="card-header bg-info text-white">
+                    <h5 class="m-0">
+                        <i class="fas fa-tools me-2"></i>2. Tipo de Mantenimiento
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {{ form.tipo_mantenimiento|as_crispy_field }}
+                </div>
+            </div>
+
+            <div class="card mb-4" style="border-left: 4px solid #dc3545;">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="m-0">
+                        <i class="fas fa-bolt me-2"></i>3. Voltaje Tableros
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.voltaje_l1_l2|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.voltaje_l2_l3|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.voltaje_l1_l3|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4" style="border-left: 4px solid #6c757d;">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="m-0">
+                        <i class="fas fa-eye me-2"></i>4. Observaciones Previas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {{ form.observaciones_previas|as_crispy_field }}
+                    <small class="form-text text-muted">
+                        Incluya hallazgos relevantes y/o anormales del equipo antes del mantenimiento.
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 3: Conjunto Motor -->
+        <div class="form-section" data-section="3" style="display: none;">
+            <div class="card mb-4" style="border-left: 4px solid #28a745;">
+                <div class="card-header bg-success text-white">
+                    <h5 class="m-0">
+                        <i class="fas fa-cogs me-2"></i>5. Conjunto Motor
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Inspección Visual -->
+                    <h6 class="text-success mb-3">Inspección Visual</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-2">
+                            {{ form.motor_inspeccion_bobinado|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.motor_inspeccion_ventilador|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.motor_inspeccion_transmision|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.motor_inspeccion_carcasa|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.motor_inspeccion_bornera|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Actividades -->
+                    <h6 class="text-success mb-3">Actividades de Mantenimiento</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-2">
+                            {{ form.motor_lubricacion_rodamientos|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.motor_limpieza_ventilador|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.motor_limpieza_carcasa|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.motor_ajuste_transmision|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.motor_medicion_vibraciones|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.motor_medicion_temperatura|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Mediciones -->
+                    <h6 class="text-success mb-3">Mediciones</h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            {{ form.motor_amperaje|as_crispy_field }}
+                            {{ form.motor_voltaje|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.motor_rpm|as_crispy_field }}
+                            {{ form.motor_temperatura|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    {{ form.motor_vibracion_horizontal|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.motor_vibracion_vertical|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.motor_vibracion_axial|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 4: Colectores de Polvo -->
+        <div class="form-section" data-section="4" style="display: none;">
+            <div class="card mb-4" style="border-left: 4px solid #fd7e14;">
+                <div class="card-header" style="background-color: #fd7e14; color: white;">
+                    <h5 class="m-0">
+                        <i class="fas fa-filter me-2"></i>6. Colectores de Polvo 1
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Actividades -->
+                    <h6 class="text-warning mb-3">Actividades</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-2">
+                            {{ form.colector1_limpieza_tolvas|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.colector1_revision_compuertas|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.colector1_revision_ductos|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.colector1_revision_estructural|as_crispy_field }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.colector1_limpieza_estructura|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Sistema de Filtros -->
+                    <h6 class="text-warning mb-3">Sistema de Filtros</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            {{ form.colector1_revision_filtros|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.colector1_cambio_filtros|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.colector1_limpieza_camara|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.colector1_revision_sellos|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Sistema de Limpieza -->
+                    <h6 class="text-warning mb-3">Sistema de Limpieza</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            {{ form.colector1_revision_valvulas_pulso|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.colector1_prueba_secuencia|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.colector1_revision_compresor_aire|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.colector1_revision_tanque_aire|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Mediciones -->
+                    <h6 class="text-warning mb-3">Mediciones</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.colector1_presion_diferencial|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.colector1_presion_aire|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.colector1_caudal_aire|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 5: Sistema Eléctrico -->
+        <div class="form-section" data-section="5" style="display: none;">
+            <div class="card mb-4" style="border-left: 4px solid #6f42c1;">
+                <div class="card-header" style="background-color: #6f42c1; color: white;">
+                    <h5 class="m-0">
+                        <i class="fas fa-plug me-2"></i>7. Sistema Eléctrico
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            {{ form.elect_revision_tablero_principal|as_crispy_field }}
+                            {{ form.elect_limpieza_tablero|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.elect_revision_contactores|as_crispy_field }}
+                            {{ form.elect_revision_relevos|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.elect_revision_fusibles|as_crispy_field }}
+                            {{ form.elect_revision_alambrado|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.elect_prueba_funcionamiento|as_crispy_field }}
+                            {{ form.elect_medicion_resistencia|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 6: Varios -->
+        <div class="form-section" data-section="6" style="display: none;">
+            <div class="card mb-4" style="border-left: 4px solid #20c997;">
+                <div class="card-header bg-teal text-white" style="background-color: #20c997;">
+                    <h5 class="m-0">
+                        <i class="fas fa-tools me-2"></i>8. Varios
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Instrumentación -->
+                    <h6 class="text-info mb-3">Instrumentación</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            {{ form.varios_revision_manometros|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.varios_calibracion_transmisores|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.varios_revision_termometros|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.varios_prueba_alarmas|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Sistema Control -->
+                    <h6 class="text-info mb-3">Sistema Control</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            {{ form.varios_revision_plc|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.varios_revision_hmi|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.varios_backup_programa|as_crispy_field }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.varios_actualizacion_parametros|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Seguridad -->
+                    <h6 class="text-info mb-3">Seguridad</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.varios_revision_paros_emergencia|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.varios_revision_guardas|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.varios_revision_señalizacion|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 7: Observaciones Posteriores -->
+        <div class="form-section" data-section="7" style="display: none;">
+            <div class="card mb-4" style="border-left: 4px solid #e83e8c;">
+                <div class="card-header" style="background-color: #e83e8c; color: white;">
+                    <h5 class="m-0">
+                        <i class="fas fa-clipboard-check me-2"></i>9. Observaciones Posteriores + Prioridad
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {{ form.observaciones_posteriores|as_crispy_field }}
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            {{ form.prioridad|as_crispy_field }}
+                            <small class="form-text text-muted">
+                                Identificar si la prioridad de la actividad propuesta es ALTA o BAJA según sea la criticidad del hallazgo
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 8: Firmas -->
+        <div class="form-section" data-section="8" style="display: none;">
+            <div class="card mb-4" style="border-left: 4px solid #343a40;">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="m-0">
+                        <i class="fas fa-signature me-2"></i>10. Firmas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Ejecutado por -->
+                    <h6 class="text-primary mb-3">Ejecutado por</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            {{ form.ejecutado_por_nombre|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.ejecutado_por_fecha|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.ejecutado_por_firma|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Supervisado por -->
+                    <h6 class="text-warning mb-3">Supervisado por</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            {{ form.supervisado_por_nombre|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.supervisado_por_fecha|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.supervisado_por_firma|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <!-- Recibido por -->
+                    <h6 class="text-success mb-3">Recibido por</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.recibido_por_nombre|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.recibido_por_fecha|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.recibido_por_firma|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de Navegación -->
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        {% if actividad %}
+                        <a href="{% url 'mantenimiento:actividad_detail' actividad.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Cancelar
+                        </a>
+                        {% endif %}
+                        <button type="button" class="btn btn-outline-secondary" id="prevBtn" style="display: none;">
+                            <i class="fas fa-arrow-left me-1"></i>Anterior
+                        </button>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-outline-warning" id="saveAsDraftBtn">
+                            <i class="fas fa-save me-1"></i>Guardar Borrador
+                        </button>
+                        <button type="button" class="btn btn-warning" id="nextBtn">
+                            Siguiente<i class="fas fa-arrow-right ms-1"></i>
+                        </button>
+                        <button type="submit" class="btn btn-success" id="submitBtn" style="display: none;">
+                            <i class="fas fa-check me-1"></i>
+                            {% if form.instance.pk %}Actualizar{% else %}Crear{% endif %} Informe
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentSection = 1;
+    const totalSections = 8;
+    
+    // Elementos
+    const formSections = document.querySelectorAll('.form-section');
+    const stepIndicators = document.querySelectorAll('.step-indicator');
+    const progressBar = document.getElementById('formProgress');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const saveAsDraftBtn = document.getElementById('saveAsDraftBtn');
+    
+    // Función para mostrar sección
+    function showSection(section) {
+        // Ocultar todas las secciones
+        formSections.forEach(sec => sec.style.display = 'none');
+        
+        // Mostrar sección actual
+        const currentSec = document.querySelector(`[data-section="${section}"]`);
+        if (currentSec) {
+            currentSec.style.display = 'block';
+        }
+        
+        // Actualizar indicadores
+        stepIndicators.forEach((indicator, index) => {
+            indicator.classList.toggle('active', index + 1 === section);
+            indicator.classList.toggle('completed', index + 1 < section);
+        });
+        
+        // Actualizar barra de progreso
+        const progress = (section / totalSections) * 100;
+        progressBar.style.width = progress + '%';
+        
+        // Actualizar botones
+        prevBtn.style.display = section > 1 ? 'inline-block' : 'none';
+        nextBtn.style.display = section < totalSections ? 'inline-block' : 'none';
+        submitBtn.style.display = section === totalSections ? 'inline-block' : 'none';
+    }
+    
+    // Event listeners para navegación
+    nextBtn.addEventListener('click', function() {
+        if (currentSection < totalSections) {
+            currentSection++;
+            showSection(currentSection);
+        }
+    });
+    
+    prevBtn.addEventListener('click', function() {
+        if (currentSection > 1) {
+            currentSection--;
+            showSection(currentSection);
+        }
+    });
+    
+    // Navegación con indicadores
+    stepIndicators.forEach((indicator, index) => {
+        indicator.addEventListener('click', function() {
+            currentSection = index + 1;
+            showSection(currentSection);
+        });
+    });
+    
+    // Guardar como borrador
+    saveAsDraftBtn.addEventListener('click', function() {
+        alert('Funcionalidad de borrador pendiente de implementar');
+    });
+    
+    // Validación del formulario
+    document.getElementById('informeForm').addEventListener('submit', function(e) {
+        const requiredFields = ['fecha', 'marca', 'modelo', 'serie', 'cliente', 'tipo_mantenimiento'];
+        let isValid = true;
+        let errors = [];
+        
+        requiredFields.forEach(fieldName => {
+            const field = document.getElementById(`id_${fieldName}`);
+            if (field && !field.value.trim()) {
+                isValid = false;
+                errors.push(`El campo ${field.previousElementSibling.textContent} es obligatorio.`);
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Por favor complete los siguientes campos obligatorios:\\n\\n' + errors.join('\\n'));
+            return false;
+        }
+    });
+    
+    // Inicializar primera sección
+    showSection(1);
+});
+</script>
+
+<style>
+.step-indicator {
+    opacity: 0.5;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.step-indicator.active {
+    opacity: 1;
+    background-color: #ffc107;
+    color: white;
+}
+
+.step-indicator.completed {
+    opacity: 1;
+    background-color: #28a745;
+    color: white;
+}
+
+.step-indicator:hover {
+    background-color: #e9ecef;
+}
+
+.step-indicator.active:hover,
+.step-indicator.completed:hover {
+    opacity: 0.8;
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.form-check-input:checked {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.btn {
+    border-radius: 6px;
+}
+
+textarea {
+    min-height: 100px;
+}
+</style>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,54 @@
+from django.views.generic import TemplateView, ListView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
+from django.db.models import Q, Count, Avg, Sum
+from django.utils import timezone
+from datetime import timedelta
+
+from proyectos.models import Proyecto
+
+
+class DashboardRetrasosView(LoginRequiredMixin, TemplateView):
+    """Dashboard especializado en análisis de retrasos"""
+    template_name = 'proyectos/retrasos/dashboard.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Estadísticas generales
+        todos_proyectos = Proyecto.objects.all()
+        proyectos_activos = todos_proyectos.exclude(estado='finalizado')
+        
+        # Cálculos de retrasos
+        proyectos_atrasados = []
+        total_dias_retraso = 0
+        
+        for proyecto in todos_proyectos:
+            if proyecto.dias_retraso > 0:
+                proyectos_atrasados.append(proyecto)
+                total_dias_retraso += proyecto.dias_retraso
+        
+        context['stats'] = {
+            'total_proyectos': todos_proyectos.count(),
+            'proyectos_activos': proyectos_activos.count(),
+            'proyectos_atrasados': len(proyectos_atrasados),
+            'porcentaje_atrasados': (len(proyectos_atrasados) / todos_proyectos.count() * 100) if todos_proyectos.count() > 0 else 0,
+            'total_dias_retraso': total_dias_retraso,
+            'promedio_retraso': total_dias_retraso / len(proyectos_atrasados) if proyectos_atrasados else 0
+        }
+        
+        # Proyectos por nivel de retraso
+        niveles_retraso = {'leve': 0, 'moderado': 0, 'severo': 0, 'critico': 0}
+        for proyecto in proyectos_atrasados:
+            nivel = proyecto.nivel_retraso
+            if nivel in niveles_retraso:
+                niveles_retraso[nivel] += 1
+        
+        context['retrasos_por_nivel'] = niveles_retraso
+        
+        # Proyectos más atrasados
+        context['proyectos_mas_atrasados'] = sorted(
+            proyectos_atrasados, 
+            key=lambda p: p.dias_retraso, 
+            reverse=True
+        )[:10]\n        \n        # Próximas fechas límite\n        hoy = timezone.now().date()\n        context['proximas_fechas_limite'] = proyectos_activos.filter(\n            fecha_fin__gte=hoy,\n            fecha_fin__lte=hoy + timedelta(days=14)\n        ).order_by('fecha_fin')\n        \n        # Proyectos con desviación de cronograma\n        proyectos_desviados = []\n        for proyecto in proyectos_activos:\n            if abs(proyecto.desviacion_cronograma) > 10:\n                proyectos_desviados.append(proyecto)\n        \n        context['proyectos_desviados'] = sorted(\n            proyectos_desviados,\n            key=lambda p: p.desviacion_cronograma\n        )\n        \n        # Análisis temporal mensual\n        context['analisis_mensual'] = self.get_analisis_mensual()\n        \n        return context\n    \n    def get_analisis_mensual(self):\n        \"\"\"Análisis de retrasos por mes\"\"\"\n        import calendar\n        from datetime import date\n        \n        hoy = timezone.now().date()\n        meses_analisis = []\n        \n        for i in range(6):  # Últimos 6 meses\n            if i == 0:\n                mes_fecha = hoy\n            else:\n                # Calcular mes anterior\n                if hoy.month - i <= 0:\n                    mes_fecha = date(hoy.year - 1, 12 + (hoy.month - i), 1)\n                else:\n                    mes_fecha = date(hoy.year, hoy.month - i, 1)\n            \n            # Proyectos que deberían haber terminado en este mes\n            proyectos_mes = Proyecto.objects.filter(\n                fecha_fin__year=mes_fecha.year,\n                fecha_fin__month=mes_fecha.month\n            )\n            \n            # Calcular retrasos para este mes\n            atrasados_mes = 0\n            dias_retraso_mes = 0\n            \n            for proyecto in proyectos_mes:\n                if proyecto.dias_retraso > 0:\n                    atrasados_mes += 1\n                    dias_retraso_mes += proyecto.dias_retraso\n            \n            meses_analisis.append({\n                'mes': calendar.month_name[mes_fecha.month],\n                'ano': mes_fecha.year,\n                'total_proyectos': proyectos_mes.count(),\n                'atrasados': atrasados_mes,\n                'dias_retraso': dias_retraso_mes,\n                'porcentaje_atrasados': (atrasados_mes / proyectos_mes.count() * 100) if proyectos_mes.count() > 0 else 0\n            })\n        \n        return meses_analisis[::-1]  # Invertir para mostrar cronológicamente\n\n\nclass ProyectosAtrasadosListView(LoginRequiredMixin, ListView):\n    \"\"\"Vista de lista específica para proyectos atrasados\"\"\"\n    template_name = 'proyectos/retrasos/atrasados_list.html'\n    context_object_name = 'proyectos'\n    paginate_by = 20\n    \n    def get_queryset(self):\n        # Obtener solo proyectos atrasados\n        todos_proyectos = Proyecto.objects.all()\n        proyectos_atrasados = []\n        \n        for proyecto in todos_proyectos:\n            if proyecto.dias_retraso > 0:\n                proyectos_atrasados.append(proyecto)\n        \n        # Aplicar filtros\n        nivel_filter = self.request.GET.get('nivel')\n        if nivel_filter:\n            proyectos_atrasados = [\n                p for p in proyectos_atrasados \n                if p.nivel_retraso == nivel_filter\n            ]\n        \n        cliente_filter = self.request.GET.get('cliente')\n        if cliente_filter:\n            proyectos_atrasados = [\n                p for p in proyectos_atrasados \n                if cliente_filter.lower() in p.cliente.lower()\n            ]\n        \n        # Ordenar por días de retraso (descendente por defecto)\n        orden = self.request.GET.get('orden', 'retraso_desc')\n        if orden == 'retraso_asc':\n            proyectos_atrasados.sort(key=lambda p: p.dias_retraso)\n        elif orden == 'retraso_desc':\n            proyectos_atrasados.sort(key=lambda p: p.dias_retraso, reverse=True)\n        elif orden == 'nombre':\n            proyectos_atrasados.sort(key=lambda p: p.nombre_proyecto)\n        elif orden == 'cliente':\n            proyectos_atrasados.sort(key=lambda p: p.cliente)\n        \n        return proyectos_atrasados\n    \n    def get_context_data(self, **kwargs):\n        context = super().get_context_data(**kwargs)\n        \n        # Opciones de filtro\n        context['niveles_retraso'] = [\n            ('leve', 'Leve (1-7 días)'),\n            ('moderado', 'Moderado (8-15 días)'),\n            ('severo', 'Severo (16-30 días)'),\n            ('critico', 'Crítico (+30 días)')\n        ]\n        \n        context['filtros_actuales'] = {\n            'nivel': self.request.GET.get('nivel', ''),\n            'cliente': self.request.GET.get('cliente', ''),\n            'orden': self.request.GET.get('orden', 'retraso_desc')\n        }\n        \n        return context\n\n\ndef api_retrasos_stats(request):\n    \"\"\"API para obtener estadísticas de retrasos en formato JSON\"\"\"\n    try:\n        # Calcular estadísticas\n        todos_proyectos = Proyecto.objects.all()\n        proyectos_atrasados = []\n        total_dias_retraso = 0\n        \n        retrasos_por_nivel = {\n            'leve': 0,\n            'moderado': 0, \n            'severo': 0,\n            'critico': 0\n        }\n        \n        for proyecto in todos_proyectos:\n            if proyecto.dias_retraso > 0:\n                proyectos_atrasados.append({\n                    'id': proyecto.id,\n                    'nombre': proyecto.nombre_proyecto,\n                    'cliente': proyecto.cliente,\n                    'dias_retraso': proyecto.dias_retraso,\n                    'nivel_retraso': proyecto.nivel_retraso,\n                    'fecha_fin': proyecto.fecha_fin.isoformat(),\n                    'estado': proyecto.estado\n                })\n                total_dias_retraso += proyecto.dias_retraso\n                retrasos_por_nivel[proyecto.nivel_retraso] += 1\n        \n        # Próximas fechas límite (próximos 7 días)\n        hoy = timezone.now().date()\n        proximas_fechas = []\n        \n        for proyecto in todos_proyectos.filter(\n            fecha_fin__gte=hoy,\n            fecha_fin__lte=hoy + timedelta(days=7),\n            estado__in=['pendiente', 'en_ejecucion']\n        ):\n            dias_restantes = (proyecto.fecha_fin - hoy).days\n            proximas_fechas.append({\n                'id': proyecto.id,\n                'nombre': proyecto.nombre_proyecto,\n                'cliente': proyecto.cliente,\n                'fecha_fin': proyecto.fecha_fin.isoformat(),\n                'dias_restantes': dias_restantes,\n                'avance': float(proyecto.avance)\n            })\n        \n        return JsonResponse({\n            'total_proyectos': todos_proyectos.count(),\n            'proyectos_atrasados': len(proyectos_atrasados),\n            'porcentaje_atrasados': (len(proyectos_atrasados) / todos_proyectos.count() * 100) if todos_proyectos.count() > 0 else 0,\n            'total_dias_retraso': total_dias_retraso,\n            'promedio_retraso': total_dias_retraso / len(proyectos_atrasados) if proyectos_atrasados else 0,\n            'retrasos_por_nivel': retrasos_por_nivel,\n            'proyectos_atrasados_detalle': proyectos_atrasados,\n            'proximas_fechas_limite': proximas_fechas\n        })\n        \n    except Exception as e:\n        return JsonResponse({\n            'error': f'Error al calcular estadísticas: {str(e)}'\n        }, status=500)\n\n\ndef api_proyecto_alertas(request, proyecto_id):\n    \"\"\"API para obtener alertas específicas de un proyecto\"\"\"\n    try:\n        proyecto = Proyecto.objects.get(id=proyecto_id)\n        alertas = proyecto.get_alertas_retraso()\n        \n        return JsonResponse({\n            'proyecto_id': proyecto.id,\n            'nombre_proyecto': proyecto.nombre_proyecto,\n            'dias_retraso': proyecto.dias_retraso,\n            'nivel_retraso': proyecto.nivel_retraso,\n            'esta_atrasado': proyecto.esta_atrasado,\n            'dias_restantes': proyecto.dias_restantes,\n            'porcentaje_tiempo_transcurrido': proyecto.porcentaje_tiempo_transcurrido,\n            'desviacion_cronograma': proyecto.desviacion_cronograma,\n            'estado_cronograma': proyecto.estado_cronograma,\n            'alertas': alertas\n        })\n        \n    except Proyecto.DoesNotExist:\n        return JsonResponse({\n            'error': 'Proyecto no encontrado'\n        }, status=404)\n    except Exception as e:\n        return JsonResponse({\n            'error': f'Error al obtener alertas: {str(e)}'\n        }, status=500)

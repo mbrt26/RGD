@@ -55,6 +55,11 @@ class ActividadListView(LoginRequiredMixin, ListView):
         if centro_costo:
             queryset = queryset.filter(proyecto__centro_costos=centro_costo)
         
+        # Filtro por cliente
+        cliente = self.request.GET.get('cliente')
+        if cliente:
+            queryset = queryset.filter(proyecto__cliente__icontains=cliente)
+        
         # Anotar con información adicional
         return queryset.annotate(
             dias_restantes=Case(
@@ -78,10 +83,20 @@ class ActividadListView(LoginRequiredMixin, ListView):
         centros_costos = Proyecto.objects.values_list('centro_costos', flat=True).distinct().order_by('centro_costos')
         context['centros_costos'] = centros_costos
         
+        # Obtener los clientes disponibles para el filtro
+        clientes = Proyecto.objects.values_list('cliente', flat=True).distinct().order_by('cliente')
+        context['clientes'] = clientes
+        
+        # Obtener proyectos disponibles para el filtro
+        proyectos = Proyecto.objects.values('id', 'nombre_proyecto').distinct().order_by('nombre_proyecto')
+        context['proyectos'] = proyectos
+        
         # Añadir filtros actuales al contexto
         context['filtros'] = {
             'centro_costo': self.request.GET.get('centro_costo', ''),
-            'estado': self.request.GET.get('estado', '')
+            'estado': self.request.GET.get('estado', ''),
+            'cliente': self.request.GET.get('cliente', ''),
+            'proyecto_id': self.request.GET.get('proyecto_id', '')
         }
         
         return context
@@ -102,8 +117,21 @@ class ActividadCreateView(LoginRequiredMixin, CreateView):
     
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
+        
+        # Verificar si hay un proyecto_id en la URL
+        proyecto_id = self.request.GET.get('proyecto_id')
+        
         # Filtrar proyectos activos en el formulario
         form.fields['proyecto'].queryset = Proyecto.objects.filter(estado__in=['pendiente', 'en_progreso'])
+        
+        # Si hay proyecto_id en la URL, preseleccionar el proyecto
+        if proyecto_id:
+            try:
+                proyecto = Proyecto.objects.get(id=proyecto_id)
+                if proyecto in form.fields['proyecto'].queryset:
+                    form.fields['proyecto'].initial = proyecto
+            except Proyecto.DoesNotExist:
+                pass
         
         # Establecer la fecha mínima para los selectores de fecha
         today = timezone.now().strftime('%Y-%m-%d')

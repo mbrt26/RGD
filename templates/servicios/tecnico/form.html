@@ -1,0 +1,85 @@
+{% extends 'base/form_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}Editar Técnico{% else %}Nuevo Técnico{% endif %} - Servicios
+{% endblock %}
+
+{% block form_title %}
+    <i class="fas fa-user me-2"></i>
+    {% if form.instance.pk %}Editar Técnico{% else %}Nuevo Técnico{% endif %}
+{% endblock %}
+
+{% block form_content %}
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Información Básica</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.usuario|as_crispy_field }}
+                    {{ form.codigo_tecnico|as_crispy_field }}
+                    {{ form.telefono|as_crispy_field }}
+                    {{ form.activo|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Especialidades y Habilidades</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.especialidades|as_crispy_field }}
+                    <div class="form-text">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Separe las especialidades con comas. Ejemplo: Aires acondicionados, Sistemas de ventilación, Mantenimiento preventivo
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'servicios:tecnico_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>
+                    {% if form.instance.pk %}Actualizar{% else %}Crear{% endif %} Técnico
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-generar código de técnico basado en el usuario seleccionado
+    const usuarioField = document.getElementById('id_usuario');
+    const codigoField = document.getElementById('id_codigo_tecnico');
+    
+    if (usuarioField && codigoField && !codigoField.value) {
+        usuarioField.addEventListener('change', function() {
+            if (this.value && !codigoField.value) {
+                // Generar código automático basado en el año actual y un número
+                const year = new Date().getFullYear();
+                const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                codigoField.value = `TEC${year}${randomNum}`;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

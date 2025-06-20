@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block title %}Solicitudes de Servicio - Servicios{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-clipboard-list me-2"></i>Solicitudes de Servicio
+        </h1>
+        <div>
+            <a href="{% url 'servicios:solicitud_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Nueva Solicitud
+            </a>
+        </div>
+    </div>
+
+    <!-- Card with table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Lista de Solicitudes de Servicio</h6>
+        </div>
+        <div class="card-body">
+
+            <!-- Filters -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label small">Búsqueda</label>
+                    <form method="get" class="d-flex">
+                        <input type="text" class="form-control" name="q" placeholder="Buscar por orden, cliente..." 
+                               value="{{ request.GET.q }}">
+                        <button type="submit" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Centro de Costos</label>
+                    <form method="get">
+                        <select name="centro_costo" class="form-control" onchange="this.form.submit()">
+                            <option value="">Todos</option>
+                            {% for centro in centros_costos %}
+                                <option value="{{ centro }}" {% if request.GET.centro_costo == centro %}selected{% endif %}>{{ centro }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        <input type="hidden" name="estado" value="{{ request.GET.estado }}">
+                        <input type="hidden" name="tipo" value="{{ request.GET.tipo }}">
+                        <input type="hidden" name="tecnico" value="{{ request.GET.tecnico }}">
+                    </form>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Estado</label>
+                    <form method="get">
+                        <select name="estado" class="form-control" onchange="this.form.submit()">
+                            <option value="">Todos</option>
+                            {% for value, label in estados %}
+                                <option value="{{ value }}" {% if request.GET.estado == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        <input type="hidden" name="centro_costo" value="{{ request.GET.centro_costo }}">
+                        <input type="hidden" name="tipo" value="{{ request.GET.tipo }}">
+                        <input type="hidden" name="tecnico" value="{{ request.GET.tecnico }}">
+                    </form>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Tipo</label>
+                    <form method="get">
+                        <select name="tipo" class="form-control" onchange="this.form.submit()">
+                            <option value="">Todos</option>
+                            {% for value, label in tipos %}
+                                <option value="{{ value }}" {% if request.GET.tipo == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        <input type="hidden" name="centro_costo" value="{{ request.GET.centro_costo }}">
+                        <input type="hidden" name="estado" value="{{ request.GET.estado }}">
+                        <input type="hidden" name="tecnico" value="{{ request.GET.tecnico }}">
+                    </form>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Técnico</label>
+                    <form method="get">
+                        <select name="tecnico" class="form-control" onchange="this.form.submit()">
+                            <option value="">Todos</option>
+                            {% for tecnico in tecnicos %}
+                                <option value="{{ tecnico.id }}" {% if request.GET.tecnico == tecnico.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ tecnico.codigo_tecnico }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        <input type="hidden" name="centro_costo" value="{{ request.GET.centro_costo }}">
+                        <input type="hidden" name="estado" value="{{ request.GET.estado }}">
+                        <input type="hidden" name="tipo" value="{{ request.GET.tipo }}">
+                    </form>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Centro de Costos</th>
+                            <th>N° Orden</th>
+                            <th>Cliente</th>
+                            <th>Cotización</th>
+                            <th>Tipo de Servicio</th>
+                            <th>Fecha Programada</th>
+                            <th>Técnico Asignado</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for solicitud in solicitudes %}
+                        <tr>
+                            <td>
+                                <strong>{{ solicitud.centro_costo|default:"-" }}</strong>
+                            </td>
+                            <td>
+                                <strong>{{ solicitud.numero_orden }}</strong>
+                            </td>
+                            <td>
+                                <div>
+                                    <div>{{ solicitud.cliente_crm.nombre|truncatechars:30 }}</div>
+                                    {% if solicitud.nombre_proyecto %}
+                                        <small class="text-primary">{{ solicitud.nombre_proyecto|truncatechars:25 }}</small>
+                                    {% endif %}
+                                    {% if solicitud.contacto_crm %}
+                                        <small class="text-muted d-block">{{ solicitud.contacto_crm.nombre }}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if solicitud.cotizacion_aprobada %}
+                                    <div>
+                                        <a href="{% url 'crm:trato_detail' solicitud.cotizacion_aprobada.cotizacion.trato.pk %}" class="text-decoration-none">
+                                            {{ solicitud.cotizacion_aprobada.cotizacion.trato.numero_oferta }}
+                                        </a>
+                                        <small class="text-muted d-block">V{{ solicitud.cotizacion_aprobada.version }}</small>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if solicitud.tipo_servicio == 'inspeccion' %}bg-info
+                                    {% elif solicitud.tipo_servicio == 'correctivo' %}bg-warning
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ solicitud.get_tipo_servicio_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div>{{ solicitud.fecha_programada|date:"d/m/Y" }}</div>
+                                <small class="text-muted">{{ solicitud.fecha_programada|date:"H:i" }}</small>
+                            </td>
+                            <td>
+                                {% if solicitud.tecnico_asignado %}
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                             style="width: 24px; height: 24px;">
+                                            <i class="fas fa-user text-white" style="font-size: 10px;"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-size: 12px;">{{ solicitud.tecnico_asignado.codigo_tecnico }}</div>
+                                            <small class="text-muted">{{ solicitud.tecnico_asignado.nombre_completo|truncatechars:15 }}</small>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">Sin asignar</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center
+                                {% if solicitud.estado == 'pendiente' %}table-secondary
+                                {% elif solicitud.estado == 'en_ejecucion' %}table-primary
+                                {% elif solicitud.estado == 'atrasado' %}table-warning
+                                {% elif solicitud.estado == 'finalizado' %}table-success
+                                {% else %}table-light{% endif %}">
+                                <span class="badge 
+                                    {% if solicitud.estado == 'pendiente' %}bg-secondary
+                                    {% elif solicitud.estado == 'en_ejecucion' %}bg-primary
+                                    {% elif solicitud.estado == 'atrasado' %}bg-warning
+                                    {% elif solicitud.estado == 'finalizado' %}bg-success
+                                    {% else %}bg-light{% endif %}">
+                                    {{ solicitud.get_estado_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'servicios:solicitud_detail' solicitud.pk %}" 
+                                       class="btn btn-outline-info btn-sm" title="Ver detalle">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'servicios:solicitud_update' solicitud.pk %}" 
+                                       class="btn btn-outline-primary btn-sm" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% if solicitud.estado == 'en_proceso' and not solicitud.informe %}
+                                        <a href="{% url 'servicios:informe_create' %}?solicitud={{ solicitud.pk }}" 
+                                           class="btn btn-outline-success btn-sm" title="Crear informe">
+                                            <i class="fas fa-file-alt"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                                    <p>No se encontraron solicitudes de servicio.</p>
+                                    <a href="{% url 'servicios:solicitud_create' %}" class="btn btn-primary">
+                                        <i class="fas fa-plus me-1"></i>Crear Primera Solicitud
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.centro_costo %}&centro_costo={{ request.GET.centro_costo }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}{% if request.GET.tecnico %}&tecnico={{ request.GET.tecnico }}{% endif %}">Primera</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.centro_costo %}&centro_costo={{ request.GET.centro_costo }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}{% if request.GET.tecnico %}&tecnico={{ request.GET.tecnico }}{% endif %}">Anterior</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.centro_costo %}&centro_costo={{ request.GET.centro_costo }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}{% if request.GET.tecnico %}&tecnico={{ request.GET.tecnico }}{% endif %}">Siguiente</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.centro_costo %}&centro_costo={{ request.GET.centro_costo }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}{% if request.GET.tecnico %}&tecnico={{ request.GET.tecnico }}{% endif %}">Última</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

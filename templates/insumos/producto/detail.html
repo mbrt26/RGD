@@ -1,0 +1,519 @@
+{% extends "base.html" %}
+{% load static humanize %}
+
+{% block title %}{{ producto.nombre }} - Detalle del Producto{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-gallery {
+        position: sticky;
+        top: 20px;
+    }
+    .main-image {
+        height: 400px;
+        object-fit: cover;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .thumbnail-image {
+        height: 80px;
+        object-fit: cover;
+        cursor: pointer;
+        border: 2px solid transparent;
+        border-radius: 4px;
+        transition: border-color 0.2s;
+    }
+    .thumbnail-image:hover, .thumbnail-image.active {
+        border-color: #007bff;
+    }
+    .price-section {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .stock-card {
+        border-left: 4px solid #007bff;
+    }
+    .spec-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        width: 30%;
+    }
+    .compatibility-badge {
+        background-color: #e3f2fd;
+        color: #1976d2;
+        border: 1px solid #bbdefb;
+    }
+    .equivalent-product {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        transition: box-shadow 0.2s;
+    }
+    .equivalent-product:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .discount-badge {
+        background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+        color: white;
+        font-weight: bold;
+    }
+    .action-buttons .btn {
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'insumos:dashboard' %}">Insumos</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'insumos:producto_list' %}">Productos</a></li>
+        <li class="breadcrumb-item active">{{ producto.codigo_interno }}</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <!-- Galería de Imágenes -->
+    <div class="col-lg-5">
+        <div class="product-gallery">
+            <!-- Imagen Principal -->
+            <div class="mb-3">
+                {% if producto.imagen_principal %}
+                    <img src="{{ producto.imagen_principal.url }}" class="img-fluid main-image w-100" id="mainImage" alt="{{ producto.nombre }}">
+                {% else %}
+                    <div class="main-image w-100 d-flex align-items-center justify-content-center bg-light">
+                        <i class="fas fa-box fa-5x text-muted"></i>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Miniaturas -->
+            {% if imagenes %}
+            <div class="row">
+                {% if producto.imagen_principal %}
+                <div class="col-2 mb-2">
+                    <img src="{{ producto.imagen_principal.url }}" class="img-fluid thumbnail-image active" 
+                         onclick="changeMainImage('{{ producto.imagen_principal.url }}')" alt="Principal">
+                </div>
+                {% endif %}
+                {% for imagen in imagenes %}
+                <div class="col-2 mb-2">
+                    <img src="{{ imagen.imagen.url }}" class="img-fluid thumbnail-image" 
+                         onclick="changeMainImage('{{ imagen.imagen.url }}')" alt="{{ imagen.descripcion }}">
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Descargas -->
+            <div class="mt-3">
+                {% if producto.ficha_tecnica %}
+                <a href="{{ producto.ficha_tecnica.url }}" class="btn btn-outline-primary btn-sm" target="_blank">
+                    <i class="fas fa-file-pdf"></i> Ficha Técnica
+                </a>
+                {% endif %}
+                {% if producto.manual_instalacion %}
+                <a href="{{ producto.manual_instalacion.url }}" class="btn btn-outline-info btn-sm" target="_blank">
+                    <i class="fas fa-book"></i> Manual de Instalación
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Información del Producto -->
+    <div class="col-lg-7">
+        <!-- Encabezado -->
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h1 class="h3 mb-1">{{ producto.nombre }}</h1>
+                <p class="text-muted mb-0">
+                    <strong>Código:</strong> {{ producto.codigo_interno }}
+                    {% if producto.codigo_fabricante %}
+                        | <strong>Ref. Fabricante:</strong> {{ producto.codigo_fabricante }}
+                    {% endif %}
+                </p>
+                <div class="mt-2">
+                    <span class="badge badge-secondary">{{ producto.categoria.nombre }}</span>
+                    <span class="badge badge-info">{{ producto.marca.nombre }}</span>
+                    {% if producto.destacado %}
+                        <span class="badge badge-warning"><i class="fas fa-star"></i> Destacado</span>
+                    {% endif %}
+                    {% if producto.perecedero %}
+                        <span class="badge badge-danger">Perecedero</span>
+                    {% endif %}
+                    {% if producto.peligroso %}
+                        <span class="badge badge-danger">Material Peligroso</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Acciones -->
+            <div class="action-buttons">
+                <a href="{% url 'admin:insumos_producto_change' producto.id %}" class="btn btn-outline-primary btn-sm" target="_blank">
+                    <i class="fas fa-edit"></i> Editar
+                </a>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#cotizarModal">
+                    <i class="fas fa-shopping-cart"></i> Cotizar
+                </button>
+            </div>
+        </div>
+        
+        <!-- Precios -->
+        <div class="price-section">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h4 class="mb-1">${{ producto.precio_venta_base|floatformat:0|intcomma }}</h4>
+                    <p class="mb-0">Precio base (sin IVA)</p>
+                    <small>Con IVA: ${{ producto.precio_con_iva|floatformat:0|intcomma }} ({{ producto.iva }}%)</small>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <p class="mb-1"><strong>Unidad:</strong> {{ producto.unidad_medida.nombre }}</p>
+                    <p class="mb-0"><strong>Moneda:</strong> {{ producto.get_moneda_display }}</p>
+                </div>
+            </div>
+            
+            <!-- Descuentos por Volumen -->
+            {% if descuentos_volumen %}
+            <div class="mt-3">
+                <h6>Descuentos por Volumen:</h6>
+                <div class="row">
+                    {% for descuento in descuentos_volumen %}
+                    <div class="col-md-6 mb-2">
+                        <span class="badge discount-badge">
+                            {{ descuento.cantidad_minima }}+ unidades: {{ descuento.descuento_porcentaje }}% desc.
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Descripción -->
+        {% if producto.descripcion_corta %}
+        <div class="mb-4">
+            <h5>Descripción</h5>
+            <p class="text-muted">{{ producto.descripcion_corta }}</p>
+        </div>
+        {% endif %}
+        
+        <!-- Información de Stock -->
+        <div class="row mb-4">
+            {% for inventario in inventarios %}
+            <div class="col-md-6 mb-3">
+                <div class="card stock-card">
+                    <div class="card-body">
+                        <h6 class="card-title">{{ inventario.almacen.nombre }}</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <p class="mb-1"><strong>Stock Actual:</strong></p>
+                                <span class="h5 {% if inventario.requiere_reorden %}text-danger{% elif inventario.stock_actual > inventario.stock_minimo %}text-success{% else %}text-warning{% endif %}">
+                                    {{ inventario.stock_actual|floatformat:0 }}
+                                </span>
+                            </div>
+                            <div class="col-6">
+                                <p class="mb-1"><strong>Stock Mínimo:</strong> {{ inventario.stock_minimo|floatformat:0 }}</p>
+                                <p class="mb-1"><strong>Disponible:</strong> {{ inventario.stock_disponible|floatformat:0 }}</p>
+                            </div>
+                        </div>
+                        {% if inventario.posicion %}
+                        <small class="text-muted">
+                            Ubicación: {{ inventario.posicion }}
+                            {% if inventario.pasillo %}- Pasillo {{ inventario.pasillo }}{% endif %}
+                        </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> No hay inventario registrado para este producto.
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Información Técnica -->
+<div class="row mt-4">
+    <!-- Especificaciones Técnicas -->
+    {% if especificaciones %}
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-cogs"></i> Especificaciones Técnicas</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered spec-table">
+                    {% for spec in especificaciones %}
+                    <tr>
+                        <th>{{ spec.nombre }}</th>
+                        <td>
+                            {{ spec.valor }}
+                            {% if spec.unidad %}<small class="text-muted"> {{ spec.unidad }}</small>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Información Física -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-ruler"></i> Información Física</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered spec-table">
+                    {% if producto.peso %}
+                    <tr>
+                        <th>Peso</th>
+                        <td>{{ producto.peso }} kg</td>
+                    </tr>
+                    {% endif %}
+                    {% if producto.largo or producto.ancho or producto.alto %}
+                    <tr>
+                        <th>Dimensiones</th>
+                        <td>
+                            {% if producto.largo %}{{ producto.largo }}{% endif %}
+                            {% if producto.ancho %} x {{ producto.ancho }}{% endif %}
+                            {% if producto.alto %} x {{ producto.alto }}{% endif %} cm
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% if producto.modelo %}
+                    <tr>
+                        <th>Modelo</th>
+                        <td>{{ producto.modelo }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if producto.codigo_barras %}
+                    <tr>
+                        <th>Código de Barras</th>
+                        <td>{{ producto.codigo_barras }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <th>Características</th>
+                        <td>
+                            {% if producto.requiere_refrigeracion %}
+                                <span class="badge badge-info">Requiere Refrigeración</span>
+                            {% endif %}
+                            {% if producto.perecedero %}
+                                <span class="badge badge-warning">Perecedero</span>
+                            {% endif %}
+                            {% if producto.peligroso %}
+                                <span class="badge badge-danger">Material Peligroso</span>
+                            {% endif %}
+                            {% if not producto.requiere_refrigeracion and not producto.perecedero and not producto.peligroso %}
+                                <span class="text-muted">Producto estándar</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Compatibilidades y Equivalencias -->
+<div class="row">
+    <!-- Compatibilidades -->
+    {% if compatibilidades %}
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-puzzle-piece"></i> Compatibilidades</h5>
+            </div>
+            <div class="card-body">
+                {% for comp in compatibilidades %}
+                <div class="compatibility-badge badge mb-2 me-2">
+                    {{ comp.tipo_equipo }}
+                    {% if comp.marca_equipo %} - {{ comp.marca_equipo }}{% endif %}
+                    {% if comp.capacidad_btu %} ({{ comp.capacidad_btu }}){% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Productos Equivalentes -->
+    {% if equivalentes %}
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-exchange-alt"></i> Productos Equivalentes</h5>
+            </div>
+            <div class="card-body">
+                {% for equiv in equivalentes %}
+                <div class="equivalent-product">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ equiv.producto_equivalente.nombre }}</strong>
+                            <br><small class="text-muted">{{ equiv.producto_equivalente.codigo_interno }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge badge-primary">{{ equiv.get_tipo_equivalencia_display }}</span>
+                            <br><a href="{% url 'insumos:producto_detail' equiv.producto_equivalente.id %}" class="btn btn-sm btn-outline-primary mt-1">Ver</a>
+                        </div>
+                    </div>
+                    {% if equiv.notas %}
+                    <p class="mt-2 mb-0 text-muted"><small>{{ equiv.notas }}</small></p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Historial de Cotizaciones -->
+{% if cotizaciones_recientes %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history"></i> Historial de Cotizaciones Recientes</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Cotización</th>
+                                <th>Cliente</th>
+                                <th>Cantidad</th>
+                                <th>Precio Unitario</th>
+                                <th>Total</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in cotizaciones_recientes %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'insumos:cotizacion_detail' item.cotizacion.id %}">
+                                        {{ item.cotizacion.numero_cotizacion|default:"Sin número" }}
+                                    </a>
+                                </td>
+                                <td>{{ item.cotizacion.cliente.nombre|truncatechars:30 }}</td>
+                                <td>{{ item.cantidad|floatformat:0 }}</td>
+                                <td>${{ item.precio_unitario|floatformat:0|intcomma }}</td>
+                                <td>${{ item.total_linea|floatformat:0|intcomma }}</td>
+                                <td>{{ item.cotizacion.fecha_creacion|date:"d/m/Y" }}</td>
+                                <td>
+                                    {% if item.cotizacion.estado == 'aprobada' %}
+                                        <span class="badge badge-success">{{ item.cotizacion.get_estado_display }}</span>
+                                    {% elif item.cotizacion.estado == 'rechazada' %}
+                                        <span class="badge badge-danger">{{ item.cotizacion.get_estado_display }}</span>
+                                    {% elif item.cotizacion.estado == 'enviada' %}
+                                        <span class="badge badge-primary">{{ item.cotizacion.get_estado_display }}</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">{{ item.cotizacion.get_estado_display }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal para Cotizar -->
+<div class="modal fade" id="cotizarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar a Cotización</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="cotizarForm">
+                    <div class="mb-3">
+                        <label for="cantidad" class="form-label">Cantidad</label>
+                        <input type="number" class="form-control" id="cantidad" min="1" value="1" required>
+                        <div class="form-text">Unidad: {{ producto.unidad_medida.nombre }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cliente" class="form-label">Cliente (opcional)</label>
+                        <select class="form-select" id="cliente">
+                            <option value="">Seleccionar cliente...</option>
+                            <!-- Los clientes se cargarán via AJAX -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="observaciones" class="form-label">Observaciones</label>
+                        <textarea class="form-control" id="observaciones" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="crearCotizacion()">
+                    <i class="fas fa-plus"></i> Crear Cotización
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Función para cambiar imagen principal
+    function changeMainImage(imageUrl) {
+        document.getElementById('mainImage').src = imageUrl;
+        
+        // Actualizar clases active de thumbnails
+        document.querySelectorAll('.thumbnail-image').forEach(img => {
+            img.classList.remove('active');
+        });
+        event.target.classList.add('active');
+    }
+    
+    // Función para crear cotización
+    function crearCotizacion() {
+        const cantidad = document.getElementById('cantidad').value;
+        const cliente = document.getElementById('cliente').value;
+        const observaciones = document.getElementById('observaciones').value;
+        
+        if (!cantidad || cantidad <= 0) {
+            alert('Por favor ingrese una cantidad válida.');
+            return;
+        }
+        
+        // Aquí se implementaría la llamada AJAX para crear la cotización
+        // Por ahora, redirigir a la página de crear cotización
+        let url = `{% url 'insumos:cotizacion_create' %}?producto={{ producto.id }}&cantidad=${cantidad}`;
+        if (cliente) url += `&cliente=${cliente}`;
+        if (observaciones) url += `&observaciones=${encodeURIComponent(observaciones)}`;
+        
+        window.location.href = url;
+    }
+    
+    // Cargar clientes para el modal
+    document.addEventListener('DOMContentLoaded', function() {
+        // Aquí se implementaría la carga de clientes via AJAX
+        // fetch('/api/clientes/').then(...)
+    });
+</script>
+{% endblock %}

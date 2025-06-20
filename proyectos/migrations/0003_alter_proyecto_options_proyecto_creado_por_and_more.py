@@ -72,7 +72,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='proyecto',
             name='fecha_inicio',
-            field=models.DateField(validators=[proyectos.models.validate_fecha_futura], verbose_name='Fecha Inicio'),
+            field=models.DateField(validators=[proyectos.models.validate_fecha_futura_solo_nuevos], verbose_name='Fecha Inicio'),
         ),
         migrations.AlterField(
             model_name='proyecto',

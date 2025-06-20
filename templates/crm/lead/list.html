@@ -1,0 +1,262 @@
+{% extends "base/list_base.html" %}
+
+{% block title %}Leads{% endblock %}
+
+{% load humanize %}
+
+{% block extra_css %}
+<style>
+.table th {
+    border-top: none;
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+.table td {
+    vertical-align: middle;
+}
+.badge {
+    font-size: 0.75rem;
+}
+.btn-group .btn {
+    margin-right: 2px;
+}
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
+</style>
+{% endblock %}
+
+{% block actions %}
+<div class="btn-group">
+    <a href="{% url 'crm:lead_create' %}" class="btn btn-primary">
+        <i class="fas fa-user-plus me-1"></i> Nuevo Lead
+    </a>
+    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#filtrosCollapse">
+        <i class="fas fa-filter me-1"></i> Filtros
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h3 class="card-title mb-0">Gestión de Leads</h3>
+                <small class="text-muted">{{ leads|length }} lead{{ leads|length|pluralize:"s" }} encontrado{{ leads|length|pluralize:"s" }}</small>
+            </div>
+            <div class="col-auto">
+                <div class="btn-group">
+                    <a href="{% url 'crm:lead_create' %}" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-1"></i> Nuevo Lead
+                    </a>
+                    <button type="button" class="btn btn-outline-dark" data-bs-toggle="collapse" data-bs-target="#filtrosCollapse">
+                        <i class="fas fa-filter me-1"></i> Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="collapse" id="filtrosCollapse">
+        <div class="card-body border-bottom">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="q" class="form-label">Búsqueda</label>
+                    <input type="text" name="q" id="q" class="form-control" 
+                           value="{{ search_query }}" placeholder="Nombre, empresa, email...">
+                </div>
+                <div class="col-md-2">
+                    <label for="estado" class="form-label">Estado</label>
+                    <select name="estado" id="estado" class="form-select">
+                        <option value="">Todos</option>
+                        {% for value, label in estados_lead %}
+                        <option value="{{ value }}" {% if selected_estado == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="fuente" class="form-label">Fuente</label>
+                    <select name="fuente" id="fuente" class="form-select">
+                        <option value="">Todas</option>
+                        {% for value, label in fuentes_lead %}
+                        <option value="{{ value }}" {% if selected_fuente == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="nivel_interes" class="form-label">Interés</label>
+                    <select name="nivel_interes" id="nivel_interes" class="form-select">
+                        <option value="">Todos</option>
+                        {% for value, label in niveles_interes %}
+                        <option value="{{ value }}" {% if selected_nivel_interes == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="responsable" class="form-label">Responsable</label>
+                    <select name="responsable" id="responsable" class="form-select">
+                        <option value="">Todos</option>
+                        {% for responsable in responsables %}
+                        <option value="{{ responsable.id }}" {% if selected_responsable|stringformat:"s" == responsable.id|stringformat:"s" %}selected{% endif %}>
+                            {{ responsable.get_full_name|default:responsable.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card-body p-0">
+        {% if leads %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Empresa</th>
+                            <th>Email</th>
+                            <th>Teléfono</th>
+                            <th>Estado</th>
+                            <th>Fuente</th>
+                            <th>Interés</th>
+                            <th>Presupuesto</th>
+                            <th>Responsable</th>
+                            <th>Última Actualización</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lead in leads %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div>
+                                        <strong>
+                                            <a href="{% url 'crm:lead_detail' lead.id %}" class="text-decoration-none">
+                                                {{ lead.nombre }}
+                                            </a>
+                                        </strong>
+                                        {% if lead.cargo %}
+                                        <br><small class="text-muted">{{ lead.cargo }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ lead.empresa|default:"-" }}</td>
+                            <td>
+                                {% if lead.correo %}
+                                <a href="mailto:{{ lead.correo }}">{{ lead.correo }}</a>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if lead.telefono %}
+                                <a href="tel:{{ lead.telefono }}">{{ lead.telefono }}</a>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge {{ lead.get_estado_class }}">{{ lead.get_estado_display }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ lead.get_fuente_display }}</span>
+                            </td>
+                            <td>
+                                <span class="badge {{ lead.get_interes_class }}">{{ lead.get_nivel_interes_display }}</span>
+                            </td>
+                            <td>
+                                {% if lead.presupuesto_estimado %}
+                                <strong class="text-success">${{ lead.presupuesto_estimado|floatformat:0|intcomma }}</strong>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if lead.responsable %}
+                                {{ lead.responsable.get_full_name|default:lead.responsable.username }}
+                                {% else %}
+                                <span class="text-muted">Sin asignar</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ lead.fecha_actualizacion|timesince }} atrás</small>
+                                <br><small class="text-muted">{{ lead.fecha_actualizacion|date:"d/m/Y" }}</small>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'crm:lead_detail' lead.id %}" class="btn btn-sm btn-outline-info" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'crm:lead_update' lead.id %}" class="btn btn-sm btn-outline-primary" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% if lead.puede_convertir %}
+                                    <a href="{% url 'crm:lead_convert' lead.id %}" class="btn btn-sm btn-outline-success" title="Convertir">
+                                        <i class="fas fa-exchange-alt"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Paginación -->
+            {% if is_paginated %}
+            <nav aria-label="Paginación de leads">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if selected_estado %}&estado={{ selected_estado }}{% endif %}{% if selected_fuente %}&fuente={{ selected_fuente }}{% endif %}">Primera</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if selected_estado %}&estado={{ selected_estado }}{% endif %}{% if selected_fuente %}&fuente={{ selected_fuente }}{% endif %}">Anterior</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if selected_estado %}&estado={{ selected_estado }}{% endif %}{% if selected_fuente %}&fuente={{ selected_fuente }}{% endif %}">Siguiente</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if selected_estado %}&estado={{ selected_estado }}{% endif %}{% if selected_fuente %}&fuente={{ selected_fuente }}{% endif %}">Última</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No hay leads registrados</h5>
+                <p class="text-muted">Comienza agregando tu primer lead al sistema</p>
+                <a href="{% url 'crm:lead_create' %}" class="btn btn-primary">
+                    <i class="fas fa-user-plus me-2"></i>Crear Primer Lead
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

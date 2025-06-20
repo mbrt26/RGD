@@ -46,6 +46,9 @@ INSTALLED_APPS = [
     'proyectos',
     'crm',
     'users',
+    'servicios',
+    'mantenimiento',
+    'insumos',
 ]
 
 MIDDLEWARE = [
@@ -112,7 +115,12 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'es-mx'
 TIME_ZONE = 'America/Mexico_City'
 USE_I18N = True
+USE_L10N = False
 USE_TZ = True
+
+# Formato de fecha ISO para compatibilidad con HTML5
+DATE_INPUT_FORMATS = ['%Y-%m-%d']
+DATETIME_INPUT_FORMATS = ['%Y-%m-%dT%H:%M']
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/

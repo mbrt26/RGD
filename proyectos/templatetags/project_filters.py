@@ -8,6 +8,9 @@ def get_estado_badge(estado):
     """Return the appropriate Bootstrap badge class for the project status."""
     badge_classes = {
         'pendiente': 'secondary',
+        'en_ejecucion': 'primary',
+        'finalizado': 'success',
+        # Mantener estados antiguos para compatibilidad
         'en_progreso': 'primary',
         'en_revision': 'info',
         'completado': 'success',
@@ -16,16 +19,6 @@ def get_estado_badge(estado):
     }
     return badge_classes.get(estado, 'secondary')
 
-@register.filter
-def get_prioridad_badge(prioridad):
-    """Return the appropriate Bootstrap badge class for the project priority."""
-    badge_classes = {
-        'baja': 'success',
-        'media': 'primary',
-        'alta': 'warning',
-        'critico': 'danger',
-    }
-    return badge_classes.get(prioridad, 'secondary')
 
 @register.filter
 def get_avance_color(avance):
@@ -42,6 +35,16 @@ def get_avance_color(avance):
         return 'info'
     else:
         return 'success'
+
+@register.filter
+def get_responsable_badge(responsable_ejecucion):
+    """Return the appropriate Bootstrap badge class for responsable de ejecución."""
+    badge_classes = {
+        'rgd': 'success',
+        'cliente': 'info',
+        'externo': 'warning',
+    }
+    return badge_classes.get(responsable_ejecucion, 'secondary')
 
 @register.filter
 def add_class(field, css_class):

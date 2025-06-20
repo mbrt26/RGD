@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ actividad.codigo_actividad }} - Actividad - Mantenimiento{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-tasks me-2"></i>
+                Actividad: {{ actividad.codigo_actividad }}
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:dashboard' %}">Mantenimiento</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:actividad_list' %}">Actividades</a></li>
+                    <li class="breadcrumb-item active">{{ actividad.codigo_actividad }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{% url 'mantenimiento:actividad_update' actividad.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit me-1"></i>Editar
+            </a>
+            
+            <!-- Botón para informe específico (nuevo sistema) -->
+            {% if actividad.estado == 'completada' or actividad.estado == 'en_proceso' %}
+                {% if not actividad.informe_unidad_paquete and not actividad.informe_coleccion_polvo %}
+                <a href="{% url 'mantenimiento:informe_seleccionar_tipo' actividad.pk %}" class="btn btn-success">
+                    <i class="fas fa-clipboard-list me-1"></i>Generar Informe Específico
+                </a>
+                {% elif actividad.informe_unidad_paquete %}
+                <a href="{% url 'mantenimiento:informe_unidad_paquete_detail' actividad.informe_unidad_paquete.pk %}" class="btn btn-info">
+                    <i class="fas fa-eye me-1"></i>Ver Informe Unidad Paquete
+                </a>
+                {% elif actividad.informe_coleccion_polvo %}
+                <a href="{% url 'mantenimiento:informe_coleccion_polvo_detail' actividad.informe_coleccion_polvo.pk %}" class="btn btn-warning">
+                    <i class="fas fa-eye me-1"></i>Ver Informe Colección de Polvo
+                </a>
+                {% endif %}
+            {% endif %}
+            
+            <!-- Botón para informe general (sistema anterior) -->
+            {% if not informe and actividad.estado != 'completada' %}
+            <a href="{% url 'mantenimiento:informe_create' %}?actividad={{ actividad.pk }}" class="btn btn-outline-success">
+                <i class="fas fa-clipboard-check me-1"></i>Informe General
+            </a>
+            {% endif %}
+            
+            <a href="{% url 'mantenimiento:actividad_list' %}" class="btn btn-secondary">
+                <i class="fas fa-list me-1"></i>Volver al Listado
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información Principal -->
+        <div class="col-md-8">
+            <!-- Información Básica -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-info-circle me-2"></i>Información Básica</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td><strong>Código:</strong></td>
+                            <td>{{ actividad.codigo_actividad }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Título:</strong></td>
+                            <td>{{ actividad.titulo }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tipo:</strong></td>
+                            <td>{{ actividad.get_tipo_actividad_display }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Estado:</strong></td>
+                            <td>
+                                {% if actividad.estado == 'completada' %}
+                                    <span class="badge bg-success">{{ actividad.get_estado_display }}</span>
+                                {% elif actividad.estado == 'en_proceso' %}
+                                    <span class="badge bg-warning">{{ actividad.get_estado_display }}</span>
+                                {% elif actividad.estado == 'programada' %}
+                                    <span class="badge bg-info">{{ actividad.get_estado_display }}</span>
+                                {% elif actividad.estado == 'cancelada' %}
+                                    <span class="badge bg-danger">{{ actividad.get_estado_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ actividad.get_estado_display }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Prioridad:</strong></td>
+                            <td>
+                                {% if actividad.prioridad == 'alta' or actividad.prioridad == 'critica' %}
+                                    <span class="badge bg-danger">{{ actividad.get_prioridad_display }}</span>
+                                {% elif actividad.prioridad == 'media' %}
+                                    <span class="badge bg-warning">{{ actividad.get_prioridad_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-info">{{ actividad.get_prioridad_display }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Descripción -->
+            {% if actividad.descripcion %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-align-left me-2"></i>Descripción</h6>
+                </div>
+                <div class="card-body">
+                    {{ actividad.descripcion|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Programación -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-calendar me-2"></i>Programación</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td><strong>Fecha Programada:</strong></td>
+                            <td>{{ actividad.fecha_programada|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        {% if actividad.fecha_limite %}
+                        <tr>
+                            <td><strong>Fecha Límite:</strong></td>
+                            <td>{{ actividad.fecha_limite|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <td><strong>Duración Estimada:</strong></td>
+                            <td>{{ actividad.duracion_estimada_horas }} hora{{ actividad.duracion_estimada_horas|pluralize }}</td>
+                        </tr>
+                        {% if actividad.fecha_inicio_real %}
+                        <tr>
+                            <td><strong>Inicio Real:</strong></td>
+                            <td>{{ actividad.fecha_inicio_real|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if actividad.fecha_fin_real %}
+                        <tr>
+                            <td><strong>Fin Real:</strong></td>
+                            <td>{{ actividad.fecha_fin_real|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if actividad.duracion_real_horas %}
+                        <tr>
+                            <td><strong>Duración Real:</strong></td>
+                            <td>{{ actividad.duracion_real_horas }} hora{{ actividad.duracion_real_horas|pluralize }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Observaciones -->
+            {% if actividad.observaciones or actividad.motivo_reprogramacion %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-sticky-note me-2"></i>Observaciones</h6>
+                </div>
+                <div class="card-body">
+                    {% if actividad.observaciones %}
+                    <div class="mb-3">
+                        <strong>Observaciones:</strong>
+                        <p class="mt-2">{{ actividad.observaciones|linebreaks }}</p>
+                    </div>
+                    {% endif %}
+                    {% if actividad.motivo_reprogramacion %}
+                    <div>
+                        <strong>Motivo de Reprogramación:</strong>
+                        <p class="mt-2">{{ actividad.motivo_reprogramacion|linebreaks }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Informe -->
+            {% if informe %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-file-alt me-2"></i>Informe de Ejecución</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Resultado:</strong> {{ informe.get_resultado_display }}
+                            <br><small class="text-muted">Ejecutado el {{ informe.fecha_ejecucion|date:"d/m/Y H:i" }}</small>
+                        </div>
+                        <a href="{% url 'mantenimiento:informe_detail' informe.pk %}" class="btn btn-outline-primary">
+                            <i class="fas fa-eye me-1"></i>Ver Informe Completo
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-md-4">
+            <!-- Equipo -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-fan me-2"></i>Equipo</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td><strong>Código:</strong></td>
+                            <td>{{ actividad.hoja_vida_equipo.codigo_interno }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Equipo:</strong></td>
+                            <td>{{ actividad.hoja_vida_equipo.equipo.marca }} {{ actividad.hoja_vida_equipo.equipo.modelo }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Cliente:</strong></td>
+                            <td>{{ actividad.hoja_vida_equipo.cliente.nombre }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ubicación:</strong></td>
+                            <td>{{ actividad.hoja_vida_equipo.ubicacion_detallada }}</td>
+                        </tr>
+                    </table>
+                    <a href="{% url 'mantenimiento:hoja_vida_detail' actividad.hoja_vida_equipo.pk %}" class="btn btn-sm btn-outline-info">
+                        <i class="fas fa-eye me-1"></i>Ver Hoja de Vida
+                    </a>
+                </div>
+            </div>
+
+            <!-- Contrato -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-file-contract me-2"></i>Contrato</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td><strong>Número:</strong></td>
+                            <td>{{ actividad.contrato.numero_contrato }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tipo:</strong></td>
+                            <td>{{ actividad.contrato.get_tipo_contrato_display }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Estado:</strong></td>
+                            <td>
+                                <span class="badge bg-success">{{ actividad.contrato.get_estado_display }}</span>
+                            </td>
+                        </tr>
+                    </table>
+                    <a href="{% url 'mantenimiento:contrato_detail' actividad.contrato.pk %}" class="btn btn-sm btn-outline-info">
+                        <i class="fas fa-eye me-1"></i>Ver Contrato
+                    </a>
+                </div>
+            </div>
+
+            <!-- Técnico Asignado -->
+            {% if actividad.tecnico_asignado %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-user-cog me-2"></i>Técnico Asignado</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td><strong>Nombre:</strong></td>
+                            <td>{{ actividad.tecnico_asignado.nombre }}</td>
+                        </tr>
+                        {% if actividad.fecha_asignacion %}
+                        <tr>
+                            <td><strong>Asignado:</strong></td>
+                            <td>{{ actividad.fecha_asignacion|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Rutina de Origen -->
+            {% if actividad.rutina_origen %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-tasks me-2"></i>Rutina de Origen</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td><strong>Nombre:</strong></td>
+                            <td>{{ actividad.rutina_origen.nombre_rutina }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tipo:</strong></td>
+                            <td>{{ actividad.rutina_origen.get_tipo_rutina_display }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Frecuencia:</strong></td>
+                            <td>{{ actividad.rutina_origen.get_frecuencia_display }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

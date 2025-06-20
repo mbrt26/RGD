@@ -18,6 +18,10 @@
         <form method="post" enctype="multipart/form-data" novalidate>
             {% csrf_token %}
             
+            {% if trato_inicial %}
+                <input type="hidden" name="trato_id" value="{{ trato_inicial.id }}">
+            {% endif %}
+            
             {% if form.non_field_errors %}
                 <div class="alert alert-danger">
                     {% for error in form.non_field_errors %}
@@ -32,13 +36,17 @@
                     {{ form.cliente|as_crispy_field }}
                     {{ form.trato|as_crispy_field }}
                     {{ form.valor|as_crispy_field }}
-                    {{ form.estado|as_crispy_field }}
                 </div>
                 
                 <!-- Versión del documento -->
                 <div class="col-md-6">
                     <div class="form-group">
-                        {{ form.archivo|as_crispy_field }}
+                        <label for="archivos" class="form-label">Archivos de la oferta</label>
+                        <input type="file" name="archivos" id="archivos" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" required>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle"></i> Puede seleccionar uno o múltiples archivos<br>
+                            <i class="fas fa-file-alt"></i> Formatos permitidos: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG
+                        </small>
                     </div>
                     <div class="form-group">
                         {{ form.razon_cambio|as_crispy_field }}
@@ -109,4 +117,50 @@
     </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Si hay información del trato inicial, mostrar información contextual
+    {% if trato_inicial %}
+    const tratoInfo = {
+        id: {{ trato_inicial.id }},
+        numero_oferta: "{{ trato_inicial.numero_oferta }}",
+        cliente: "{{ trato_inicial.cliente.nombre }}",
+        valor: {{ trato_inicial.valor|default:0 }}
+    };
+    
+    // Agregar información contextual en la página
+    const cardHeader = document.querySelector('.card-header h3');
+    if (cardHeader) {
+        cardHeader.innerHTML = `
+            Nueva Oferta para ProyectoCRM #${tratoInfo.numero_oferta}
+            <br><small class="text-muted">Cliente: ${tratoInfo.cliente}</small>
+        `;
+    }
+    
+    // Pre-llenar el valor si no está establecido
+    const valorField = document.querySelector('#id_valor');
+    if (valorField && valorField.value === '' && tratoInfo.valor > 0) {
+        valorField.value = tratoInfo.valor;
+    }
+    
+    // Agregar un enlace de regreso al trato
+    const cardBody = document.querySelector('.card-body');
+    if (cardBody) {
+        const backLink = document.createElement('div');
+        backLink.className = 'alert alert-info';
+        backLink.innerHTML = `
+            <i class="fas fa-info-circle me-2"></i>
+            Esta oferta se creará para el <strong>ProyectoCRM #${tratoInfo.numero_oferta}</strong>
+            <a href="{% url 'crm:trato_detail' trato_inicial.id %}" class="btn btn-sm btn-outline-primary ms-2">
+                <i class="fas fa-arrow-left"></i> Volver al ProyectoCRM
+            </a>
+        `;
+        cardBody.insertBefore(backLink, cardBody.firstChild);
+    }
+    {% endif %}
+});
+</script>
 {% endblock %}

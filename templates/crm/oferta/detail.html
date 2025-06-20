@@ -1,83 +1,193 @@
 {% extends "base/base.html" %}
+{% load humanize %}
 
-{% block title %}Oferta #{{ cotizacion.id }} | Detalle{% endblock %}
+{% block title %}
+    {% if cotizacion.trato %}
+        Oferta #{{ cotizacion.trato.numero_oferta }} | Detalle
+    {% else %}
+        Cotización COT-{{ cotizacion.id }} | Detalle
+    {% endif %}
+{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <div class="row align-items-center">
-            <div class="col">
-                <h3 class="card-title mb-0">Oferta #{{ cotizacion.id }}</h3>
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'crm:cotizacion_list' %}">Ofertas</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        {% if cotizacion.trato %}
+                            Oferta #{{ cotizacion.trato.numero_oferta }}
+                        {% else %}
+                            COT-{{ cotizacion.id }}
+                        {% endif %}
+                    </li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información Principal -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        {% if cotizacion.trato %}
+                            Oferta #{{ cotizacion.trato.numero_oferta }}
+                        {% else %}
+                            Cotización COT-{{ cotizacion.id }}
+                        {% endif %}
+                    </h5>
+                    <div>
+                        <a href="{% url 'crm:cotizacion_update' cotizacion.id %}" class="btn btn-primary">
+                            <i class="fas fa-edit"></i> Editar
+                        </a>
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                            <i class="fas fa-trash"></i> Eliminar
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Información General -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>Información General</h6>
+                            <dl class="row">
+                                <dt class="col-sm-5">Fecha de Creación:</dt>
+                                <dd class="col-sm-7">{{ cotizacion.fecha_creacion|date:"d/m/Y H:i" }}</dd>
+                                
+                                <dt class="col-sm-5">Estado:</dt>
+                                <dd class="col-sm-7">
+                                    <span class="badge bg-{{ cotizacion.estado }} fs-6">
+                                        {{ cotizacion.get_estado_display }}
+                                    </span>
+                                </dd>
+                                
+                                {% if cotizacion.fecha_envio %}
+                                <dt class="col-sm-5">Fecha de Envío:</dt>
+                                <dd class="col-sm-7">{{ cotizacion.fecha_envio|date:"d/m/Y H:i" }}</dd>
+                                {% endif %}
+                            </dl>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="text-success mb-3"><i class="fas fa-building me-2"></i>Información del Cliente</h6>
+                            <dl class="row">
+                                <dt class="col-sm-4">Cliente:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="{% url 'crm:cliente_detail' cotizacion.cliente.id %}">
+                                        {{ cotizacion.cliente.nombre }}
+                                    </a>
+                                </dd>
+                                
+                                {% if cotizacion.trato %}
+                                <dt class="col-sm-4">ProyectoCRM:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="{% url 'crm:trato_detail' cotizacion.trato.id %}">
+                                        #{{ cotizacion.trato.numero_oferta }}
+                                    </a>
+                                </dd>
+                                {% endif %}
+                            </dl>
+                        </div>
+                    </div>
+                    
+                    <!-- Notas -->
+                    {% if cotizacion.notas %}
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="text-dark mb-3"><i class="fas fa-sticky-note me-2"></i>Notas</h6>
+                            <div class="bg-light p-3 rounded">
+                                {{ cotizacion.notas|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            <div class="col text-end">
-                <a href="{% url 'crm:cotizacion_update' cotizacion.id %}" class="btn btn-primary">
-                    <i class="fas fa-edit"></i> Editar
-                </a>
-                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
-                    <i class="fas fa-trash"></i> Eliminar
-                </button>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Resumen de Valores -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-dollar-sign me-2"></i>Resumen Financiero</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-6">Monto Total:</dt>
+                        <dd class="col-sm-6">
+                            <strong class="text-success">${{ cotizacion.monto|floatformat:2|intcomma }}</strong>
+                        </dd>
+                    </dl>
+                </div>
             </div>
         </div>
     </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <h5>Información General</h5>
-                <dl class="row">
-                    <dt class="col-sm-4">Fecha</dt>
-                    <dd class="col-sm-8">{{ cotizacion.fecha_creacion }}</dd>
-                    
-                    <dt class="col-sm-4">Monto</dt>
-                    <dd class="col-sm-8">${{ cotizacion.monto|floatformat:2 }}</dd>
-                    
-                    <dt class="col-sm-4">Estado</dt>
-                    <dd class="col-sm-8">{{ cotizacion.get_estado_display }}</dd>
-                </dl>
-            </div>
-            <div class="col-md-6">
-                <h5>Información del Cliente</h5>
-                <dl class="row">
-                    <dt class="col-sm-4">Cliente</dt>
-                    <dd class="col-sm-8">
-                        <a href="{% url 'crm:cliente_detail' cotizacion.cliente.id %}">
-                            {{ cotizacion.cliente.nombre }}
-                        </a>
-                    </dd>
-                    
-                    <dt class="col-sm-4">Trato</dt>
-                    <dd class="col-sm-8">
-                        <a href="{% url 'crm:trato_detail' cotizacion.trato.id %}">
-                            {{ cotizacion.trato.titulo }}
-                        </a>
-                    </dd>
-                </dl>
-            </div>
-        </div>
 
-        <!-- Descripción y detalles -->
-        <div class="mt-4">
-            <h5>Descripción</h5>
+    <!-- Versiones de la Cotización -->
+    <div class="row">
+        <div class="col-12">
             <div class="card">
-                <div class="card-body">
-                    {{ cotizacion.descripcion|linebreaks }}
-                </div>
-            </div>
-        </div>
-
-        <!-- Archivos adjuntos -->
-        <div class="mt-4">
-            <h5>Archivos Adjuntos</h5>
-            {% if cotizacion.archivo %}
-            <div class="card">
-                <div class="card-body">
-                    <a href="{{ cotizacion.archivo.url }}" target="_blank" class="btn btn-outline-primary">
-                        <i class="fas fa-file"></i> Ver Oferta
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="fas fa-file-alt me-2"></i>Versiones de la Cotización</h5>
+                    <a href="{% url 'crm:cotizacion_update' cotizacion.id %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Nueva Versión
                     </a>
                 </div>
+                <div class="card-body">
+                    {% if cotizacion.versiones.all %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Versión</th>
+                                        <th>Fecha</th>
+                                        <th>Valor</th>
+                                        <th>Razón del Cambio</th>
+                                        <th>Creado por</th>
+                                        <th>Archivo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for version in cotizacion.versiones.all %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-primary">v{{ version.version }}</span>
+                                        </td>
+                                        <td>{{ version.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                                        <td>${{ version.valor|floatformat:2|intcomma }}</td>
+                                        <td>{{ version.razon_cambio|truncatewords:10 }}</td>
+                                        <td>{{ version.creado_por.get_full_name|default:version.creado_por.username|default:"N/A" }}</td>
+                                        <td>
+                                            {% if version.archivo %}
+                                                <a href="{{ version.archivo.url }}" class="btn btn-sm btn-success" target="_blank" title="Descargar">
+                                                    <i class="fas fa-download"></i> Descargar
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">Sin archivo</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No hay versiones de esta cotización.</p>
+                            <a href="{% url 'crm:cotizacion_update' cotizacion.id %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Subir Primera Versión
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
-            {% else %}
-            <p class="text-muted">No hay archivos adjuntos</p>
-            {% endif %}
         </div>
     </div>
 </div>
@@ -91,13 +201,22 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                ¿Está seguro que desea eliminar la oferta #{{ cotizacion.id }}?
+                <p>¿Está seguro que desea eliminar la cotización 
+                    {% if cotizacion.trato %}
+                        #{{ cotizacion.trato.numero_oferta }}
+                    {% else %}
+                        COT-{{ cotizacion.id }}
+                    {% endif %}?
+                </p>
+                <p class="text-warning"><i class="fas fa-exclamation-triangle"></i> Esta acción también eliminará todas las versiones asociadas y no se puede deshacer.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <form action="{% url 'crm:cotizacion_delete' cotizacion.id %}" method="post" style="display: inline;">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Eliminar
+                    </button>
                 </form>
             </div>
         </div>

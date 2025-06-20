@@ -45,6 +45,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('crm/', include('crm.urls')),
     path('proyectos/', include('proyectos.urls')),
+    path('servicios/', include('servicios.urls')),
+    path('mantenimiento/', include('mantenimiento.urls')),
+    path('insumos/', include('insumos.urls')),
     
     # API endpoints
     path('proyectos/api/actividades/<int:pk>/', actividad_detail_api, name='actividad_api_detail'),

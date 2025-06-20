@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Checklist de Entregables - {{ proyecto.nombre_proyecto }} | {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .checklist-item {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        margin-bottom: 0.75rem;
+        transition: all 0.3s ease;
+    }
+    
+    .checklist-item:hover {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .checklist-item.completed {
+        background-color: #f8f9fa;
+        border-color: #28a745;
+    }
+    
+    .checklist-item.en_proceso {
+        border-color: #ffc107;
+        border-left: 4px solid #ffc107;
+    }
+    
+    .checklist-item.no_aplica {
+        background-color: #e9ecef;
+        border-color: #6c757d;
+    }
+    
+    .checklist-item.vencido {
+        border-color: #dc3545;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .progress-ring {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .progress-circle {
+        fill: none;
+        stroke-width: 8;
+        stroke-linecap: round;
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
+    }
+    
+    .progress-circle.background {
+        stroke: #e9ecef;
+    }
+    
+    .progress-circle.progress {
+        stroke: #28a745;
+        stroke-dasharray: 283;
+        stroke-dashoffset: 283;
+        transition: stroke-dashoffset 0.5s ease;
+    }
+    
+    .fase-section {
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #007bff;
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .alert-vencido {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+        color: #721c24;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h1 class="card-title mb-0">
+                                <i class="fas fa-tasks me-2"></i>
+                                Checklist de Entregables
+                            </h1>
+                            <p class="text-muted mb-0">{{ proyecto.nombre_proyecto }} - {{ proyecto.cliente }}</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="{% url 'proyectos:gestion_entregables' %}?proyecto={{ proyecto.id }}" class="btn btn-primary">
+                                <i class="fas fa-cog me-1"></i> Gestionar
+                            </a>
+                            <a href="{% url 'proyectos:entregable_personalizado_create' proyecto.id %}" class="btn btn-success">
+                                <i class="fas fa-plus me-1"></i> Agregar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Estadísticas Generales -->
+                    <div class="stats-card">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h3 class="mb-1">Progreso del Proyecto</h3>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h4 class="mb-0">{{ stats.total }}</h4>
+                                            <small>Total</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h4 class="mb-0 text-success">{{ stats.completados }}</h4>
+                                            <small>Completados</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h4 class="mb-0 text-warning">{{ stats.en_proceso }}</h4>
+                                            <small>En Proceso</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h4 class="mb-0 text-danger">{{ stats.pendientes }}</h4>
+                                            <small>Pendientes</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <div class="progress-ring">
+                                    <svg width="120" height="120">
+                                        <circle class="progress-circle background" cx="60" cy="60" r="45"></circle>
+                                        <circle class="progress-circle progress" cx="60" cy="60" r="45" 
+                                                style="stroke-dashoffset: calc(283 - ({{ stats.porcentaje_completado }} / 100 * 283))"></circle>
+                                    </svg>
+                                    <div class="position-absolute" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                                        <h2 class="mb-0">{{ stats.porcentaje_completado }}%</h2>
+                                        <small>Completado</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alertas de Entregables Próximos a Vencer -->
+                    {% if proximos_vencer %}
+                    <div class="alert alert-vencido">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>Entregables Próximos a Vencer</h5>
+                        <div class="row">
+                            {% for entregable in proximos_vencer %}
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><strong>{{ entregable.codigo }}</strong> - {{ entregable.nombre|truncatechars:40 }}</span>
+                                    <span class="badge bg-warning">{{ entregable.fecha_entrega|date:"d/m/Y" }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Checklist por Fases -->
+                    {% for fase, entregables in entregables_por_fase.items %}
+                    {% if entregables %}
+                    <div class="fase-section">
+                        <h4 class="mb-3">
+                            {% if fase == 'Definición' %}
+                                <i class="fas fa-file-contract me-2"></i>{{ fase }} (Legalización)
+                            {% elif fase == 'Planeación' %}
+                                <i class="fas fa-calendar-alt me-2"></i>{{ fase }}
+                            {% elif fase == 'Ejecución' %}
+                                <i class="fas fa-cogs me-2"></i>{{ fase }}
+                            {% elif fase == 'Entrega' %}
+                                <i class="fas fa-shipping-fast me-2"></i>{{ fase }} Administrativa
+                            {% endif %}
+                        </h4>
+                        
+                        {% for entregable in entregables %}
+                        <div class="checklist-item {{ entregable.estado }} {% if entregable.fecha_entrega < today and entregable.estado != 'completado' %}vencido{% endif %}">
+                            <div class="p-3">
+                                <div class="row align-items-center">
+                                    <div class="col-md-1">
+                                        <div class="form-check">
+                                            <input type="checkbox" 
+                                                   class="form-check-input" 
+                                                   {% if entregable.estado == 'completado' or entregable.estado == 'no_aplica' %}checked{% endif %}
+                                                   disabled>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <strong class="text-primary">{{ entregable.codigo }}</strong>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <h6 class="mb-1">{{ entregable.nombre }}</h6>
+                                        {% if entregable.observaciones %}
+                                            <small class="text-muted">{{ entregable.observaciones|truncatechars:100 }}</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <span class="badge 
+                                            {% if entregable.estado == 'completado' %}bg-success
+                                            {% elif entregable.estado == 'en_proceso' %}bg-warning text-dark
+                                            {% elif entregable.estado == 'no_aplica' %}bg-info
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ entregable.get_estado_display }}
+                                        </span>
+                                        {% if entregable.obligatorio %}
+                                            <br><small class="badge bg-danger">Obligatorio</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-2">
+                                        {% if entregable.fecha_entrega %}
+                                            <small class="
+                                                {% if entregable.fecha_entrega < today and entregable.estado != 'completado' %}text-danger fw-bold
+                                                {% elif entregable.fecha_entrega <= fecha_limite %}text-warning fw-bold
+                                                {% else %}text-muted{% endif %}">
+                                                <i class="fas fa-calendar me-1"></i>
+                                                {{ entregable.fecha_entrega|date:"d/m/Y" }}
+                                            </small>
+                                        {% endif %}
+                                        {% if entregable.archivo %}
+                                            <br><small class="text-success">
+                                                <i class="fas fa-file me-1"></i>Con archivo
+                                            </small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-1">
+                                        <a href="{% url 'proyectos:entregable_proyecto_update' entregable.id %}" 
+                                           class="btn btn-sm btn-outline-primary"
+                                           title="Editar entregable">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                                
+                                <!-- Información adicional -->
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">
+                                            <i class="fas fa-user me-1"></i><strong>Creador:</strong> {{ entregable.creador }}
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">
+                                            <i class="fas fa-user-check me-1"></i><strong>Consolidador:</strong> {{ entregable.consolidador }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+
+                    <!-- Acciones Rápidas -->
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <a href="{% url 'proyectos:gestion_entregables' %}?proyecto={{ proyecto.id }}" class="btn btn-primary w-100">
+                                                <i class="fas fa-cog me-1"></i> Configurar Entregables
+                                            </a>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <a href="{% url 'proyectos:cambiar_tipo_entregable' proyecto.id %}" class="btn btn-warning w-100">
+                                                <i class="fas fa-toggle-on me-1"></i> Cambiar Tipos
+                                            </a>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <a href="{% url 'proyectos:entregable_personalizado_create' proyecto.id %}" class="btn btn-success w-100">
+                                                <i class="fas fa-plus me-1"></i> Agregar Personalizado
+                                            </a>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <a href="{% url 'proyectos:reporte_entregables' %}?proyecto={{ proyecto.id }}" class="btn btn-info w-100">
+                                                <i class="fas fa-file-excel me-1"></i> Exportar Excel
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    // Animar el progreso circular
+    const progressCircle = document.querySelector('.progress-circle.progress');
+    const percentage = {{ stats.porcentaje_completado }};
+    const circumference = 2 * Math.PI * 45; // radio = 45
+    const offset = circumference - (percentage / 100) * circumference;
+    
+    progressCircle.style.strokeDashoffset = offset;
+    
+    // Tooltip para elementos informativos
+    $('[title]').tooltip();
+    
+    // Resaltar entregables vencidos
+    $('.checklist-item.vencido').addClass('border-danger');
+    
+    // Auto-refresh cada 5 minutos para mantener datos actualizados
+    setTimeout(function() {
+        location.reload();
+    }, 300000); // 5 minutos
+    
+    // Mejorar la experiencia visual
+    $('.checklist-item').hover(
+        function() {
+            $(this).addClass('shadow-sm');
+        },
+        function() {
+            $(this).removeClass('shadow-sm');
+        }
+    );
+});
+</script>
+{% endblock %}

@@ -1,0 +1,406 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ hoja_vida.codigo_interno }} - Hoja de Vida - Mantenimiento{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-clipboard-list me-2"></i>
+                Hoja de Vida: {{ hoja_vida.codigo_interno }}
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:dashboard' %}">Mantenimiento</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:hoja_vida_list' %}">Hojas de Vida</a></li>
+                    <li class="breadcrumb-item active">{{ hoja_vida.codigo_interno }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{% url 'mantenimiento:hoja_vida_update' hoja_vida.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit me-1"></i>Editar
+            </a>
+            <a href="{% url 'mantenimiento:hoja_vida_list' %}" class="btn btn-secondary">
+                <i class="fas fa-list me-1"></i>Volver al Listado
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información Principal -->
+        <div class="col-md-8">
+            <div class="row">
+                <!-- Información Básica -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="m-0"><i class="fas fa-info-circle me-2"></i>Información Básica</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td><strong>Código Interno:</strong></td>
+                                    <td>{{ hoja_vida.codigo_interno }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Número de Serie:</strong></td>
+                                    <td>{{ hoja_vida.numero_serie }}</td>
+                                </tr>
+                                {% if hoja_vida.tag_cliente %}
+                                <tr>
+                                    <td><strong>Tag del Cliente:</strong></td>
+                                    <td>{{ hoja_vida.tag_cliente }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td><strong>Estado:</strong></td>
+                                    <td>
+                                        {% if hoja_vida.estado == 'operativo' %}
+                                            <span class="badge bg-success">{{ hoja_vida.get_estado_display }}</span>
+                                        {% elif hoja_vida.estado == 'mantenimiento' %}
+                                            <span class="badge bg-warning">{{ hoja_vida.get_estado_display }}</span>
+                                        {% elif hoja_vida.estado == 'fuera_servicio' %}
+                                            <span class="badge bg-danger">{{ hoja_vida.get_estado_display }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ hoja_vida.get_estado_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Activo:</strong></td>
+                                    <td>
+                                        {% if hoja_vida.activo %}
+                                            <span class="badge bg-success">Sí</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">No</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información del Equipo -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="m-0"><i class="fas fa-fan me-2"></i>Equipo</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td><strong>Nombre:</strong></td>
+                                    <td>{{ hoja_vida.equipo.nombre }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Marca:</strong></td>
+                                    <td>{{ hoja_vida.equipo.marca }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Modelo:</strong></td>
+                                    <td>{{ hoja_vida.equipo.modelo }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Categoría:</strong></td>
+                                    <td>{{ hoja_vida.equipo.get_categoria_display }}</td>
+                                </tr>
+                                {% if hoja_vida.equipo.capacidad_btu %}
+                                <tr>
+                                    <td><strong>Capacidad:</strong></td>
+                                    <td>{{ hoja_vida.equipo.capacidad_btu|floatformat:0 }} BTU/h</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                            <a href="{% url 'mantenimiento:equipo_detail' hoja_vida.equipo.pk %}" class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-eye me-1"></i>Ver Equipo Completo
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cliente -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="m-0"><i class="fas fa-building me-2"></i>Cliente</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td><strong>Nombre:</strong></td>
+                                    <td>{{ hoja_vida.cliente.nombre }}</td>
+                                </tr>
+                                {% if hoja_vida.cliente.nit %}
+                                <tr>
+                                    <td><strong>NIT:</strong></td>
+                                    <td>{{ hoja_vida.cliente.nit }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if hoja_vida.cliente.telefono %}
+                                <tr>
+                                    <td><strong>Teléfono:</strong></td>
+                                    <td>{{ hoja_vida.cliente.telefono }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if hoja_vida.cliente.email %}
+                                <tr>
+                                    <td><strong>Email:</strong></td>
+                                    <td>{{ hoja_vida.cliente.email }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                            <a href="{% url 'crm:cliente_detail' hoja_vida.cliente.pk %}" class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-eye me-1"></i>Ver Cliente Completo
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fechas -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="m-0"><i class="fas fa-calendar me-2"></i>Fechas Importantes</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td><strong>Instalación:</strong></td>
+                                    <td>{{ hoja_vida.fecha_instalacion|date:"d/m/Y" }}</td>
+                                </tr>
+                                {% if hoja_vida.fecha_compra %}
+                                <tr>
+                                    <td><strong>Compra:</strong></td>
+                                    <td>{{ hoja_vida.fecha_compra|date:"d/m/Y" }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if hoja_vida.fecha_garantia_fin %}
+                                <tr>
+                                    <td><strong>Fin de Garantía:</strong></td>
+                                    <td>
+                                        {{ hoja_vida.fecha_garantia_fin|date:"d/m/Y" }}
+                                        {% if hoja_vida.en_garantia %}
+                                            <span class="badge bg-success ms-2">En Garantía</span>
+                                        {% else %}
+                                            <span class="badge bg-warning ms-2">Fuera de Garantía</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% if hoja_vida.fecha_ultimo_servicio %}
+                                <tr>
+                                    <td><strong>Último Servicio:</strong></td>
+                                    <td>{{ hoja_vida.fecha_ultimo_servicio|date:"d/m/Y" }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td><strong>Edad del Equipo:</strong></td>
+                                    <td>{{ hoja_vida.edad_anos }} año{{ hoja_vida.edad_anos|pluralize }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ubicación -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-map-marker-alt me-2"></i>Ubicación</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td><strong>Ubicación Detallada:</strong></td>
+                                    <td>{{ hoja_vida.ubicacion_detallada }}</td>
+                                </tr>
+                                {% if hoja_vida.direccion_instalacion %}
+                                <tr>
+                                    <td><strong>Dirección:</strong></td>
+                                    <td>{{ hoja_vida.direccion_instalacion }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if hoja_vida.coordenadas_gps %}
+                                <tr>
+                                    <td><strong>Coordenadas GPS:</strong></td>
+                                    <td>{{ hoja_vida.coordenadas_gps }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información Comercial -->
+            {% if hoja_vida.proveedor or hoja_vida.valor_compra %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-dollar-sign me-2"></i>Información Comercial</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        {% if hoja_vida.proveedor %}
+                        <tr>
+                            <td><strong>Proveedor:</strong></td>
+                            <td>{{ hoja_vida.proveedor }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if hoja_vida.valor_compra %}
+                        <tr>
+                            <td><strong>Valor de Compra:</strong></td>
+                            <td>${{ hoja_vida.valor_compra|floatformat:0|intcomma }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Observaciones -->
+            {% if hoja_vida.observaciones or hoja_vida.condiciones_ambientales %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-sticky-note me-2"></i>Observaciones</h6>
+                </div>
+                <div class="card-body">
+                    {% if hoja_vida.observaciones %}
+                    <div class="mb-3">
+                        <strong>Observaciones Generales:</strong>
+                        <p class="mt-2">{{ hoja_vida.observaciones|linebreaks }}</p>
+                    </div>
+                    {% endif %}
+                    {% if hoja_vida.condiciones_ambientales %}
+                    <div>
+                        <strong>Condiciones Ambientales:</strong>
+                        <p class="mt-2">{{ hoja_vida.condiciones_ambientales|linebreaks }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-md-4">
+            <!-- Contratos Activos -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-file-contract me-2"></i>Contratos Activos</h6>
+                </div>
+                <div class="card-body">
+                    {% if contratos %}
+                        {% for contrato in contratos %}
+                        <div class="border rounded p-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ contrato.numero_contrato }}</strong>
+                                    <br><small class="text-muted">{{ contrato.nombre_contrato }}</small>
+                                </div>
+                                <span class="badge bg-success">{{ contrato.get_estado_display }}</span>
+                            </div>
+                            <div class="mt-2">
+                                <small>
+                                    <i class="fas fa-calendar me-1"></i>
+                                    {{ contrato.fecha_inicio|date:"d/m/Y" }} - {{ contrato.fecha_fin|date:"d/m/Y" }}
+                                </small>
+                            </div>
+                            <a href="{% url 'mantenimiento:contrato_detail' contrato.pk %}" class="btn btn-sm btn-outline-primary mt-2">
+                                <i class="fas fa-eye me-1"></i>Ver Contrato
+                            </a>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted mb-0">No hay contratos activos para este equipo.</p>
+                        <a href="{% url 'mantenimiento:contrato_create' %}" class="btn btn-sm btn-outline-primary mt-2">
+                            <i class="fas fa-plus me-1"></i>Crear Contrato
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Rutinas de Mantenimiento -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-tasks me-2"></i>Rutinas de Mantenimiento</h6>
+                </div>
+                <div class="card-body">
+                    {% if rutinas %}
+                        {% for rutina in rutinas %}
+                        <div class="border rounded p-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ rutina.nombre_rutina }}</strong>
+                                    <br><small class="text-muted">{{ rutina.get_tipo_rutina_display }}</small>
+                                </div>
+                                <span class="badge bg-info">{{ rutina.get_frecuencia_display }}</span>
+                            </div>
+                            <div class="mt-2">
+                                <small>
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ rutina.duracion_estimada_horas }}h estimadas
+                                </small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted mb-0">No hay rutinas configuradas para este equipo.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actividades Recientes -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-history me-2"></i>Actividades Recientes</h6>
+                </div>
+                <div class="card-body">
+                    {% if actividades %}
+                        {% for actividad in actividades %}
+                        <div class="border rounded p-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ actividad.titulo }}</strong>
+                                    <br><small class="text-muted">{{ actividad.get_tipo_actividad_display }}</small>
+                                </div>
+                                {% if actividad.estado == 'completada' %}
+                                    <span class="badge bg-success">{{ actividad.get_estado_display }}</span>
+                                {% elif actividad.estado == 'en_proceso' %}
+                                    <span class="badge bg-warning">{{ actividad.get_estado_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ actividad.get_estado_display }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="mt-2">
+                                <small>
+                                    <i class="fas fa-calendar me-1"></i>
+                                    {{ actividad.fecha_programada|date:"d/m/Y H:i" }}
+                                </small>
+                            </div>
+                            <a href="{% url 'mantenimiento:actividad_detail' actividad.pk %}" class="btn btn-sm btn-outline-primary mt-2">
+                                <i class="fas fa-eye me-1"></i>Ver Actividad
+                            </a>
+                        </div>
+                        {% endfor %}
+                        <a href="{% url 'mantenimiento:actividad_list' %}?equipo={{ hoja_vida.pk }}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-list me-1"></i>Ver Todas las Actividades
+                        </a>
+                    {% else %}
+                        <p class="text-muted mb-0">No hay actividades registradas para este equipo.</p>
+                        <a href="{% url 'mantenimiento:actividad_create' %}?hoja_vida={{ hoja_vida.pk }}" class="btn btn-sm btn-outline-primary mt-2">
+                            <i class="fas fa-plus me-1"></i>Crear Actividad
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'base/form_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block form_content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title mb-0">{{ title }}</h3>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form.cliente|as_crispy_field }}
+                    {{ form.nombre|as_crispy_field }}
+                    {{ form.cargo|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.correo|as_crispy_field }}
+                    {{ form.telefono|as_crispy_field }}
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    {{ form.notas|as_crispy_field }}
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col">
+                    <a href="{% url 'crm:contacto_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+                <div class="col text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> {% if object %}Actualizar{% else %}Crear{% endif %} Contacto
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

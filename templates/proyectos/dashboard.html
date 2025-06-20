@@ -3,133 +3,463 @@
 
 {% block extra_css %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<style>
+.dashboard-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: none;
+    border-radius: 10px;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.metric-icon {
+    font-size: 2.5rem;
+    opacity: 0.8;
+}
+
+.progress-mini {
+    height: 8px;
+    border-radius: 4px;
+}
+
+.alert-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timeline-item {
+    border-left: 3px solid #e9ecef;
+    padding-left: 20px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -7px;
+    top: 8px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #007bff;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.table-mini {
+    font-size: 0.85rem;
+}
+
+.card-header-custom {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.animate-counter {
+    font-weight: bold;
+    font-size: 1.8rem;
+}
+</style>
 {% endblock %}
 
 {% block title %}Dashboard Proyectos | {{ block.super }}{% endblock %}
 
 {% block content %}
-<div class="row">
-    <!-- Estadísticas Generales -->
-    <div class="col-md-3 animate-fade-in-up delay-1">
-        <div class="card dashboard-card bg-primary text-white mb-4">
+<!-- Métricas Principales -->
+<div class="row mb-4">
+    <!-- Total Proyectos -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card dashboard-card bg-primary text-white h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <h5 class="mb-0">{{ total_proyectos }}</h5>
-                        <div class="small">Proyectos</div>
+                        <div class="animate-counter">{{ total_proyectos }}</div>
+                        <div class="small">Total Proyectos</div>
+                        <div class="progress progress-mini mt-2 bg-primary-light">
+                            <div class="progress-bar bg-white" style="width: 100%"></div>
+                        </div>
                     </div>
-                    <div class="fa-3x">
+                    <div class="metric-icon">
                         <i class="fas fa-project-diagram"></i>
                     </div>
                 </div>
             </div>
-            <div class="card-footer d-flex align-items-center justify-content-between">
-                <a class="small text-white stretched-link" href="{% url 'proyectos:proyecto_list' %}">Ver Detalles</a>
-                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+            <div class="card-footer d-flex align-items-center justify-content-between small">
+                <a class="text-white stretched-link" href="{% url 'proyectos:proyecto_list' %}">Ver todos</a>
+                <i class="fas fa-angle-right text-white"></i>
             </div>
         </div>
     </div>
-    <div class="col-md-3 animate-fade-in-up delay-2">
-        <div class="card dashboard-card bg-success text-white mb-4">
+
+    <!-- Proyectos Activos -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card dashboard-card bg-success text-white h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <h5 class="mb-0">{{ proyectos_activos }}</h5>
-                        <div class="small">Proyectos Activos</div>
+                        <div class="animate-counter">{{ proyectos_activos }}</div>
+                        <div class="small">En Ejecución</div>
+                        <div class="progress progress-mini mt-2 bg-success-light">
+                            <div class="progress-bar bg-white" style="width: {{ porcentaje_activos }}%"></div>
+                        </div>
                     </div>
-                    <div class="fa-3x">
+                    <div class="metric-icon">
                         <i class="fas fa-tasks"></i>
                     </div>
                 </div>
             </div>
-            <div class="card-footer d-flex align-items-center justify-content-between">
-                <a class="small text-white stretched-link" href="{% url 'proyectos:proyecto_list' %}?estado=activo">Ver Detalles</a>
-                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+            <div class="card-footer d-flex align-items-center justify-content-between small">
+                <a class="text-white stretched-link" href="{% url 'proyectos:proyecto_list' %}?estado=en_ejecucion">Ver activos</a>
+                <i class="fas fa-angle-right text-white"></i>
             </div>
         </div>
     </div>
-    <div class="col-md-3 animate-fade-in-up delay-3">
-        <div class="card dashboard-card bg-info text-white mb-4">
+
+    <!-- Avance Promedio -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card dashboard-card bg-info text-white h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <h5 class="mb-0">{{ avance_promedio|floatformat:1 }}%</h5>
+                        <div class="animate-counter">{{ avance_promedio|floatformat:1 }}%</div>
                         <div class="small">Avance Promedio</div>
+                        <div class="progress progress-mini mt-2 bg-info-light">
+                            <div class="progress-bar bg-white" style="width: {{ avance_promedio }}%"></div>
+                        </div>
+                        {% if desviacion_avance < 0 %}
+                        <small class="text-warning">
+                            <i class="fas fa-arrow-down"></i> {{ desviacion_avance|floatformat:1 }}% vs planeado
+                        </small>
+                        {% elif desviacion_avance > 0 %}
+                        <small class="text-success">
+                            <i class="fas fa-arrow-up"></i> +{{ desviacion_avance|floatformat:1 }}% vs planeado
+                        </small>
+                        {% endif %}
                     </div>
-                    <div class="fa-3x">
+                    <div class="metric-icon">
                         <i class="fas fa-chart-line"></i>
                     </div>
                 </div>
             </div>
-            <div class="card-footer d-flex align-items-center justify-content-between">
-                <a class="small text-white stretched-link" href="{% url 'proyectos:proyecto_list' %}">Ver Detalles</a>
-                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+            <div class="card-footer d-flex align-items-center justify-content-between small">
+                <a class="text-white stretched-link" href="{% url 'proyectos:proyecto_list' %}">Ver detalle</a>
+                <i class="fas fa-angle-right text-white"></i>
             </div>
         </div>
     </div>
-    <div class="col-md-3 animate-fade-in-up delay-4">
-        <div class="card dashboard-card bg-warning text-white mb-4">
+
+    <!-- Alertas Críticas -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card dashboard-card bg-warning text-white h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <h5 class="mb-0">{{ actividades_pendientes }}</h5>
-                        <div class="small">Actividades Pendientes</div>
+                        <div class="animate-counter">{{ proyectos_criticos|length }}</div>
+                        <div class="small">Proyectos Críticos</div>
+                        <div class="mt-2">
+                            <small><i class="fas fa-exclamation-triangle"></i> {{ proyectos_retraso_avance }} retraso avance</small><br>
+                            <small><i class="fas fa-dollar-sign"></i> {{ proyectos_sobre_presupuesto }} sobre presupuesto</small>
+                        </div>
                     </div>
-                    <div class="fa-3x">
-                        <i class="fas fa-clipboard-list"></i>
+                    <div class="metric-icon position-relative">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        {% if proyectos_criticos|length > 0 %}
+                        <span class="alert-badge bg-danger text-white">{{ proyectos_criticos|length }}</span>
+                        {% endif %}
                     </div>
                 </div>
             </div>
-            <div class="card-footer d-flex align-items-center justify-content-between">
-                <a class="small text-white stretched-link" href="{% url 'proyectos:actividad_list' %}?estado=pendiente">Ver Detalles</a>
-                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+            <div class="card-footer d-flex align-items-center justify-content-between small">
+                <span class="text-white">Requieren atención</span>
+                <i class="fas fa-angle-right text-white"></i>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Gráficos y Tablas -->
-<div class="row mt-4">
-    <!-- Proyectos Recientes -->
-    <div class="col-lg-6">
-        <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-table me-1"></i>
-                Proyectos Recientes
+<!-- Gráficos y Métricas Avanzadas -->
+<div class="row mb-4">
+    <!-- Gráfico de Avance vs Presupuesto -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header card-header-custom">
+                <h6 class="m-0 font-weight-bold">
+                    <i class="fas fa-chart-bar me-2"></i>Control de Avance vs Presupuesto
+                </h6>
             </div>
             <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="avancePresupuestoChart"></canvas>
+                </div>
+                <div class="row text-center mt-3">
+                    <div class="col-4">
+                        <div class="small text-muted">Avance Real</div>
+                        <div class="font-weight-bold text-info">{{ avance_promedio|floatformat:1 }}%</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="small text-muted">Avance Planeado</div>
+                        <div class="font-weight-bold text-primary">{{ avance_planeado_promedio|floatformat:1 }}%</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="small text-muted">Ejecución $</div>
+                        <div class="font-weight-bold text-success">{{ porcentaje_gasto|floatformat:1 }}%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribución de Proyectos -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header card-header-custom">
+                <h6 class="m-0 font-weight-bold">
+                    <i class="fas fa-chart-pie me-2"></i>Distribución por Estado
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="proyectosPorEstadoChart"></canvas>
+                </div>
+                <div class="row text-center mt-3">
+                    <div class="col-4">
+                        <div class="status-indicator bg-warning"></div>
+                        <div class="small">Pendientes</div>
+                        <div class="font-weight-bold">{{ proyectos_por_estado.pendiente }}</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="status-indicator bg-primary"></div>
+                        <div class="small">En Ejecución</div>
+                        <div class="font-weight-bold">{{ proyectos_por_estado.en_ejecucion }}</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="status-indicator bg-success"></div>
+                        <div class="small">Finalizados</div>
+                        <div class="font-weight-bold">{{ proyectos_por_estado.finalizado }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Proyectos Críticos y Próximas Fechas -->
+<div class="row mb-4">
+    <!-- Proyectos Críticos -->
+    <div class="col-lg-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header card-header-custom d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Proyectos que Requieren Atención
+                </h6>
+                {% if proyectos_criticos|length > 0 %}
+                <span class="badge bg-danger">{{ proyectos_criticos|length }}</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if proyectos_criticos %}
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover">
+                    <table class="table table-mini table-hover">
                         <thead>
                             <tr>
                                 <th>Proyecto</th>
                                 <th>Cliente</th>
+                                <th>Alertas</th>
+                                <th>Avance</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in proyectos_criticos %}
+                            <tr>
+                                <td>
+                                    <div class="font-weight-bold">{{ item.proyecto.nombre_proyecto|truncatechars:40 }}</div>
+                                    <small class="text-muted">{{ item.proyecto.centro_costos }}</small>
+                                </td>
+                                <td>{{ item.proyecto.cliente|truncatechars:25 }}</td>
+                                <td>
+                                    <span class="badge bg-danger">{{ item.alertas_count }}</span>
+                                    {% for alerta in item.alertas_desc %}
+                                    <div class="small text-danger">
+                                        <i class="fas fa-exclamation-circle"></i> {{ alerta }}
+                                    </div>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    <div class="progress progress-mini">
+                                        <div class="progress-bar bg-danger" style="width: {{ item.proyecto.avance }}%"></div>
+                                    </div>
+                                    <small>{{ item.proyecto.avance|floatformat:1 }}%</small>
+                                </td>
+                                <td>
+                                    <a href="{% url 'proyectos:proyecto_detail' item.proyecto.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+                    <p class="mb-0">¡Excelente! No hay proyectos críticos.</p>
+                    <small>Todos los proyectos están dentro de los parámetros normales.</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Próximas Fechas Límite -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header card-header-custom">
+                <h6 class="m-0 font-weight-bold">
+                    <i class="fas fa-calendar-alt me-2"></i>Próximas Fechas Límite
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if proximas_fechas %}
+                <div class="timeline">
+                    {% for proyecto in proximas_fechas %}
+                    <div class="timeline-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ proyecto.nombre_proyecto|truncatechars:30 }}</h6>
+                                <p class="mb-1 text-muted small">{{ proyecto.cliente }}</p>
+                                <div class="small">
+                                    <span class="badge bg-{% if proyecto.dias_restantes <= 7 %}danger{% elif proyecto.dias_restantes <= 15 %}warning{% else %}info{% endif %}">
+                                        {{ proyecto.dias_restantes }} días
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">{{ proyecto.fecha_fin|date:"d/m" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-calendar-check fa-3x mb-3 text-success"></i>
+                    <p class="mb-0">No hay fechas límite próximas</p>
+                    <small>En los próximos 30 días</small>
+                </div>
+                {% endif %}
+            </div>
+            {% if proximas_fechas %}
+            <div class="card-footer">
+                <a href="{% url 'proyectos:proyecto_list' %}" class="btn btn-outline-primary btn-sm w-100">
+                    <i class="fas fa-calendar"></i> Ver calendario completo
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Proyectos Recientes y Bitácoras -->
+<div class="row mb-4">
+    <!-- Proyectos Recientes -->
+    <div class="col-lg-7 mb-4">
+        <div class="card h-100">
+            <div class="card-header card-header-custom d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold">
+                    <i class="fas fa-table me-2"></i>Proyectos Recientes
+                </h6>
+                <a href="{% url 'proyectos:proyecto_list' %}" class="btn btn-sm btn-outline-light">Ver todos</a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-mini table-hover">
+                        <thead>
+                            <tr>
+                                <th>Proyecto</th>
+                                <th>Estado</th>
                                 <th>Avance</th>
                                 <th>Fecha Fin</th>
+                                <th>Equipo</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for proyecto in ultimos_proyectos %}
                             <tr>
-                                <td>{{ proyecto.nombre_proyecto }}</td>
-                                <td>{{ proyecto.cliente }}</td>
                                 <td>
-                                    {% with avance=proyecto.avance|default:0 %}
-                                    {% if avance < 30 %}
-                                        {% progress_bar avance 'bg-danger' %}
-                                    {% elif avance < 70 %}
-                                        {% progress_bar avance 'bg-warning' %}
-                                    {% else %}
-                                        {% progress_bar avance 'bg-success' %}
-                                    {% endif %}
-                                    {% endwith %}
+                                    <div class="font-weight-bold">
+                                        <a href="{% url 'proyectos:proyecto_detail' proyecto.id %}" class="text-decoration-none">
+                                            {{ proyecto.nombre_proyecto|truncatechars:35 }}
+                                        </a>
+                                    </div>
+                                    <small class="text-muted">{{ proyecto.cliente|truncatechars:25 }}</small>
                                 </td>
-                                <td>{{ proyecto.fecha_fin_estimada|date:"d/m/Y"|default:"Sin fecha" }}</td>
+                                <td>
+                                    <span class="badge bg-{% if proyecto.estado == 'finalizado' %}success{% elif proyecto.estado == 'en_ejecucion' %}primary{% else %}warning{% endif %}">
+                                        {{ proyecto.get_estado_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="progress progress-mini">
+                                        {% if proyecto.avance < proyecto.avance_planeado %}
+                                        <div class="progress-bar bg-danger" style="width: {{ proyecto.avance }}%"></div>
+                                        {% elif proyecto.avance >= 90 %}
+                                        <div class="progress-bar bg-success" style="width: {{ proyecto.avance }}%"></div>
+                                        {% else %}
+                                        <div class="progress-bar bg-primary" style="width: {{ proyecto.avance }}%"></div>
+                                        {% endif %}
+                                    </div>
+                                    <small>{{ proyecto.avance|floatformat:1 }}%</small>
+                                </td>
+                                <td>
+                                    <small>{{ proyecto.fecha_fin|date:"d/m/Y" }}</small>
+                                    {% if proyecto.esta_atrasado %}
+                                    <br><small class="text-danger">
+                                        <i class="fas fa-exclamation-triangle"></i> {{ proyecto.dias_retraso }}d
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if proyecto.director_proyecto %}
+                                    <div class="small">
+                                        <i class="fas fa-user-tie"></i> {{ proyecto.director_proyecto.nombre|truncatechars:15 }}
+                                    </div>
+                                    {% endif %}
+                                    {% if proyecto.ingeniero_residente %}
+                                    <div class="small">
+                                        <i class="fas fa-hard-hat"></i> {{ proyecto.ingeniero_residente.nombre|truncatechars:15 }}
+                                    </div>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4" class="text-center">No hay proyectos recientes</td>
+                                <td colspan="5" class="text-center text-muted py-3">No hay proyectos recientes</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -139,44 +469,110 @@
         </div>
     </div>
 
-    <!-- Distribución de Actividades por Estado -->
-    <div class="col-lg-6">
-        <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-chart-pie me-1"></i>
-                Distribución de Actividades por Estado
+    <!-- Actividad Reciente (Bitácoras) -->
+    <div class="col-lg-5 mb-4">
+        <div class="card h-100">
+            <div class="card-header card-header-custom d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold">
+                    <i class="fas fa-clipboard-list me-2"></i>Actividad Reciente
+                </h6>
+                {% if bitacoras_urgentes > 0 %}
+                <span class="badge bg-danger">{{ bitacoras_urgentes }} urgentes</span>
+                {% endif %}
             </div>
             <div class="card-body">
-                <canvas id="actividadesPorEstado" width="100%" height="50"></canvas>
+                {% if ultimas_bitacoras %}
+                <div class="timeline">
+                    {% for bitacora in ultimas_bitacoras %}
+                    <div class="timeline-item">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-1">{{ bitacora.proyecto.nombre_proyecto|truncatechars:30 }}</h6>
+                            <small class="text-muted">{{ bitacora.fecha_registro|date:"d/m H:i" }}</small>
+                        </div>
+                        <p class="mb-1 small">{{ bitacora.subactividad|truncatechars:50 }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fas fa-user"></i> 
+                                {% if bitacora.lider_trabajo %}
+                                    {{ bitacora.lider_trabajo.nombre|truncatechars:20 }}
+                                {% else %}
+                                    {{ bitacora.responsable.nombre|truncatechars:20 }}
+                                {% endif %}
+                            </small>
+                            <span class="badge bg-{% if bitacora.estado == 'completada' %}success{% elif bitacora.estado == 'en_proceso' %}primary{% elif bitacora.estado == 'planeada' %}warning{% else %}secondary{% endif %}">
+                                {{ bitacora.get_estado_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-clipboard fa-3x mb-3"></i>
+                    <p class="mb-0">No hay actividad reciente</p>
+                    <small>Las bitácoras aparecerán aquí</small>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'proyectos:bitacora_list' %}" class="btn btn-outline-primary btn-sm w-100">
+                    <i class="fas fa-list"></i> Ver todas las bitácoras
+                </a>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Últimas Entradas de Bitácora -->
-<div class="row mt-4">
+<!-- Métricas Financieras -->
+<div class="row mb-4">
     <div class="col-12">
-        <div class="card mb-4">
-            <div class="card-header">
-                <i class="fas fa-clipboard me-1"></i>
-                Últimas Entradas de Bitácora
+        <div class="card">
+            <div class="card-header card-header-custom">
+                <h6 class="m-0 font-weight-bold">
+                    <i class="fas fa-chart-area me-2"></i>Resumen Financiero
+                </h6>
             </div>
             <div class="card-body">
-                <div class="timeline">
-                    {% if ultimas_bitacoras %}
-                    {% for bitacora in ultimas_bitacoras %}
-                    <div class="timeline-item">
-                        <div class="d-flex justify-content-between">
-                            <h5 class="mb-1">{{ bitacora.proyecto.nombre_proyecto }}</h5>
-                            <small>{{ bitacora.fecha_registro|date:"d/m/Y H:i" }}</small>
+                <div class="row">
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <div class="border-start border-4 border-primary ps-3">
+                            <div class="small text-muted">Presupuesto Total</div>
+                            <div class="h5 mb-0">${{ presupuesto_total|floatformat:0|intcomma }}</div>
                         </div>
-                        <p class="mb-1">{{ bitacora.descripcion|truncatewords:30 }}</p>
-                        <small>Responsable: {{ bitacora.responsable }}</small>
                     </div>
-                                        {% endfor %}
-                    {% else %}
-                    <p class="text-center">No hay entradas de bitácora recientes</p>
-                    {% endif %}
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <div class="border-start border-4 border-success ps-3">
+                            <div class="small text-muted">Ejecutado</div>
+                            <div class="h5 mb-0">${{ gasto_total|floatformat:0|intcomma }}</div>
+                            <small class="text-success">{{ porcentaje_gasto|floatformat:1 }}% del total</small>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <div class="border-start border-4 border-info ps-3">
+                            <div class="small text-muted">Disponible</div>
+                            <div class="h5 mb-0">${{ disponible_total|floatformat:0|intcomma }}</div>
+                            <small class="text-info">{{ porcentaje_disponible|floatformat:1 }}% restante</small>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <div class="border-start border-4 border-warning ps-3">
+                            <div class="small text-muted">Proyectos en Riesgo</div>
+                            <div class="h5 mb-0">{{ proyectos_sobre_presupuesto }}</div>
+                            <small class="text-warning">Sobreejecución presupuestaria</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Barra de progreso financiero -->
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small text-muted">Ejecución Presupuestaria</span>
+                        <span class="small font-weight-bold">{{ porcentaje_gasto|floatformat:1 }}%</span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-{% if porcentaje_gasto > 80 %}danger{% elif porcentaje_gasto > 60 %}warning{% else %}success{% endif %}" 
+                             style="width: {{ porcentaje_gasto }}%"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -188,51 +584,137 @@
 {{ block.super }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    (function() {
-        'use strict';
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            var chartEl = document.getElementById('actividadesPorEstado');
-            if (!chartEl) { return; }
-            
-            var chartData = [
-                {{ actividades_por_estado.no_iniciado|default:0 }},
-                {{ actividades_por_estado.en_proceso|default:0 }},
-                {{ actividades_por_estado.finalizado|default:0 }}
-            ];
-            
-            var totalActivities = chartData.reduce(function(sum, value) {
-                return sum + value;
-            }, 0);
-            
-            var chart = new window.Chart(chartEl, {
-                type: 'pie',
-                data: {
-                    labels: ['No Iniciado', 'En Proceso', 'Finalizado'],
-                    datasets: [{
-                        data: chartData,
-                        backgroundColor: ['#dc3545', '#ffc107', '#28a745']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    var value = context.raw || 0;
-                                    var percentage = totalActivities > 0 ? 
-                                        Math.round((value / totalActivities) * 100) : 0;
-                                    return context.label + ': ' + value + ' (' + percentage + '%)';
-                                }
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfico de Avance vs Presupuesto
+    const avancePresupuestoCtx = document.getElementById('avancePresupuestoChart');
+    if (avancePresupuestoCtx) {
+        new Chart(avancePresupuestoCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Avance Real', 'Avance Planeado', 'Ejecución Presupuesto'],
+                datasets: [{
+                    data: [
+                        {{ avance_promedio|default:0 }},
+                        {{ avance_planeado_promedio|default:0 }},
+                        {{ porcentaje_gasto|default:0 }}
+                    ],
+                    backgroundColor: ['#17a2b8', '#007bff', '#28a745'],
+                    borderRadius: 8,
+                    barThickness: 40
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y.toFixed(1) + '%';
                             }
                         }
                     }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45
+                        }
+                    }
                 }
-            });
+            }
         });
-    })();
+    }
+
+    // Gráfico de Distribución de Proyectos
+    const proyectosEstadoCtx = document.getElementById('proyectosPorEstadoChart');
+    if (proyectosEstadoCtx) {
+        new Chart(proyectosEstadoCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Pendientes', 'En Ejecución', 'Finalizados'],
+                datasets: [{
+                    data: [
+                        {{ proyectos_por_estado.pendiente|default:0 }},
+                        {{ proyectos_por_estado.en_ejecucion|default:0 }},
+                        {{ proyectos_por_estado.finalizado|default:0 }}
+                    ],
+                    backgroundColor: ['#ffc107', '#007bff', '#28a745'],
+                    borderWidth: 3,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((context.raw / total) * 100).toFixed(1) : 0;
+                                return context.label + ': ' + context.raw + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+
+    // Animación de contadores
+    const counters = document.querySelectorAll('.animate-counter');
+    counters.forEach(counter => {
+        const originalText = counter.textContent;
+        const hasPercent = originalText.includes('%');
+        const hasDecimal = originalText.includes('.');
+        
+        // Extraer el número, incluyendo decimales
+        const targetStr = originalText.replace(/[^\d.]/g, '');
+        const target = parseFloat(targetStr);
+        
+        if (target > 0) {
+            let current = 0;
+            const increment = target / 30;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    // Mostrar el valor final con el formato correcto
+                    if (hasDecimal) {
+                        counter.textContent = target.toFixed(1) + (hasPercent ? '%' : '');
+                    } else {
+                        counter.textContent = Math.round(target) + (hasPercent ? '%' : '');
+                    }
+                    clearInterval(timer);
+                } else {
+                    // Mostrar el valor actual con el formato correcto
+                    if (hasDecimal) {
+                        counter.textContent = current.toFixed(1) + (hasPercent ? '%' : '');
+                    } else {
+                        counter.textContent = Math.floor(current) + (hasPercent ? '%' : '');
+                    }
+                }
+            }, 50);
+        }
+    });
+});
 </script>
 {% endblock %}

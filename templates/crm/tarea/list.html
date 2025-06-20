@@ -23,9 +23,9 @@
                        value="{{ selected_numero_oferta|default:'' }}" placeholder="Buscar #...">
             </div>
             <div class="col-md-3">
-                <label for="trato" class="form-label">Trato</label>
+                <label for="trato" class="form-label">Proyecto</label>
                 <select name="trato" id="trato" class="form-select select2">
-                    <option value="">Todos los tratos</option>
+                    <option value="">Todos los proyectos</option>
                     {% for trato in tratos %}
                     <option value="{{ trato.id }}" {% if selected_trato|stringformat:"s" == trato.id|stringformat:"s" %}selected{% endif %}>
                         {{ trato.nombre }}
@@ -52,6 +52,57 @@
                     <i class="fas fa-times"></i> Limpiar
                 </a>
             </div>
+            <!-- Hidden fields to preserve main filters when submitting secondary filters -->
+            <input type="hidden" name="cliente" value="{{ selected_cliente|default:'' }}">
+            <input type="hidden" name="numero_oferta" value="{{ selected_numero_oferta|default:'' }}">
+            <input type="hidden" name="trato" value="{{ selected_trato|default:'' }}">
+            <input type="hidden" name="responsable" value="{{ selected_responsable|default:'' }}">
+        </form>
+        
+        <!-- Filtros adicionales (segunda fila) -->
+        <form method="get" class="row g-3 mt-2 pt-2 border-top">
+            <!-- Hidden fields to preserve main filters -->
+            <input type="hidden" name="cliente" value="{{ selected_cliente|default:'' }}">
+            <input type="hidden" name="numero_oferta" value="{{ selected_numero_oferta|default:'' }}">
+            <input type="hidden" name="trato" value="{{ selected_trato|default:'' }}">
+            <input type="hidden" name="responsable" value="{{ selected_responsable|default:'' }}">
+            <div class="col-md-2">
+                <label for="tipo" class="form-label">Tipo</label>
+                <select name="tipo" id="tipo" class="form-select">
+                    <option value="">Todos los tipos</option>
+                    {% for value, label in tipos_tarea %}
+                    <option value="{{ value }}" {% if selected_tipo == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="estado" class="form-label">Estado</label>
+                <select name="estado" id="estado" class="form-select">
+                    <option value="">Todos los estados</option>
+                    {% for value, label in estados_tarea %}
+                    <option value="{{ value }}" {% if selected_estado == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="fecha_desde" class="form-label">Desde</label>
+                <input type="date" name="fecha_desde" id="fecha_desde" class="form-control" 
+                       value="{{ selected_fecha_desde|default:'' }}">
+            </div>
+            <div class="col-md-2">
+                <label for="fecha_hasta" class="form-label">Hasta</label>
+                <input type="date" name="fecha_hasta" id="fecha_hasta" class="form-control" 
+                       value="{{ selected_fecha_hasta|default:'' }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-calendar-alt"></i> Filtrar
+                </button>
+            </div>
         </form>
     </div>
 </div>
@@ -61,11 +112,12 @@
     <th>Título</th>
     <th># Oferta</th>
     <th>Cliente</th>
-    <th>Trato</th>
+    <th>Proyecto</th>
+    <th>Tipo</th>
     <th>Fecha Límite</th>
+    <th>Fecha Ejecución</th>
     <th>Estado</th>
     <th>Asignado a</th>
-    <th>Prioridad</th>
     <th>Acciones</th>
 {% endblock %}
 
@@ -76,10 +128,17 @@
         <td>{{ tarea.get_numero_oferta }}</td>
         <td>{{ tarea.get_nombre_cliente }}</td>
         <td>{{ tarea.get_nombre_trato }}</td>
-        <td>{{ tarea.fecha_vencimiento|date:"d/m/Y"|default:'Sin fecha' }}</td>
+        <td><span class="badge bg-secondary">{{ tarea.get_tipo_display }}</span></td>
+        <td class="{{ tarea.get_fecha_class }}">{{ tarea.fecha_vencimiento|date:"d/m/Y"|default:'Sin fecha' }}</td>
+        <td>
+            {% if tarea.fecha_ejecucion %}
+                {{ tarea.fecha_ejecucion|date:"d/m/Y H:i" }}
+            {% else %}
+                <span class="text-muted">Pendiente</span>
+            {% endif %}
+        </td>
         <td><span class="badge {{ tarea.get_estado_class }}">{{ tarea.get_estado_display }}</span></td>
         <td>{{ tarea.responsable.get_full_name|default:tarea.responsable.username|default:'No asignado' }}</td>
-        <td><span class="badge {{ tarea.get_prioridad_class }}">{{ tarea.get_prioridad_display }}</span></td>
         <td>
             <a href="{% url 'crm:tarea_detail' tarea.id %}" class="btn btn-sm btn-info" title="Ver">
                 <i class="fas fa-eye"></i>
@@ -91,7 +150,7 @@
     </tr>
     {% empty %}
     <tr>
-        <td colspan="9" class="text-center">No hay tareas registradas.</td>
+        <td colspan="10" class="text-center">No hay tareas registradas.</td>
     </tr>
     {% endfor %}
 {% endblock %}

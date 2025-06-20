@@ -1,0 +1,466 @@
+{% extends 'base.html' %}
+
+{% block title %}Informe Unidad Paquete - {{ informe.consecutivo }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-clipboard-list me-2"></i>Informe Mantenimiento Unidades Paquetes Condensados por Aire
+            </h2>
+            <p class="text-muted mb-0">Consecutivo: {{ informe.consecutivo }} | Fecha: {{ informe.fecha|date:"d/m/Y" }}</p>
+        </div>
+        <div>
+            <a href="{% url 'mantenimiento:informe_unidad_paquete_update' informe.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit me-1"></i>Editar
+            </a>
+            <button class="btn btn-success" onclick="window.print()">
+                <i class="fas fa-print me-1"></i>Imprimir
+            </button>
+            <a href="{% url 'mantenimiento:actividad_detail' informe.actividad.pk %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Información General -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="m-0">
+                <i class="fas fa-info-circle me-2"></i>Información General del Equipo
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Fecha:</strong> {{ informe.fecha|date:"d/m/Y" }}</p>
+                    <p><strong>Marca:</strong> {{ informe.marca }}</p>
+                    <p><strong>Sistema Modelo:</strong> {{ informe.sistema_modelo }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Equipo Serie:</strong> {{ informe.equipo_serie }}</p>
+                    <p><strong>Consecutivo:</strong> {{ informe.consecutivo }}</p>
+                    <p><strong>Usuario:</strong> {{ informe.usuario }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tipo de Mantenimiento y Voltaje -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="m-0">Tipo de Mantenimiento</h6>
+                </div>
+                <div class="card-body">
+                    <span class="badge bg-primary fs-6">{{ informe.get_tipo_mantenimiento_display }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="m-0">Voltaje en Tableros Eléctricos</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-4">
+                            <strong>L1-L2:</strong><br>{{ informe.voltaje_l1_l2|default:"-" }}V
+                        </div>
+                        <div class="col-4">
+                            <strong>L2-L3:</strong><br>{{ informe.voltaje_l2_l3|default:"-" }}V
+                        </div>
+                        <div class="col-4">
+                            <strong>L1-L3:</strong><br>{{ informe.voltaje_l1_l3|default:"-" }}V
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Observaciones Previas -->
+    {% if informe.observaciones_previas %}
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h6 class="m-0">Observaciones Previas al Mantenimiento</h6>
+        </div>
+        <div class="card-body">
+            <p>{{ informe.observaciones_previas|linebreaks }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Sección Evaporador -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="m-0">
+                <i class="fas fa-snowflake me-2"></i>Sección Evaporador
+            </h5>
+        </div>
+        <div class="card-body">
+            <!-- Actividades de Mantenimiento -->
+            <h6 class="text-info mb-3">Actividades de Mantenimiento</h6>
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.evap_lavado %}checked{% endif %} disabled>
+                        <label class="form-check-label">Lavado</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.evap_desincrustante %}checked{% endif %} disabled>
+                        <label class="form-check-label">Desincrustante</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.evap_limpieza_bandeja %}checked{% endif %} disabled>
+                        <label class="form-check-label">Limpieza bandeja</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.evap_limpieza_drenaje %}checked{% endif %} disabled>
+                        <label class="form-check-label">Limpieza drenaje</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Motor Ventilador -->
+            <h6 class="text-info mb-3">Conjunto Motor Ventilador Evaporador</h6>
+            <div class="row mb-4">
+                <div class="col-md-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.evap_motor_limpieza_rotores %}checked{% endif %} disabled>
+                        <label class="form-check-label">Limpieza rotores</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.evap_motor_lubricacion %}checked{% endif %} disabled>
+                        <label class="form-check-label">Lubricación</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.evap_motor_rpm %}checked{% endif %} disabled>
+                        <label class="form-check-label">R.P.M.</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.evap_motor_amperaje %}checked{% endif %} disabled>
+                        <label class="form-check-label">Amperaje motor</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.evap_motor_limpieza_ejes %}checked{% endif %} disabled>
+                        <label class="form-check-label">Limpieza ejes</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rangos Permitidos -->
+            <h6 class="text-info mb-3">Rangos Permitidos</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Parámetro</th>
+                            <th>Valor</th>
+                            <th>Parámetro</th>
+                            <th>Valor</th>
+                            <th>Parámetro</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Nivel Aceite</td>
+                            <td>{{ informe.evap_nivel_aceite|default:"-" }}</td>
+                            <td>Amperaje RLA</td>
+                            <td>{{ informe.evap_amperaje_rla|default:"-" }}</td>
+                            <td>Limpieza</td>
+                            <td>{{ informe.evap_limpieza|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td>Cambio de Aceite</td>
+                            <td>{{ informe.evap_cambio_aceite|default:"-" }}</td>
+                            <td>Presión Succión</td>
+                            <td>{{ informe.evap_presion_succion|default:"-" }}</td>
+                            <td>Presostato de alta</td>
+                            <td>{{ informe.evap_presostato_alta|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td>Ajuste control capacidad</td>
+                            <td>{{ informe.evap_ajuste_control_capacidad|default:"-" }}</td>
+                            <td>Presión descarga</td>
+                            <td>{{ informe.evap_presion_descarga|default:"-" }}</td>
+                            <td>Presostato de baja</td>
+                            <td>{{ informe.evap_presostato_baja|default:"-" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección Condensador -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="m-0">
+                <i class="fas fa-compress me-2"></i>Sección Condensador
+            </h5>
+        </div>
+        <div class="card-body">
+            <!-- Compresor 1 y 2 en dos columnas -->
+            <div class="row">
+                <!-- Compresor 1 -->
+                <div class="col-md-6">
+                    <h6 class="text-success mb-3">Compresor No.1</h6>
+                    <p><strong>Modelo:</strong> {{ informe.comp1_modelo|default:"-" }}</p>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" {% if informe.comp1_revision_placas_bornes %}checked{% endif %} disabled>
+                            <label class="form-check-label">Revisión placas bornes</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" {% if informe.comp1_nivel_aceite %}checked{% endif %} disabled>
+                            <label class="form-check-label">Nivel Aceite</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" {% if informe.comp1_cambio_aceite %}checked{% endif %} disabled>
+                            <label class="form-check-label">Cambio de Aceite</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" {% if informe.comp1_ajuste_control_capacidad %}checked{% endif %} disabled>
+                            <label class="form-check-label">Ajuste control capacidad</label>
+                        </div>
+                    </div>
+
+                    <h6 class="text-success mb-3">Motor Ventilador Condensador 1</h6>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.cond1_limpieza_rotores %}checked{% endif %} disabled>
+                        <label class="form-check-label">Limpieza rotores</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.cond1_lubricacion %}checked{% endif %} disabled>
+                        <label class="form-check-label">Lubricación</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.cond1_rpm %}checked{% endif %} disabled>
+                        <label class="form-check-label">R.P.M.</label>
+                    </div>
+                </div>
+
+                <!-- Compresor 2 -->
+                <div class="col-md-6">
+                    <h6 class="text-success mb-3">Compresor No.2</h6>
+                    <p><strong>Modelo:</strong> {{ informe.comp2_modelo|default:"-" }}</p>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" {% if informe.comp2_revision_placas_bornes %}checked{% endif %} disabled>
+                            <label class="form-check-label">Revisión placas bornes</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" {% if informe.comp2_nivel_aceite %}checked{% endif %} disabled>
+                            <label class="form-check-label">Nivel Aceite</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" {% if informe.comp2_cambio_aceite %}checked{% endif %} disabled>
+                            <label class="form-check-label">Cambio de Aceite</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" {% if informe.comp2_ajuste_control_capacidad %}checked{% endif %} disabled>
+                            <label class="form-check-label">Ajuste control capacidad</label>
+                        </div>
+                    </div>
+
+                    <h6 class="text-success mb-3">Motor Ventilador Condensador 2</h6>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.cond2_limpieza_rotores %}checked{% endif %} disabled>
+                        <label class="form-check-label">Limpieza rotores</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.cond2_lubricacion %}checked{% endif %} disabled>
+                        <label class="form-check-label">Lubricación</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.cond2_rpm %}checked{% endif %} disabled>
+                        <label class="form-check-label">R.P.M.</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Circuito de Refrigeración -->
+    <div class="card mb-4">
+        <div class="card-header" style="background-color: #fd7e14; color: white;">
+            <h6 class="m-0">
+                <i class="fas fa-temperature-low me-2"></i>Circuito de Refrigeración
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.refrig_carga_refrigerante %}checked{% endif %} disabled>
+                        <label class="form-check-label">Carga refrigerante</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.refrig_valvulas_solenoide %}checked{% endif %} disabled>
+                        <label class="form-check-label">Válvulas Solenoide</label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.refrig_aislamiento %}checked{% endif %} disabled>
+                        <label class="form-check-label">Aislamiento</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.refrig_pruebas_escapes %}checked{% endif %} disabled>
+                        <label class="form-check-label">Pruebas escapes</label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.refrig_filtro_secador %}checked{% endif %} disabled>
+                        <label class="form-check-label">Filtro Secador</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.refrig_valvula_expansion %}checked{% endif %} disabled>
+                        <label class="form-check-label">Válvula de expansión</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.refrig_chequear_humedad %}checked{% endif %} disabled>
+                        <label class="form-check-label">Chequear humedad</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sistema Eléctrico -->
+    <div class="card mb-4">
+        <div class="card-header" style="background-color: #6f42c1; color: white;">
+            <h6 class="m-0">
+                <i class="fas fa-plug me-2"></i>Sistema Eléctrico
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.elect_limpieza_tablero %}checked{% endif %} disabled>
+                        <label class="form-check-label">Limpieza tablero</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.elect_limpieza_contactor %}checked{% endif %} disabled>
+                        <label class="form-check-label">Limpieza contactor</label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.elect_operacion_timer %}checked{% endif %} disabled>
+                        <label class="form-check-label">Operación Timer</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.elect_operacion_relevos %}checked{% endif %} disabled>
+                        <label class="form-check-label">Operación Relevos</label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.elect_revision_alambrado %}checked{% endif %} disabled>
+                        <label class="form-check-label">Revisión alambrado</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" {% if informe.elect_operacion_termostato %}checked{% endif %} disabled>
+                        <label class="form-check-label">Operación termostato</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Observaciones Posteriores -->
+    {% if informe.observaciones_posteriores %}
+    <div class="card mb-4">
+        <div class="card-header" style="background-color: #20c997; color: white;">
+            <h6 class="m-0">Observaciones Posteriores al Mantenimiento</h6>
+        </div>
+        <div class="card-body">
+            <p>{{ informe.observaciones_posteriores|linebreaks }}</p>
+            <p><strong>Prioridad:</strong> 
+                <span class="badge {% if informe.prioridad == 'alta' %}bg-danger{% else %}bg-success{% endif %}">
+                    {{ informe.get_prioridad_display }}
+                </span>
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Firmas y Responsables -->
+    <div class="card mb-4">
+        <div class="card-header" style="background-color: #e83e8c; color: white;">
+            <h5 class="m-0">
+                <i class="fas fa-signature me-2"></i>Firmas y Responsables
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <h6 class="text-primary">Ejecutado por</h6>
+                    <p><strong>Nombre:</strong> {{ informe.ejecutado_por_nombre|default:"-" }}</p>
+                    <p><strong>Fecha:</strong> {{ informe.ejecutado_por_fecha|date:"d/m/Y"|default:"-" }}</p>
+                    <p><strong>Firma:</strong> {{ informe.ejecutado_por_firma|default:"-" }}</p>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-warning">Supervisado por</h6>
+                    <p><strong>Nombre:</strong> {{ informe.supervisado_por_nombre|default:"-" }}</p>
+                    <p><strong>Fecha:</strong> {{ informe.supervisado_por_fecha|date:"d/m/Y"|default:"-" }}</p>
+                    <p><strong>Firma:</strong> {{ informe.supervisado_por_firma|default:"-" }}</p>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-success">Recibido por</h6>
+                    <p><strong>Nombre:</strong> {{ informe.recibido_por_nombre|default:"-" }}</p>
+                    <p><strong>Fecha:</strong> {{ informe.recibido_por_fecha|date:"d/m/Y"|default:"-" }}</p>
+                    <p><strong>Firma:</strong> {{ informe.recibido_por_firma|default:"-" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .breadcrumb, nav {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #dee2e6 !important;
+        page-break-inside: avoid;
+    }
+    
+    .card-header {
+        background-color: #f8f9fa !important;
+        color: #212529 !important;
+        border-bottom: 1px solid #dee2e6 !important;
+    }
+}
+
+.form-check-input[disabled] {
+    opacity: 1;
+}
+</style>
+{% endblock %}

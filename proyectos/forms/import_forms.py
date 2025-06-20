@@ -1,5 +1,15 @@
 from django import forms
 
+class ColaboradorImportForm(forms.Form):
+    archivo_excel = forms.FileField(
+        label='Archivo Excel',
+        help_text='Seleccione un archivo Excel (.xlsx) con los colaboradores a importar',
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': '.xlsx'
+        })
+    )
+
 class ActividadImportForm(forms.Form):
     archivo_excel = forms.FileField(
         label='Archivo Excel',

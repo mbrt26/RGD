@@ -1,0 +1,195 @@
+{% extends 'base/form_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}Editar Hoja de Vida{% else %}Nueva Hoja de Vida{% endif %} - Mantenimiento
+{% endblock %}
+
+{% block form_title %}
+    <i class="fas fa-clipboard-list me-2"></i>
+    {% if form.instance.pk %}Editar Hoja de Vida{% else %}Nueva Hoja de Vida{% endif %}
+{% endblock %}
+
+{% block form_content %}
+<form method="post" enctype="multipart/form-data" id="hojaVidaForm">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Información Básica</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.equipo|as_crispy_field }}
+                    {{ form.cliente|as_crispy_field }}
+                    {{ form.codigo_interno|as_crispy_field }}
+                    {{ form.numero_serie|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Estado y Configuración</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.estado|as_crispy_field }}
+                    {{ form.tag_cliente|as_crispy_field }}
+                    {{ form.activo|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Fechas Importantes</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.fecha_instalacion|as_crispy_field }}
+                    {{ form.fecha_compra|as_crispy_field }}
+                    {{ form.fecha_garantia_fin|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Información Comercial</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.proveedor|as_crispy_field }}
+                    {{ form.valor_compra|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0">Ubicación</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form.ubicacion_detallada|as_crispy_field }}
+                    {{ form.coordenadas_gps|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.direccion_instalacion|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0">Observaciones</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form.observaciones|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.condiciones_ambientales|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'mantenimiento:hoja_vida_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>
+                    {% if form.instance.pk %}Actualizar{% else %}Crear{% endif %} Hoja de Vida
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar validación del formulario
+    document.getElementById('hojaVidaForm').addEventListener('submit', function(e) {
+        const equipo = document.getElementById('id_equipo').value;
+        const cliente = document.getElementById('id_cliente').value;
+        const codigoInterno = document.getElementById('id_codigo_interno').value.trim();
+        const numeroSerie = document.getElementById('id_numero_serie').value.trim();
+        const fechaInstalacion = document.getElementById('id_fecha_instalacion').value;
+        const ubicacionDetallada = document.getElementById('id_ubicacion_detallada').value.trim();
+        
+        let errors = [];
+        
+        if (!equipo) {
+            errors.push('Debe seleccionar un equipo.');
+        }
+        
+        if (!cliente) {
+            errors.push('Debe seleccionar un cliente.');
+        }
+        
+        if (!codigoInterno) {
+            errors.push('El código interno es obligatorio.');
+        }
+        
+        if (!numeroSerie) {
+            errors.push('El número de serie es obligatorio.');
+        }
+        
+        if (!fechaInstalacion) {
+            errors.push('La fecha de instalación es obligatoria.');
+        }
+        
+        if (!ubicacionDetallada) {
+            errors.push('La ubicación detallada es obligatoria.');
+        }
+        
+        if (errors.length > 0) {
+            e.preventDefault();
+            alert('Por favor corrija los siguientes errores:\n\n' + errors.join('\n'));
+            return false;
+        }
+    });
+    
+    // Auto-generar código interno si está vacío
+    const codigoField = document.getElementById('id_codigo_interno');
+    const clienteField = document.getElementById('id_cliente');
+    const equipoField = document.getElementById('id_equipo');
+    
+    function generarCodigoInterno() {
+        if (codigoField.value.trim() === '' && clienteField.value && equipoField.value) {
+            const clienteOption = clienteField.options[clienteField.selectedIndex];
+            const equipoOption = equipoField.options[equipoField.selectedIndex];
+            
+            if (clienteOption && equipoOption) {
+                const clienteText = clienteOption.text;
+                const equipoText = equipoOption.text;
+                
+                // Generar código basado en iniciales del cliente y tipo de equipo
+                const clienteCode = clienteText.split(' ').map(word => word.charAt(0)).join('').toUpperCase().substr(0, 3);
+                const equipoCode = equipoText.split(' ').map(word => word.charAt(0)).join('').toUpperCase().substr(0, 2);
+                const timestamp = Date.now().toString().substr(-4);
+                
+                codigoField.value = `${clienteCode}-${equipoCode}-${timestamp}`;
+            }
+        }
+    }
+    
+    clienteField.addEventListener('change', generarCodigoInterno);
+    equipoField.addEventListener('change', generarCodigoInterno);
+});
+</script>
+{% endblock %}

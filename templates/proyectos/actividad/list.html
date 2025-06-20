@@ -99,7 +99,7 @@
                                         {% endif %}
                                         
                                         <!-- Filtro por estado -->
-                                        <div class="col-md-4">
+                                        <div class="col-md-3">
                                             <label for="estado" class="form-label">Estado</label>
                                             <select name="estado" id="estado" class="form-select">
                                                 <option value="">Todos los estados</option>
@@ -112,7 +112,7 @@
                                         </div>
                                         
                                         <!-- Filtro por centro de costo -->
-                                        <div class="col-md-4">
+                                        <div class="col-md-3">
                                             <label for="centro_costo" class="form-label">Centro de Costo</label>
                                             <select name="centro_costo" id="centro_costo" class="form-select">
                                                 <option value="">Todos los centros</option>
@@ -124,8 +124,34 @@
                                             </select>
                                         </div>
                                         
+                                        <!-- Filtro por cliente -->
+                                        <div class="col-md-3">
+                                            <label for="cliente" class="form-label">Cliente</label>
+                                            <select name="cliente" id="cliente" class="form-select">
+                                                <option value="">Todos los clientes</option>
+                                                {% for cliente in clientes %}
+                                                    <option value="{{ cliente }}" {% if filtros.cliente == cliente %}selected{% endif %}>
+                                                        {{ cliente }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
+                                        <!-- Filtro por proyecto -->
+                                        <div class="col-md-3">
+                                            <label for="proyecto_id" class="form-label">Proyecto</label>
+                                            <select name="proyecto_id" id="proyecto_id" class="form-select">
+                                                <option value="">Todos los proyectos</option>
+                                                {% for proyecto in proyectos %}
+                                                    <option value="{{ proyecto.id }}" {% if filtros.proyecto_id == proyecto.id|stringformat:"s" %}selected{% endif %}>
+                                                        {{ proyecto.nombre_proyecto|truncatechars:40 }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
                                         <!-- Botones de acción -->
-                                        <div class="col-md-4 d-flex align-items-end">
+                                        <div class="col-md-3 d-flex align-items-end">
                                             <div>
                                                 <button type="submit" class="btn btn-primary btn-sm">
                                                     <i class="mdi mdi-filter"></i> Filtrar
@@ -148,8 +174,12 @@
                                     <th width="40">
                                         <input type="checkbox" id="selectAllTable" class="form-check-input">
                                     </th>
+                                    <th>Centro de Costos</th>
                                     <th>Actividad</th>
                                     <th>Proyecto</th>
+                                    <th># Oferta</th>
+                                    <th>Responsable Asignado</th>
+                                    <th>Responsable Ejecución</th>
                                     <th>Inicio</th>
                                     <th>Fin</th>
                                     <th>Duración</th>
@@ -165,6 +195,9 @@
                                         <input type="checkbox" class="form-check-input activity-checkbox" value="{{ actividad.id }}" data-activity-name="{{ actividad.actividad }}">
                                     </td>
                                     <td>
+                                        <strong>{{ actividad.centro_costo|default:"-" }}</strong>
+                                    </td>
+                                    <td>
                                         <a href="{% url 'proyectos:actividad_detail' actividad.id %}">{{ actividad.actividad|truncatechars:50 }}</a>
                                     </td>
                                     <td>
@@ -173,6 +206,27 @@
                                         {% else %}
                                             Sin proyecto
                                         {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if actividad.proyecto.trato and actividad.proyecto.trato.numero_oferta %}
+                                            <a href="{% url 'crm:trato_detail' actividad.proyecto.trato.id %}" class="btn btn-sm btn-outline-primary">
+                                                #{{ actividad.proyecto.trato.numero_oferta }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Sin oferta</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if actividad.responsable_asignado %}
+                                            <span class="badge bg-primary">{{ actividad.responsable_asignado.nombre }}</span>
+                                        {% else %}
+                                            <span class="text-muted">Sin asignar</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ actividad.responsable_ejecucion|get_responsable_badge }}">
+                                            {{ actividad.get_responsable_ejecucion_display }}
+                                        </span>
                                     </td>
                                     <td>{{ actividad.inicio|date:"d/m/Y" }}</td>
                                     <td>{{ actividad.fin|date:"d/m/Y" }}</td>
@@ -211,7 +265,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="9" class="text-center">
+                                    <td colspan="13" class="text-center">
                                         <div class="alert alert-info">
                                             No se encontraron actividades.
                                         </div>

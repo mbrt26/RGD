@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Mantenimiento - RGD AIRE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-cogs me-2"></i>Dashboard de Mantenimiento HVAC
+        </h1>
+    </div>
+
+    <!-- Cards de estadísticas principales -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Equipos
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_equipos }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-fan fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Hojas de Vida Activas
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ hojas_vida_activas }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Contratos Activos
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ contratos_activos }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-file-contract fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Actividades Pendientes
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ actividades_pendientes }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Contratos próximos a vencer -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Contratos Próximos a Vencer (30 días)</h6>
+                    <a href="{% url 'mantenimiento:contrato_list' %}" class="btn btn-sm btn-primary">
+                        Ver Todos
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if contratos_por_vencer %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Contrato</th>
+                                        <th>Cliente</th>
+                                        <th>Vence</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for contrato in contratos_por_vencer %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'mantenimiento:contrato_detail' contrato.pk %}">
+                                                {{ contrato.numero_contrato }}
+                                            </a>
+                                        </td>
+                                        <td>{{ contrato.cliente.nombre|truncatechars:20 }}</td>
+                                        <td>{{ contrato.fecha_fin|date:"d/m/Y" }}</td>
+                                        <td>
+                                            <span class="badge bg-warning">{{ contrato.get_estado_display }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-check-circle fa-3x mb-3"></i>
+                            <p>No hay contratos próximos a vencer.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Actividades próximas -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Actividades Próximas (7 días)</h6>
+                    <a href="{% url 'mantenimiento:actividad_list' %}" class="btn btn-sm btn-primary">
+                        Ver Todos
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if actividades_proximas %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Cliente</th>
+                                        <th>Fecha</th>
+                                        <th>Tipo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for actividad in actividades_proximas %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'mantenimiento:actividad_detail' actividad.pk %}">
+                                                {{ actividad.codigo_actividad }}
+                                            </a>
+                                        </td>
+                                        <td>{{ actividad.hoja_vida_equipo.cliente.nombre|truncatechars:20 }}</td>
+                                        <td>{{ actividad.fecha_programada|date:"d/m/Y" }}</td>
+                                        <td>{{ actividad.get_tipo_actividad_display }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-calendar-check fa-3x mb-3"></i>
+                            <p>No hay actividades programadas para los próximos 7 días.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actividades atrasadas -->
+    {% if actividades_atrasadas %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-left-danger shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Actividades Atrasadas
+                    </h6>
+                    <a href="{% url 'mantenimiento:actividad_list' %}?atrasadas=1" class="btn btn-sm btn-danger">
+                        Ver Todos
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Título</th>
+                                    <th>Cliente</th>
+                                    <th>Fecha Programada</th>
+                                    <th>Tipo</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for actividad in actividades_atrasadas %}
+                                <tr>
+                                    <td>{{ actividad.codigo_actividad }}</td>
+                                    <td>{{ actividad.titulo|truncatechars:30 }}</td>
+                                    <td>{{ actividad.hoja_vida_equipo.cliente.nombre|truncatechars:25 }}</td>
+                                    <td>
+                                        <span class="text-danger">
+                                            {{ actividad.fecha_programada|date:"d/m/Y H:i" }}
+                                        </span>
+                                    </td>
+                                    <td>{{ actividad.get_tipo_actividad_display }}</td>
+                                    <td>
+                                        <span class="badge bg-danger">{{ actividad.get_estado_display }}</span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'mantenimiento:actividad_detail' actividad.pk %}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Acciones rápidas -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-bolt me-2"></i>Acciones Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{% url 'mantenimiento:hoja_vida_create' %}" class="btn btn-primary btn-block mb-2">
+                                <i class="fas fa-plus me-1"></i>Nueva Hoja de Vida
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'mantenimiento:contrato_create' %}" class="btn btn-success btn-block mb-2">
+                                <i class="fas fa-file-contract me-1"></i>Nuevo Contrato
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'mantenimiento:actividad_create' %}" class="btn btn-info btn-block mb-2">
+                                <i class="fas fa-plus me-1"></i>Nueva Actividad
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'mantenimiento:actividad_list' %}" class="btn btn-warning btn-block mb-2">
+                                <i class="fas fa-calendar me-1"></i>Ver Actividades
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

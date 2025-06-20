@@ -1,4 +1,5 @@
 {% extends "base/list_base.html" %}
+{% load bitacora_filters %}
 
 {% block title %}Bitácora{% endblock %}
 
@@ -22,23 +23,69 @@
                 {% block table_header %}
                 <thead>
                     <tr>
-                        <th>Fecha</th>
+                        <th>Estado</th>
+                        <th>Fechas</th>
                         <th>Proyecto</th>
                         <th>Actividad</th>
-                        <th>Descripción</th>
-                        <th>Registrado por</th>
+                        <th>Equipo de Trabajo</th>
+                        <th>Validación</th>
+                        <th>Alertas</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 {% endblock %}
                 <tbody>
                     {% for bitacora in bitacoras %}
-                    <tr>
-                        <td>{{ bitacora.fecha_registro|date:"d/m/Y H:i" }}</td>
-                        <td>{{ bitacora.proyecto }}</td>
-                        <td>{{ bitacora.actividad }}</td>
-                        <td>{{ bitacora.descripcion|truncatechars:50 }}</td>
-                        <td>{{ bitacora.responsable }}</td>
+                    <tr class="{% if bitacora.requiere_registro_urgente %}table-danger{% elif bitacora.estado == 'planeada' %}table-warning{% elif bitacora.estado == 'completada' %}table-success{% endif %}">
+                        <td>
+                            <!-- Semáforo General -->
+                            <div class="text-center mb-1">
+                                {{ bitacora|semaforo_bitacora }}
+                            </div>
+                            
+                            <!-- Estado Principal -->
+                            {{ bitacora|estado_bitacora_badge }}
+                            
+                            <!-- Urgencia/Retraso -->
+                            {% if bitacora.estado == 'planeada' %}
+                                <div class="mt-1">
+                                    {{ bitacora|urgencia_registro_badge }}
+                                </div>
+                            {% elif bitacora.dias_retraso_ejecucion > 0 %}
+                                <div class="mt-1">
+                                    {{ bitacora|retraso_bitacora_badge }}
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ bitacora|fecha_planificada_vs_real }}
+                            <small class="text-muted d-block mt-1">
+                                Registro: {{ bitacora.fecha_registro|date:"d/m/Y H:i" }}
+                            </small>
+                        </td>
+                        <td>
+                            <strong>{{ bitacora.proyecto.nombre_proyecto|truncatechars:30 }}</strong>
+                            <br><small class="text-muted">{{ bitacora.proyecto.cliente }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ bitacora.actividad.nombre|truncatechars:40 }}</strong>
+                            {% if bitacora.subactividad %}
+                                <br><small class="text-muted">{{ bitacora.subactividad|truncatechars:30 }}</small>
+                            {% endif %}
+                            <br><small class="text-info">{{ bitacora.duracion_horas }}h</small>
+                        </td>
+                        <td>
+                            {{ bitacora|equipo_trabajo_display }}
+                        </td>
+                        <td>
+                            {{ bitacora|validacion_bitacora_badge }}
+                            <div class="mt-1">
+                                {{ bitacora|firmas_digitales_status }}
+                            </div>
+                        </td>
+                        <td>
+                            {{ bitacora|alertas_bitacora_list }}
+                        </td>
                         <td>
                             <div class="btn-group" role="group">
                                 <a href="{% url 'proyectos:bitacora_detail' bitacora.pk %}" 

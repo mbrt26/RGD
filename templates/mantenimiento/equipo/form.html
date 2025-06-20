@@ -1,0 +1,135 @@
+{% extends 'base/form_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}Editar Equipo HVAC{% else %}Nuevo Equipo HVAC{% endif %} - Mantenimiento
+{% endblock %}
+
+{% block form_title %}
+    <i class="fas fa-fan me-2"></i>
+    {% if form.instance.pk %}Editar Equipo HVAC{% else %}Nuevo Equipo HVAC{% endif %}
+{% endblock %}
+
+{% block form_content %}
+<form method="post" enctype="multipart/form-data" id="equipoForm">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Información Básica</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.nombre|as_crispy_field }}
+                    {{ form.categoria|as_crispy_field }}
+                    {{ form.marca|as_crispy_field }}
+                    {{ form.modelo|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Especificaciones Técnicas</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.capacidad_btu|as_crispy_field }}
+                    {{ form.voltaje|as_crispy_field }}
+                    {{ form.amperaje|as_crispy_field }}
+                    {{ form.refrigerante|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Información del Fabricante</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.fabricante|as_crispy_field }}
+                    {{ form.pais_origen|as_crispy_field }}
+                    {{ form.peso_kg|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Características Adicionales</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.vida_util_anos|as_crispy_field }}
+                    {{ form.activo|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0">Descripción</h6>
+        </div>
+        <div class="card-body">
+            {{ form.descripcion|as_crispy_field }}
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'mantenimiento:equipo_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>
+                    {% if form.instance.pk %}Actualizar{% else %}Registrar{% endif %} Equipo
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validación básica del formulario
+    document.getElementById('equipoForm').addEventListener('submit', function(e) {
+        const nombre = document.getElementById('id_nombre').value.trim();
+        const categoria = document.getElementById('id_categoria').value;
+        const marca = document.getElementById('id_marca').value.trim();
+        const modelo = document.getElementById('id_modelo').value.trim();
+        
+        let errors = [];
+        
+        if (!nombre) {
+            errors.push('El nombre del equipo es obligatorio.');
+        }
+        
+        if (!categoria) {
+            errors.push('Debe seleccionar una categoría.');
+        }
+        
+        if (!marca) {
+            errors.push('La marca es obligatoria.');
+        }
+        
+        if (!modelo) {
+            errors.push('El modelo es obligatorio.');
+        }
+        
+        if (errors.length > 0) {
+            e.preventDefault();
+            alert('Por favor corrija los siguientes errores:\n\n' + errors.join('\n'));
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

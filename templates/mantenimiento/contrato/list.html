@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block title %}Contratos de Mantenimiento - RGD AIRE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-file-contract me-2"></i>Contratos de Mantenimiento
+        </h1>
+        <div>
+            <a href="{% url 'mantenimiento:contrato_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Nuevo Contrato
+            </a>
+        </div>
+    </div>
+
+    <!-- Card with table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Lista de Contratos</h6>
+        </div>
+        <div class="card-body">
+
+            <!-- Filters -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <form method="get" class="d-flex">
+                        <input type="text" class="form-control" name="q" placeholder="Buscar por número o cliente..." 
+                               value="{{ request.GET.q }}">
+                        <button type="submit" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                </div>
+                <div class="col-md-3">
+                    <form method="get">
+                        <select name="cliente" class="form-control" onchange="this.form.submit()">
+                            <option value="">Todos los clientes</option>
+                            {% for cliente in clientes %}
+                                <option value="{{ cliente.id }}" {% if request.GET.cliente == cliente.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ cliente.nombre|truncatechars:30 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        <input type="hidden" name="estado" value="{{ request.GET.estado }}">
+                        <input type="hidden" name="tipo" value="{{ request.GET.tipo }}">
+                    </form>
+                </div>
+                <div class="col-md-2">
+                    <form method="get">
+                        <select name="estado" class="form-control" onchange="this.form.submit()">
+                            <option value="">Todos los estados</option>
+                            {% for estado_key, estado_label in estados %}
+                                <option value="{{ estado_key }}" {% if request.GET.estado == estado_key %}selected{% endif %}>
+                                    {{ estado_label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        <input type="hidden" name="cliente" value="{{ request.GET.cliente }}">
+                        <input type="hidden" name="tipo" value="{{ request.GET.tipo }}">
+                    </form>
+                </div>
+                <div class="col-md-3">
+                    <form method="get">
+                        <select name="tipo" class="form-control" onchange="this.form.submit()">
+                            <option value="">Todos los tipos</option>
+                            {% for tipo_key, tipo_label in tipos %}
+                                <option value="{{ tipo_key }}" {% if request.GET.tipo == tipo_key %}selected{% endif %}>
+                                    {{ tipo_label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        <input type="hidden" name="cliente" value="{{ request.GET.cliente }}">
+                        <input type="hidden" name="estado" value="{{ request.GET.estado }}">
+                    </form>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>N° Contrato</th>
+                            <th>Cliente</th>
+                            <th>Tipo</th>
+                            <th>Vigencia</th>
+                            <th>Valor Mensual</th>
+                            <th>Equipos</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contrato in contratos %}
+                        <tr>
+                            <td>
+                                <strong>{{ contrato.numero_contrato }}</strong>
+                            </td>
+                            <td>
+                                <div>
+                                    <div>{{ contrato.cliente.nombre|truncatechars:30 }}</div>
+                                    <small class="text-muted">{{ contrato.cliente.telefono|default:"" }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ contrato.get_tipo_contrato_display }}</span>
+                                {% if contrato.renovacion_automatica %}
+                                    <br><small class="text-success"><i class="fas fa-sync me-1"></i>Auto-renovable</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ contrato.fecha_inicio|date:"d/m/Y" }}</strong> - <strong>{{ contrato.fecha_fin|date:"d/m/Y" }}</strong>
+                                </div>
+                                {% if contrato.vigente %}
+                                    <small class="text-success">Vigente</small>
+                                {% else %}
+                                    {% if contrato.dias_para_vencer %}
+                                        {% if contrato.dias_para_vencer <= 30 %}
+                                            <small class="text-warning">Vence en {{ contrato.dias_para_vencer }} días</small>
+                                        {% else %}
+                                            <small class="text-muted">{{ contrato.dias_para_vencer }} días restantes</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <small class="text-danger">Vencido</small>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>${{ contrato.valor_mensual|floatformat:2 }}</strong>
+                                </div>
+                                {% if contrato.valor_hora_adicional %}
+                                    <small class="text-muted">+ ${{ contrato.valor_hora_adicional|floatformat:2 }}/hora</small>
+                                {% endif %}
+                                {% if contrato.horas_incluidas_mes %}
+                                    <br><small class="text-info">{{ contrato.horas_incluidas_mes }}h incluidas</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ contrato.get_equipos_count }} equipos</span>
+                                {% if contrato.incluye_materiales %}
+                                    <br><small class="text-success"><i class="fas fa-tools me-1"></i>Incluye materiales</small>
+                                {% endif %}
+                                {% if contrato.incluye_repuestos %}
+                                    <br><small class="text-success"><i class="fas fa-cog me-1"></i>Incluye repuestos</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if contrato.estado == 'activo' %}
+                                    <span class="badge bg-success">{{ contrato.get_estado_display }}</span>
+                                {% elif contrato.estado == 'suspendido' %}
+                                    <span class="badge bg-warning">{{ contrato.get_estado_display }}</span>
+                                {% elif contrato.estado == 'vencido' %}
+                                    <span class="badge bg-danger">{{ contrato.get_estado_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ contrato.get_estado_display }}</span>
+                                {% endif %}
+                                <br><small class="text-muted">Resp: {{ contrato.tiempo_respuesta_horas }}h</small>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'mantenimiento:contrato_detail' contrato.pk %}" 
+                                       class="btn btn-outline-info btn-sm" title="Ver detalle">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="#" class="btn btn-outline-primary btn-sm" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-file-contract fa-3x mb-3"></i>
+                                    <p>No se encontraron contratos de mantenimiento.</p>
+                                    <a href="{% url 'mantenimiento:contrato_create' %}" class="btn btn-primary">
+                                        <i class="fas fa-plus me-1"></i>Crear Primer Contrato
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}">Primera</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}">Anterior</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}">Siguiente</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}">Última</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

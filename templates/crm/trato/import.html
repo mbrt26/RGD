@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Importar Tratos{% endblock %}
+{% block title %}Importar ProyectosCRM{% endblock %}
 
 {% block content %}
 <div class="container py-4">
@@ -9,7 +9,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="card-title mb-0">Importar Tratos desde Excel</h4>
+                    <h4 class="card-title mb-0">Importar ProyectosCRM desde Excel</h4>
                 </div>
                 <div class="card-body">
                     <div class="alert alert-info mb-4">
@@ -57,10 +57,10 @@
                                 <div class="col-md-6">
                                     <h6>Campos obligatorios:</h6>
                                     <ul>
-                                        <li><strong>nombre:</strong> Nombre del trato</li>
+                                        <li><strong>nombre:</strong> Nombre del proyecto</li>
                                         <li><strong>cliente:</strong> Nombre del cliente existente</li>
                                         <li><strong>valor:</strong> Valor del trato</li>
-                                        <li><strong>estado:</strong> Estado (nuevo, cotizacion, negociacion, ganado, perdido, cancelado)</li>
+                                        <li><strong>estado:</strong> Estado (revision_tecnica, elaboracion_oferta, envio_negociacion, formalizacion, ganado, perdido, sin_informacion)</li>
                                         <li><strong>fecha_cierre:</strong> Fecha de cierre esperada (formato YYYY-MM-DD)</li>
                                     </ul>
                                 </div>
@@ -69,15 +69,15 @@
                                     <ul>
                                         <li><strong>correo:</strong> Correo de contacto</li>
                                         <li><strong>telefono:</strong> Teléfono de contacto</li>
-                                        <li><strong>descripcion:</strong> Descripción del trato</li>
+                                        <li><strong>descripcion:</strong> Descripción del proyecto</li>
                                         <li><strong>probabilidad:</strong> Probabilidad de cierre (0-100)</li>
-                                        <li><strong>fuente:</strong> Fuente del trato</li>
+                                        <li><strong>fuente:</strong> Fuente del trato (visita, informe_tecnico, email, telefono, whatsapp, otro)</li>
                                         <li><strong>notas:</strong> Notas adicionales</li>
                                         <li><strong>centro_costos:</strong> Centro de costos</li>
                                         <li><strong>nombre_proyecto:</strong> Nombre del proyecto</li>
                                         <li><strong>orden_contrato:</strong> Número de orden o contrato</li>
                                         <li><strong>dias_prometidos:</strong> Días prometidos</li>
-                                        <li><strong>tipo_negociacion:</strong> Tipo de negociación</li>
+                                        <li><strong>tipo_negociacion:</strong> Tipo de negociación (contrato, control, diseno, filtros, mantenimiento, servicios)</li>
                                     </ul>
                                 </div>
                             </div>
@@ -91,7 +91,7 @@
                                 <i class="fas fa-arrow-left"></i> Volver
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-file-import"></i> Importar Tratos
+                                <i class="fas fa-file-import"></i> Importar ProyectosCRM
                             </button>
                         </div>
                     </form>

@@ -29,47 +29,196 @@
     }
     
     /* Estilos personalizados para badges de estado */
-    .badge.bg-nuevo {
-        background-color: #3498db !important; /* Azul */
+    .badge.bg-revision_tecnica {
+        background-color: #17a2b8 !important; /* Azul info */
         color: white !important;
     }
-    .badge.bg-cotizacion {
-        background-color: #f39c12 !important; /* Naranja */
+    .badge.bg-elaboracion_oferta {
+        background-color: #ffc107 !important; /* Amarillo warning */
+        color: black !important;
+    }
+    .badge.bg-envio_negociacion {
+        background-color: #6f42c1 !important; /* Púrpura */
         color: white !important;
     }
-    .badge.bg-negociacion {
-        background-color: #9b59b6 !important; /* Púrpura */
+    .badge.bg-formalizacion {
+        background-color: #fd7e14 !important; /* Naranja */
         color: white !important;
     }
     .badge.bg-ganado {
-        background-color: #2ecc71 !important; /* Verde */
+        background-color: #28a745 !important; /* Verde success */
         color: white !important;
     }
     .badge.bg-perdido {
-        background-color: #e74c3c !important; /* Rojo */
+        background-color: #dc3545 !important; /* Rojo danger */
         color: white !important;
     }
-    .badge.bg-cancelado {
-        background-color: #7f8c8d !important; /* Gris */
+    .badge.bg-sin_informacion {
+        background-color: #6c757d !important; /* Gris secondary */
         color: white !important;
+    }
+    
+    /* Estilos para barra de probabilidad con colores */
+    .progress-bar-low {
+        background-color: #dc3545 !important; /* Rojo para baja probabilidad */
+    }
+    .progress-bar-medium {
+        background-color: #ffc107 !important; /* Amarillo para probabilidad media */
+    }
+    .progress-bar-high {
+        background-color: #28a745 !important; /* Verde para alta probabilidad */
     }
 </style>
 {% endblock %}
 
 {% block actions %}
 <div class="btn-group">
-    <a href="{% url 'crm:trato_create' %}" class="btn btn-primary">
-        <i class="fas fa-plus me-1"></i> Nuevo Trato
+    <a href="{% url 'crm:trato_quick_create' %}" class="btn btn-success">
+        <i class="fas fa-rocket me-1"></i> Crear Rápido
     </a>
-    <a href="{% url 'crm:trato_import' %}" class="btn btn-success">
+    <a href="{% url 'crm:trato_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Nuevo Proyecto
+    </a>
+    <a href="{% url 'crm:trato_import' %}" class="btn btn-info">
         <i class="fas fa-file-import me-1"></i> Importar Excel
     </a>
+    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#filtrosCollapse">
+        <i class="fas fa-filter me-1"></i> Filtros
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_content %}
+<!-- Panel de Filtros -->
+<div class="collapse mb-3" id="filtrosCollapse">
+    <div class="card">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros de Búsqueda</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <!-- Búsqueda general -->
+                <div class="col-md-3">
+                    <label class="form-label">Búsqueda General</label>
+                    <input type="text" name="q" class="form-control" placeholder="# Oferta, Cliente, Descripción..." value="{{ filtros.q }}">
+                </div>
+                
+                <!-- Cliente -->
+                <div class="col-md-3">
+                    <label class="form-label">Cliente</label>
+                    <select name="cliente" class="form-select">
+                        <option value="">Todos los clientes</option>
+                        {% for cliente in clientes %}
+                        <option value="{{ cliente.id }}" {% if filtros.cliente == cliente.id|stringformat:"s" %}selected{% endif %}>
+                            {{ cliente.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Estado -->
+                <div class="col-md-3">
+                    <label class="form-label">Estado</label>
+                    <select name="estado" class="form-select">
+                        <option value="">Todos los estados</option>
+                        {% for estado_code, estado_name in estados %}
+                        <option value="{{ estado_code }}" {% if filtros.estado == estado_code %}selected{% endif %}>
+                            {{ estado_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Responsable -->
+                <div class="col-md-3">
+                    <label class="form-label">Responsable</label>
+                    <select name="responsable" class="form-select">
+                        <option value="">Todos los responsables</option>
+                        {% for responsable in responsables %}
+                        <option value="{{ responsable.id }}" {% if filtros.responsable == responsable.id|stringformat:"s" %}selected{% endif %}>
+                            {{ responsable.get_full_name|default:responsable.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Fuente -->
+                <div class="col-md-3">
+                    <label class="form-label">Fuente</label>
+                    <select name="fuente" class="form-select">
+                        <option value="">Todas las fuentes</option>
+                        {% for fuente_code, fuente_name in fuentes %}
+                        <option value="{{ fuente_code }}" {% if filtros.fuente == fuente_code %}selected{% endif %}>
+                            {{ fuente_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Tipo de Negociación -->
+                <div class="col-md-3">
+                    <label class="form-label">Tipo de Negociación</label>
+                    <select name="tipo_negociacion" class="form-select">
+                        <option value="">Todos los tipos</option>
+                        {% for tipo_code, tipo_name in tipos_negociacion %}
+                        <option value="{{ tipo_code }}" {% if filtros.tipo_negociacion == tipo_code %}selected{% endif %}>
+                            {{ tipo_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Probabilidad -->
+                <div class="col-md-3">
+                    <label class="form-label">Probabilidad (%)</label>
+                    <div class="input-group">
+                        <input type="number" name="probabilidad_min" class="form-control" placeholder="Min" min="0" max="100" value="{{ filtros.probabilidad_min }}">
+                        <span class="input-group-text">-</span>
+                        <input type="number" name="probabilidad_max" class="form-control" placeholder="Max" min="0" max="100" value="{{ filtros.probabilidad_max }}">
+                    </div>
+                </div>
+                
+                <!-- Valor -->
+                <div class="col-md-3">
+                    <label class="form-label">Valor ($)</label>
+                    <div class="input-group">
+                        <input type="number" name="valor_min" class="form-control" placeholder="Min" step="0.01" value="{{ filtros.valor_min }}">
+                        <span class="input-group-text">-</span>
+                        <input type="number" name="valor_max" class="form-control" placeholder="Max" step="0.01" value="{{ filtros.valor_max }}">
+                    </div>
+                </div>
+                
+                <!-- Fecha de Cierre -->
+                <div class="col-md-3">
+                    <label class="form-label">Fecha de Cierre</label>
+                    <div class="input-group">
+                        <input type="date" name="fecha_desde" class="form-control" value="{{ filtros.fecha_desde }}">
+                        <span class="input-group-text">-</span>
+                        <input type="date" name="fecha_hasta" class="form-control" value="{{ filtros.fecha_hasta }}">
+                    </div>
+                </div>
+                
+                <!-- Botones -->
+                <div class="col-12">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i> Filtrar
+                        </button>
+                        <a href="{% url 'crm:trato_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i> Limpiar
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block table_header %}
     <th># Oferta</th>
     <th>Cliente</th>
+    <th>Descripción</th>
     <th>Valor Estimado</th>
     <th>Estado</th>
     <th>Responsable</th>
@@ -87,6 +236,15 @@
             </a>
         </td>
         <td>{{ trato.cliente|default:'Sin cliente' }}</td>
+        <td>
+            {% if trato.descripcion %}
+                {{ trato.descripcion|truncatewords:8 }}
+            {% elif trato.nombre %}
+                {{ trato.nombre|truncatewords:8 }}
+            {% else %}
+                <span class="text-muted">Sin descripción</span>
+            {% endif %}
+        </td>
         <td>${{ trato.valor|default:0|floatformat:2|intcomma }}</td>
         <td>
             <span class="badge bg-{{ trato.estado }}">
@@ -94,16 +252,34 @@
             </span>
         </td>
         <td>{{ trato.responsable.get_full_name|default:trato.responsable.username|default:'No asignado' }}</td>
-        <td>{{ trato.fecha_cierre|date:"d/m/Y"|default:'Sin fecha' }}</td>
+        <td class="{{ trato.get_fecha_cierre_class }}">{{ trato.fecha_cierre|date:"d/m/Y"|default:'Sin fecha' }}</td>
         <td>
             <div class="progress progress-container">
-                <div class="progress-bar progress-bar-striped" role="progressbar" 
-                     style="width: {{ trato.probabilidad }}%" 
-                     aria-valuenow="{{ trato.probabilidad }}" 
-                     aria-valuemin="0" 
-                     aria-valuemax="100">
-                    {{ trato.probabilidad }}%
-                </div>
+                {% if trato.probabilidad <= 30 %}
+                    <div class="progress-bar progress-bar-striped progress-bar-low" role="progressbar" 
+                         style="width: {{ trato.probabilidad }}%" 
+                         aria-valuenow="{{ trato.probabilidad }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        {{ trato.probabilidad }}%
+                    </div>
+                {% elif trato.probabilidad <= 70 %}
+                    <div class="progress-bar progress-bar-striped progress-bar-medium" role="progressbar" 
+                         style="width: {{ trato.probabilidad }}%" 
+                         aria-valuenow="{{ trato.probabilidad }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        {{ trato.probabilidad }}%
+                    </div>
+                {% else %}
+                    <div class="progress-bar progress-bar-striped progress-bar-high" role="progressbar" 
+                         style="width: {{ trato.probabilidad }}%" 
+                         aria-valuenow="{{ trato.probabilidad }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        {{ trato.probabilidad }}%
+                    </div>
+                {% endif %}
             </div>
         </td>
         <td>
@@ -117,7 +293,7 @@
     </tr>
     {% empty %}
     <tr>
-        <td colspan="8" class="text-center">
+        <td colspan="9" class="text-center">
             No hay tratos registrados.
         </td>
     </tr>

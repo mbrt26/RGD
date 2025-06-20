@@ -1,0 +1,607 @@
+{% extends "base/form_base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .proyecto-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .estado-preview {
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        margin-bottom: 0.5rem;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .estado-preview:hover {
+        border-color: #0d6efd;
+        transform: translateY(-1px);
+    }
+    .estado-preview.selected {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    .estado-verde { background: rgba(40, 167, 69, 0.1); color: #28a745; }
+    .estado-amarillo { background: rgba(255, 193, 7, 0.1); color: #ffc107; }
+    .estado-rojo { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+    .estado-azul { background: rgba(0, 123, 255, 0.1); color: #007bff; }
+    
+    .avance-container {
+        position: relative;
+    }
+    .avance-visual {
+        height: 20px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    .avance-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #20c997);
+        border-radius: 10px;
+        transition: width 0.3s ease;
+        position: relative;
+    }
+    .avance-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+    .comparacion-avance {
+        font-size: 0.9rem;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        margin-top: 0.5rem;
+    }
+    .variacion-positiva {
+        background: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+        border: 1px solid rgba(40, 167, 69, 0.2);
+    }
+    .variacion-negativa {
+        background: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+        border: 1px solid rgba(220, 53, 69, 0.2);
+    }
+    .variacion-neutral {
+        background: rgba(108, 117, 125, 0.1);
+        color: #6c757d;
+        border: 1px solid rgba(108, 117, 125, 0.2);
+    }
+    .decision-required {
+        background: linear-gradient(45deg, #ff6b6b, #ffa500);
+        color: white;
+        border: none;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+    }
+</style>
+{% endblock %}
+
+{% block form_content %}
+<!-- Header del proyecto -->
+<div class="proyecto-header p-4 mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h4 class="mb-1">{{ proyecto.nombre_proyecto }}</h4>
+            <p class="mb-0 opacity-75">
+                <i class="fas fa-building me-2"></i>{{ proyecto.cliente }}
+                <span class="mx-2">|</span>
+                <i class="fas fa-code-branch me-2"></i>{{ proyecto.centro_costos }}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="badge bg-light text-dark fs-6 p-2">
+                <i class="fas fa-calendar me-1"></i>{{ comite.fecha_comite|date:"d/m/Y" }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>{{ title }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="seguimientoForm">
+                    {% csrf_token %}
+                    
+                    <!-- Estado del seguimiento -->
+                    <div class="mb-4">
+                        <label class="form-label">Estado del Seguimiento <span class="text-danger">*</span></label>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <div class="estado-preview estado-verde" onclick="seleccionarEstado('verde', this)">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">Verde - Sin problemas</div>
+                                            <small>El proyecto avanza según lo planificado</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="estado-preview estado-amarillo" onclick="seleccionarEstado('amarillo', this)">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">Amarillo - Requiere atención</div>
+                                            <small>Hay aspectos que requieren seguimiento</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="estado-preview estado-rojo" onclick="seleccionarEstado('rojo', this)">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-exclamation-circle me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">Rojo - Crítico</div>
+                                            <small>Requiere intervención inmediata</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="estado-preview estado-azul" onclick="seleccionarEstado('azul', this)">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-pause-circle me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">Azul - En pausa</div>
+                                            <small>Proyecto temporalmente pausado</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {{ form.estado_seguimiento }}
+                        {% if form.estado_seguimiento.errors %}
+                            <div class="text-danger small mt-1">{{ form.estado_seguimiento.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Avance reportado -->
+                    <div class="mb-4">
+                        <label for="{{ form.avance_reportado.id_for_label }}" class="form-label">
+                            {{ form.avance_reportado.label }} <span class="text-danger">*</span>
+                        </label>
+                        <div class="avance-container">
+                            {{ form.avance_reportado }}
+                            <div class="avance-visual">
+                                <div class="avance-bar" id="avanceBar" style="width: {{ form.avance_reportado.value|default:0 }}%">
+                                    <div class="avance-text" id="avanceText">{{ form.avance_reportado.value|default:0 }}%</div>
+                                </div>
+                            </div>
+                            {% if object.avance_anterior %}
+                            <div class="comparacion-avance" id="comparacionAvance">
+                                <!-- Se actualizará via JavaScript -->
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if form.avance_reportado.errors %}
+                            <div class="text-danger small">{{ form.avance_reportado.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Logros del período -->
+                    <div class="mb-3">
+                        <label for="{{ form.logros_periodo.id_for_label }}" class="form-label">
+                            {{ form.logros_periodo.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.logros_periodo }}
+                        <div class="form-text">Principales logros y avances desde el último comité</div>
+                        {% if form.logros_periodo.errors %}
+                            <div class="text-danger small">{{ form.logros_periodo.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Dificultades -->
+                    <div class="mb-3">
+                        <label for="{{ form.dificultades.id_for_label }}" class="form-label">
+                            {{ form.dificultades.label }}
+                        </label>
+                        {{ form.dificultades }}
+                        <div class="form-text">Problemas, obstáculos o riesgos identificados</div>
+                        {% if form.dificultades.errors %}
+                            <div class="text-danger small">{{ form.dificultades.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Acciones requeridas -->
+                    <div class="mb-3">
+                        <label for="{{ form.acciones_requeridas.id_for_label }}" class="form-label">
+                            {{ form.acciones_requeridas.label }}
+                        </label>
+                        {{ form.acciones_requeridas }}
+                        <div class="form-text">Acciones específicas a tomar</div>
+                        {% if form.acciones_requeridas.errors %}
+                            <div class="text-danger small">{{ form.acciones_requeridas.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.responsable_reporte.id_for_label }}" class="form-label">
+                                {{ form.responsable_reporte.label }}
+                            </label>
+                            {{ form.responsable_reporte }}
+                            {% if form.responsable_reporte.errors %}
+                                <div class="text-danger small">{{ form.responsable_reporte.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.fecha_proximo_hito.id_for_label }}" class="form-label">
+                                {{ form.fecha_proximo_hito.label }}
+                            </label>
+                            {{ form.fecha_proximo_hito }}
+                            {% if form.fecha_proximo_hito.errors %}
+                                <div class="text-danger small">{{ form.fecha_proximo_hito.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.presupuesto_ejecutado.id_for_label }}" class="form-label">
+                                {{ form.presupuesto_ejecutado.label }}
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                {{ form.presupuesto_ejecutado }}
+                            </div>
+                            {% if form.presupuesto_ejecutado.errors %}
+                                <div class="text-danger small">{{ form.presupuesto_ejecutado.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.tiempo_asignado.id_for_label }}" class="form-label">
+                                {{ form.tiempo_asignado.label }}
+                            </label>
+                            <div class="input-group">
+                                {{ form.tiempo_asignado }}
+                                <span class="input-group-text">min</span>
+                            </div>
+                            {% if form.tiempo_asignado.errors %}
+                                <div class="text-danger small">{{ form.tiempo_asignado.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Requiere decisión -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.requiere_decision }}
+                            <label class="form-check-label" for="{{ form.requiere_decision.id_for_label }}">
+                                {{ form.requiere_decision.label }}
+                            </label>
+                        </div>
+                        <div class="form-text">Marque si este proyecto requiere una decisión específica del comité</div>
+                    </div>
+
+                    <!-- Decisión tomada (solo si requiere decisión) -->
+                    <div class="mb-3" id="decisionContainer" style="display: none;">
+                        <label for="{{ form.decision_tomada.id_for_label }}" class="form-label">
+                            {{ form.decision_tomada.label }}
+                        </label>
+                        {{ form.decision_tomada }}
+                        <div class="form-text">Descripción de la decisión tomada por el comité</div>
+                        {% if form.decision_tomada.errors %}
+                            <div class="text-danger small">{{ form.decision_tomada.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.orden_presentacion.id_for_label }}" class="form-label">
+                                {{ form.orden_presentacion.label }}
+                            </label>
+                            {{ form.orden_presentacion }}
+                            {% if form.orden_presentacion.errors %}
+                                <div class="text-danger small">{{ form.orden_presentacion.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Observaciones -->
+                    <div class="mb-4">
+                        <label for="{{ form.observaciones.id_for_label }}" class="form-label">
+                            {{ form.observaciones.label }}
+                        </label>
+                        {{ form.observaciones }}
+                        {% if form.observaciones.errors %}
+                            <div class="text-danger small">{{ form.observaciones.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'proyectos:comite_detail' comite.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Volver al Comité
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="fas fa-save me-2"></i>Guardar Seguimiento
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Información del proyecto -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Información del Proyecto
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-2 text-center">
+                    <div class="col-6">
+                        <div class="border rounded p-2">
+                            <div class="h6 mb-0 text-primary">{{ proyecto.avance }}%</div>
+                            <small class="text-muted">Avance Actual</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-2">
+                            <div class="h6 mb-0 text-info">{{ proyecto.avance_planeado }}%</div>
+                            <small class="text-muted">Avance Planeado</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-2">
+                            <div class="h6 mb-0 text-success">${{ proyecto.presupuesto|floatformat:0 }}</div>
+                            <small class="text-muted">Presupuesto</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-2">
+                            <div class="h6 mb-0 text-warning">${{ proyecto.gasto_real|floatformat:0 }}</div>
+                            <small class="text-muted">Gastado</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="small">
+                    <div class="mb-2">
+                        <strong>Director:</strong> {{ proyecto.director_proyecto.nombre|default:"Sin asignar" }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Ingeniero:</strong> {{ proyecto.ingeniero_residente.nombre|default:"Sin asignar" }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Inicio:</strong> {{ proyecto.fecha_inicio|date:"d/m/Y" }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Fin:</strong> {{ proyecto.fecha_fin|date:"d/m/Y" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Consejos -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Consejos
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="small mb-0">
+                    <li class="mb-2">Use <strong>Verde</strong> para proyectos que avanzan normalmente</li>
+                    <li class="mb-2">Use <strong>Amarillo</strong> para proyectos con alertas menores</li>
+                    <li class="mb-2">Use <strong>Rojo</strong> para proyectos críticos o con retrasos</li>
+                    <li class="mb-2">Use <strong>Azul</strong> para proyectos pausados por decisiones externas</li>
+                    <li class="mb-2">Sea específico en los logros y dificultades</li>
+                    <li>Incluya fechas concretas en las acciones requeridas</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar campos del formulario
+    const campos = {
+        'id_estado_seguimiento': 'form-select',
+        'id_avance_reportado': 'form-control',
+        'id_logros_periodo': 'form-control',
+        'id_dificultades': 'form-control',
+        'id_acciones_requeridas': 'form-control',
+        'id_responsable_reporte': 'form-select',
+        'id_fecha_proximo_hito': 'form-control',
+        'id_presupuesto_ejecutado': 'form-control',
+        'id_observaciones': 'form-control',
+        'id_orden_presentacion': 'form-control',
+        'id_tiempo_asignado': 'form-control',
+        'id_requiere_decision': 'form-check-input',
+        'id_decision_tomada': 'form-control'
+    };
+
+    for (const [id, className] of Object.entries(campos)) {
+        const field = document.getElementById(id);
+        if (field) {
+            field.classList.add(className);
+            if (field.tagName === 'TEXTAREA') {
+                field.rows = 3;
+            }
+        }
+    }
+
+    // Configurar fecha
+    const fechaField = document.getElementById('id_fecha_proximo_hito');
+    if (fechaField) {
+        fechaField.type = 'date';
+    }
+
+    // Ocultar el campo select original
+    const estadoSelect = document.getElementById('id_estado_seguimiento');
+    if (estadoSelect) {
+        estadoSelect.style.display = 'none';
+        
+        // Seleccionar el estado actual
+        const estadoActual = estadoSelect.value;
+        if (estadoActual) {
+            const preview = document.querySelector(`[onclick*="${estadoActual}"]`);
+            if (preview) {
+                preview.classList.add('selected');
+            }
+        }
+    }
+
+    // Configurar la lógica de "requiere decisión"
+    const requiereDecisionCheck = document.getElementById('id_requiere_decision');
+    const decisionContainer = document.getElementById('decisionContainer');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function toggleDecision() {
+        if (requiereDecisionCheck && requiereDecisionCheck.checked) {
+            decisionContainer.style.display = 'block';
+            submitBtn.classList.add('decision-required');
+            submitBtn.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Guardar - Requiere Decisión';
+        } else {
+            decisionContainer.style.display = 'none';
+            submitBtn.classList.remove('decision-required');
+            submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Seguimiento';
+        }
+    }
+
+    if (requiereDecisionCheck) {
+        toggleDecision(); // Configurar estado inicial
+        requiereDecisionCheck.addEventListener('change', toggleDecision);
+    }
+
+    // Configurar el avance reportado
+    const avanceInput = document.getElementById('id_avance_reportado');
+    const avanceBar = document.getElementById('avanceBar');
+    const avanceText = document.getElementById('avanceText');
+    const comparacionAvance = document.getElementById('comparacionAvance');
+
+    function updateAvance() {
+        const valor = parseFloat(avanceInput.value) || 0;
+        avanceBar.style.width = valor + '%';
+        avanceText.textContent = valor + '%';
+
+        // Cambiar color basado en el valor
+        if (valor < 25) {
+            avanceBar.style.background = 'linear-gradient(90deg, #dc3545, #e74c3c)';
+        } else if (valor < 50) {
+            avanceBar.style.background = 'linear-gradient(90deg, #ffc107, #f39c12)';
+        } else if (valor < 75) {
+            avanceBar.style.background = 'linear-gradient(90deg, #17a2b8, #3498db)';
+        } else {
+            avanceBar.style.background = 'linear-gradient(90deg, #28a745, #20c997)';
+        }
+
+        // Mostrar comparación con avance anterior
+        {% if object.avance_anterior %}
+        const avanceAnterior = {{ object.avance_anterior }};
+        const variacion = valor - avanceAnterior;
+        
+        if (comparacionAvance) {
+            let className = 'variacion-neutral';
+            let icono = 'fas fa-minus';
+            let texto = 'Sin cambio';
+            
+            if (variacion > 0) {
+                className = 'variacion-positiva';
+                icono = 'fas fa-arrow-up';
+                texto = `+${variacion.toFixed(1)}% desde el último comité`;
+            } else if (variacion < 0) {
+                className = 'variacion-negativa';
+                icono = 'fas fa-arrow-down';
+                texto = `${variacion.toFixed(1)}% desde el último comité`;
+            }
+            
+            comparacionAvance.className = `comparacion-avance ${className}`;
+            comparacionAvance.innerHTML = `<i class="${icono} me-2"></i>${texto} (anterior: ${avanceAnterior}%)`;
+        }
+        {% endif %}
+    }
+
+    if (avanceInput) {
+        updateAvance(); // Configurar estado inicial
+        avanceInput.addEventListener('input', updateAvance);
+    }
+});
+
+function seleccionarEstado(estado, elemento) {
+    // Quitar selección de otros elementos
+    document.querySelectorAll('.estado-preview').forEach(el => el.classList.remove('selected'));
+    
+    // Seleccionar el elemento actual
+    elemento.classList.add('selected');
+    
+    // Actualizar el select oculto
+    const estadoSelect = document.getElementById('id_estado_seguimiento');
+    if (estadoSelect) {
+        estadoSelect.value = estado;
+    }
+}
+
+// Validación del formulario
+document.getElementById('seguimientoForm').addEventListener('submit', function(e) {
+    const estadoSelect = document.getElementById('id_estado_seguimiento');
+    const avanceInput = document.getElementById('id_avance_reportado');
+    const logrosInput = document.getElementById('id_logros_periodo');
+
+    if (!estadoSelect.value) {
+        e.preventDefault();
+        alert('Debe seleccionar un estado de seguimiento');
+        return;
+    }
+
+    if (!avanceInput.value || parseFloat(avanceInput.value) < 0 || parseFloat(avanceInput.value) > 100) {
+        e.preventDefault();
+        alert('El avance debe estar entre 0 y 100%');
+        avanceInput.focus();
+        return;
+    }
+
+    if (!logrosInput.value.trim()) {
+        e.preventDefault();
+        alert('Debe describir los logros del período');
+        logrosInput.focus();
+        return;
+    }
+
+    // Confirmar si requiere decisión pero no se ha especificado
+    const requiereDecision = document.getElementById('id_requiere_decision');
+    const decisionTomada = document.getElementById('id_decision_tomada');
+    
+    if (requiereDecision && requiereDecision.checked && !decisionTomada.value.trim()) {
+        if (!confirm('Ha marcado que requiere decisión pero no ha especificado cuál. ¿Desea continuar?')) {
+            e.preventDefault();
+            decisionTomada.focus();
+            return;
+        }
+    }
+});
+</script>
+{% endblock %}

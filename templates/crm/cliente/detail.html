@@ -25,29 +25,38 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-sm-4"><strong>Dirección:</strong></div>
+                        <div class="col-sm-4"><strong>Sector de Actividad:</strong></div>
+                        <div class="col-sm-8">{{ cliente.sector_actividad|default:"No especificado" }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>NIT:</strong></div>
+                        <div class="col-sm-8">{{ cliente.nit|default:"No especificado" }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>Correo:</strong></div>
                         <div class="col-sm-8">
-                            {{ cliente.direccion_linea1 }}
-                            {% if cliente.direccion_linea2 %}
-                            <br>{{ cliente.direccion_linea2 }}
+                            {% if cliente.correo %}
+                                <a href="mailto:{{ cliente.correo }}">{{ cliente.correo }}</a>
+                            {% else %}
+                                No especificado
                             {% endif %}
                         </div>
                     </div>
                     <div class="row mt-2">
+                        <div class="col-sm-4"><strong>Teléfono:</strong></div>
+                        <div class="col-sm-8">{{ cliente.telefono|default:"No especificado" }}</div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>Dirección:</strong></div>
+                        <div class="col-sm-8">{{ cliente.direccion|default:"No especificada" }}</div>
+                    </div>
+                    <div class="row mt-2">
                         <div class="col-sm-4"><strong>Ciudad:</strong></div>
-                        <div class="col-sm-8">{{ cliente.ciudad }}</div>
+                        <div class="col-sm-8">{{ cliente.ciudad|default:"No especificada" }}</div>
                     </div>
                     <div class="row mt-2">
                         <div class="col-sm-4"><strong>Estado/Dpto:</strong></div>
-                        <div class="col-sm-8">{{ cliente.estado }}</div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-sm-4"><strong>País:</strong></div>
-                        <div class="col-sm-8">{{ cliente.pais }}</div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-sm-4"><strong>Código Postal:</strong></div>
-                        <div class="col-sm-8">{{ cliente.codigo_postal }}</div>
+                        <div class="col-sm-8">{{ cliente.estado|default:"No especificado" }}</div>
                     </div>
                     {% if cliente.rut %}
                     <div class="row mt-2">
@@ -57,6 +66,12 @@
                                 <i class="fas fa-file"></i> Ver RUT
                             </a>
                         </div>
+                    </div>
+                    {% endif %}
+                    {% if cliente.notas %}
+                    <div class="row mt-2">
+                        <div class="col-sm-4"><strong>Notas:</strong></div>
+                        <div class="col-sm-8">{{ cliente.notas|linebreaks }}</div>
                     </div>
                     {% endif %}
                 </div>
@@ -230,7 +245,7 @@
                 <h5 class="modal-title">Nuevo Contacto</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="post" action="{% url 'crm:contacto_create' cliente.id %}">
+            <form method="post" action="{% url 'crm:contacto_create_from_client' cliente.id %}">
                 {% csrf_token %}
                 <div class="modal-body">
                     <!-- Aquí irán los campos del formulario -->

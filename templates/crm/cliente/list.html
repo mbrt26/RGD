@@ -16,10 +16,10 @@
 {% block table_header %}
     <th>Nombre</th>
     <th>Sector</th>
+    <th>NIT</th>
     <th>Correo</th>
     <th>Teléfono</th>
     <th>Ciudad</th>
-    <th>País</th>
     <th>Acciones</th>
 {% endblock %}
 
@@ -32,10 +32,10 @@
             </a>
         </td>
         <td>{{ cliente.sector_actividad|default:'-' }}</td>
+        <td>{{ cliente.nit|default:'-' }}</td>
         <td>{{ cliente.correo|default:'-' }}</td>
         <td>{{ cliente.telefono|default:'-' }}</td>
         <td>{{ cliente.ciudad|default:'-' }}</td>
-        <td>{{ cliente.pais|default:'-' }}</td>
         <td>
             <a href="{% url 'crm:cliente_detail' cliente.id %}" class="btn btn-sm btn-info" title="Ver">
                 <i class="fas fa-eye"></i>

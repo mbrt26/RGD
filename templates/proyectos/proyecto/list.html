@@ -1,8 +1,62 @@
 {% extends 'base.html' %}
-{% load static humanize project_filters %}
+{% load static humanize project_filters retraso_filters presupuesto_filters %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/projects.css' %}">
+<style>
+    /* Estilos para las columnas reorganizadas */
+    .table th, .table td {
+        vertical-align: middle;
+        padding: 0.75rem 0.5rem;
+    }
+    
+    /* Columnas de porcentajes más estrechas */
+    .table th:nth-child(6), 
+    .table th:nth-child(7), 
+    .table th:nth-child(12),
+    .table td:nth-child(6), 
+    .table td:nth-child(7), 
+    .table td:nth-child(12) {
+        width: 120px;
+        min-width: 120px;
+    }
+    
+    /* Columnas de fechas */
+    .table th:nth-child(8), 
+    .table th:nth-child(9),
+    .table td:nth-child(8), 
+    .table td:nth-child(9) {
+        width: 100px;
+        min-width: 100px;
+    }
+    
+    /* Columnas monetarias */
+    .table th:nth-child(10), 
+    .table th:nth-child(11),
+    .table td:nth-child(10), 
+    .table td:nth-child(11) {
+        width: 130px;
+        min-width: 130px;
+    }
+    
+    /* Columna de acciones */
+    .table th:nth-child(13),
+    .table td:nth-child(13) {
+        width: 120px;
+        min-width: 120px;
+    }
+    
+    /* Badges de alertas */
+    .badge.bg-danger {
+        animation: pulse-red 2s infinite;
+    }
+    
+    @keyframes pulse-red {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+</style>
 {% endblock %}
 
 {% block title %}Lista de Proyectos{% endblock %}
@@ -23,45 +77,49 @@
             <h6 class="m-0 font-weight-bold text-primary">Filtros</h6>
         </div>
         <div class="card-body">
-            <form method="get" class="form-inline">
-                <!-- Search Input -->
-                <div class="form-group mr-3 mb-2">
-                    <input type="text" name="q" class="form-control" placeholder="Buscar..." value="{{ request.GET.q }}">
+            <form method="get">
+                <div class="row">
+                    <!-- Search Input -->
+                    <div class="col-md-3 mb-2">
+                        <input type="text" name="q" class="form-control" placeholder="Buscar proyecto, cliente u orden..." value="{{ request.GET.q }}">
+                    </div>
+                    
+                    <!-- Status Filter -->
+                    <div class="col-md-2 mb-2">
+                        <select name="estado" class="form-control">
+                            <option value="">Todos los estados</option>
+                            {% for value, label in estados.items %}
+                                <option value="{{ value }}" {% if request.GET.estado == value|stringformat:'s' %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Cliente Filter -->
+                    <div class="col-md-3 mb-2">
+                        <input type="text" name="cliente" class="form-control" placeholder="Cliente..." value="{{ request.GET.cliente }}">
+                    </div>
+                    
+                    <!-- Centro Costos Filter -->
+                    <div class="col-md-3 mb-2">
+                        <input type="text" name="centro_costos" class="form-control" placeholder="Centro costos..." value="{{ request.GET.centro_costos }}">
+                    </div>
+                    
+                    <div class="col-md-1 mb-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter"></i>
+                        </button>
+                    </div>
+                    
+                    {% if request.GET %}
+                        <div class="col-md-12 mb-2">
+                            <a href="{% url 'proyectos:proyecto_list' %}" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-times"></i> Limpiar Filtros
+                            </a>
+                        </div>
+                    {% endif %}
                 </div>
-                
-                <!-- Status Filter -->
-                <div class="form-group mr-3 mb-2">
-                    <select name="estado" class="form-control">
-                        <option value="">Todos los estados</option>
-                        {% for value, label in estados.items %}
-                            <option value="{{ value }}" {% if request.GET.estado == value|stringformat:'s' %}selected{% endif %}>
-                                {{ label }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <!-- Priority Filter -->
-                <div class="form-group mr-3 mb-2">
-                    <select name="prioridad" class="form-control">
-                        <option value="">Todas las prioridades</option>
-                        {% for value, label in prioridades.items %}
-                            <option value="{{ value }}" {% if request.GET.prioridad == value|stringformat:'s' %}selected{% endif %}>
-                                {{ label }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <button type="submit" class="btn btn-primary mb-2">
-                    <i class="fas fa-filter"></i> Filtrar
-                </button>
-                
-                {% if request.GET %}
-                    <a href="{% url 'proyectos:proyecto_list' %}" class="btn btn-secondary mb-2 ml-2">
-                        <i class="fas fa-times"></i> Limpiar
-                    </a>
-                {% endif %}
             </form>
         </div>
     </div>
@@ -76,51 +134,132 @@
                 <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
                     <thead class="table-light">
                         <tr>
-                            <th>Nombre del Proyecto</th>
+                            <th>Centro de Costo</th>
                             <th>Cliente</th>
+                            <th>Nombre del Proyecto</th>
+                            <th>Oferta</th>
                             <th>Estado</th>
-                            <th>Prioridad</th>
-                            <th>Avance</th>
+                            <th>% Avance Planeado</th>
+                            <th>% Avance Real</th>
                             <th>Fecha Inicio</th>
                             <th>Fecha Fin</th>
+                            <th>Presupuesto</th>
+                            <th>Gastado</th>
+                            <th>% Ejecución Presupuesto</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for proyecto in proyectos %}
                         <tr>
+                            <!-- Centro de Costo -->
+                            <td>
+                                <strong>{{ proyecto.centro_costos|default:"-" }}</strong>
+                                {% if proyecto.trato and proyecto.trato.centro_costos and proyecto.centro_costos != proyecto.trato.centro_costos %}
+                                    <br><small class="text-muted">Oferta: {{ proyecto.trato.centro_costos }}</small>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Cliente -->
+                            <td>
+                                {{ proyecto.cliente }}
+                                {% if proyecto.dias_prometidos %}
+                                    <br><small class="text-muted">{{ proyecto.dias_prometidos }} días</small>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Nombre del Proyecto -->
                             <td>
                                 <a href="{% url 'proyectos:proyecto_detail' proyecto.id %}">
                                     {{ proyecto.nombre_proyecto }}
                                 </a>
-                                <br>
-                                <small class="text-muted">{{ proyecto.orden_contrato }}</small>
+                                {% if proyecto.orden_contrato %}
+                                    <br><small class="text-muted">{{ proyecto.orden_contrato }}</small>
+                                {% endif %}
                             </td>
-                            <td>{{ proyecto.cliente }}</td>
+                            
+                            <!-- Oferta -->
+                            <td>
+                                {% if proyecto.trato and proyecto.trato.numero_oferta %}
+                                    <a href="{% url 'crm:trato_detail' proyecto.trato.id %}" class="btn btn-sm btn-outline-primary">
+                                        #{{ proyecto.trato.numero_oferta }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Sin oferta</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Estado -->
                             <td>
                                 <span class="badge badge-{{ proyecto.estado|get_estado_badge }}">
                                     {{ proyecto.get_estado_display }}
                                 </span>
                             </td>
-                            <td>
-                                <span class="badge badge-{{ proyecto.prioridad|get_prioridad_badge }}">
-                                    {{ proyecto.get_prioridad_display }}
+                            
+                            <!-- % Avance Planeado -->
+                            <td class="text-center">
+                                <span class="badge bg-info">
+                                    {{ proyecto.avance_planeado|floatformat:1 }}%
                                 </span>
                             </td>
-                            <td>
-                                <div class="progress mb-2" style="height: 20px;">
-                                    <div class="progress-bar bg-{{ proyecto.avance|get_avance_color }} progress-bar-striped progress-bar-animated" 
-                                         role="progressbar" 
-                                         style="width: {{ proyecto.avance }}%" 
-                                         aria-valuenow="{{ proyecto.avance }}" 
-                                         aria-valuemin="0" 
-                                         aria-valuemax="100">
-                                        {{ proyecto.avance }}%
-                                    </div>
-                                </div>
+                            
+                            <!-- % Avance Real -->
+                            <td class="text-center">
+                                {% if proyecto.avance < proyecto.avance_planeado %}
+                                    <span class="badge bg-danger text-white">
+                                        {{ proyecto.avance|floatformat:1 }}%
+                                    </span>
+                                    <br><small class="text-danger">
+                                        <i class="fas fa-exclamation-triangle"></i> 
+                                        Atrasado
+                                    </small>
+                                {% else %}
+                                    <span class="badge bg-success">
+                                        {{ proyecto.avance|floatformat:1 }}%
+                                    </span>
+                                {% endif %}
                             </td>
+                            
+                            <!-- Fecha Inicio -->
                             <td>{{ proyecto.fecha_inicio|date:"d/m/Y" }}</td>
-                            <td>{{ proyecto.fecha_fin|date:"d/m/Y" }}</td>
+                            
+                            <!-- Fecha Fin -->
+                            <td>
+                                {{ proyecto.fecha_fin|date:"d/m/Y" }}
+                                {% if proyecto.fecha_fin_real %}
+                                    <br><small class="text-success">Real: {{ proyecto.fecha_fin_real|date:"d/m/Y" }}</small>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Presupuesto -->
+                            <td class="text-center">
+                                <strong>${{ proyecto.presupuesto|floatformat:0|intcomma }}</strong>
+                            </td>
+                            
+                            <!-- Gastado -->
+                            <td class="text-center">
+                                <strong>${{ proyecto.gasto_real|floatformat:0|intcomma }}</strong>
+                                <br><small class="text-muted">
+                                    Disponible: ${{ proyecto.presupuesto_disponible|floatformat:0|intcomma }}
+                                </small>
+                            </td>
+                            
+                            <!-- % Ejecución Presupuesto -->
+                            <td class="text-center">
+                                {% if proyecto.porcentaje_ejecucion_presupuesto > proyecto.avance %}
+                                    <span class="badge bg-danger text-white">
+                                        {{ proyecto.porcentaje_ejecucion_presupuesto|floatformat:1 }}%
+                                    </span>
+                                    <br><small class="text-danger">
+                                        <i class="fas fa-exclamation-triangle"></i> 
+                                        Sobreejecución
+                                    </small>
+                                {% else %}
+                                    <span class="badge bg-success">
+                                        {{ proyecto.porcentaje_ejecucion_presupuesto|floatformat:1 }}%
+                                    </span>
+                                {% endif %}
+                            </td>
                             <td>
                                 <div class="btn-group" role="group">
                                     <a href="{% url 'proyectos:proyecto_detail' proyecto.id %}" 
@@ -143,7 +282,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center">
+                            <td colspan="13" class="text-center">
                                 <div class="alert alert-info">
                                     No se encontraron proyectos con los filtros actuales.
                                 </div>
@@ -223,7 +362,7 @@
                 "url": "//cdn.datatables.net/plug-ins/1.10.20/i18n/Spanish.json"
             },
             "columnDefs": [
-                { "orderable": false, "targets": [7] }  // Disable sorting on actions column
+                { "orderable": false, "targets": [12] }  // Disable sorting on actions column
             ]
         });
         

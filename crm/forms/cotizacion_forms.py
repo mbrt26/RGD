@@ -5,7 +5,7 @@ from ..models import Cotizacion, VersionCotizacion, Cliente, Trato
 class CotizacionForm(forms.ModelForm):
     class Meta:
         model = Cotizacion
-        fields = ['cliente', 'trato', 'estado', 'notas']
+        fields = ['cliente', 'trato', 'notas']
 
 
 class VersionCotizacionForm(forms.ModelForm):
@@ -15,33 +15,45 @@ class VersionCotizacionForm(forms.ModelForm):
 
 
 class CotizacionConVersionForm(forms.ModelForm):
-    archivo = forms.FileField(label='Archivo', required=False)
-    razon_cambio = forms.CharField(widget=forms.Textarea, label='Razón del Cambio', required=False)
+    razon_cambio = forms.CharField(widget=forms.Textarea, label='Razón del Cambio', required=True)
     valor = forms.DecimalField(max_digits=12, decimal_places=2, label='Valor')
 
     class Meta:
         model = Cotizacion
-        fields = ['cliente', 'trato', 'estado', 'notas', 'valor']
+        fields = ['cliente', 'trato', 'notas']
 
     def __init__(self, *args, **kwargs):
+        # Extraer parámetros adicionales antes de llamar super()
+        initial_cliente = kwargs.pop('initial_cliente', None)
+        initial_trato = kwargs.pop('initial_trato', None)
+        
         super().__init__(*args, **kwargs)
-        self.fields['cliente'].queryset = Cliente.objects.all()
+        
+        for field in self.fields.values():
+            field.widget.attrs.update({'class': 'form-control'})
+        
+        # Si hay un cliente inicial, filtrar los tratos por ese cliente
+        if initial_cliente:
+            self.fields['trato'].queryset = Trato.objects.filter(cliente=initial_cliente).order_by('-fecha_creacion')
+            # Si hay un trato inicial, establecerlo como seleccionado
+            if initial_trato:
+                self.fields['trato'].initial = initial_trato
+        
+        # Si estamos editando una cotización existente, filtrar por el cliente de la cotización
+        elif self.instance and self.instance.pk and self.instance.cliente:
+            self.fields['trato'].queryset = Trato.objects.filter(cliente=self.instance.cliente).order_by('-fecha_creacion')
         
         # Try to set trato queryset based on selected cliente
-        if 'cliente' in self.data:
+        elif 'cliente' in self.data:
             try:
                 cliente_id = int(self.data.get('cliente'))
-                self.fields['trato'].queryset = Trato.objects.filter(cliente_id=cliente_id)
+                self.fields['trato'].queryset = Trato.objects.filter(cliente_id=cliente_id).order_by('-fecha_creacion')
             except (ValueError, TypeError):
                 self.fields['trato'].queryset = Trato.objects.none()
-        elif self.instance.pk and hasattr(self.instance, 'cliente') and self.instance.cliente is not None:
-            # Only try to filter tratos if we have a saved instance with a cliente
-            self.fields['trato'].queryset = Trato.objects.filter(cliente=self.instance.cliente)
         else:
-            self.fields['trato'].queryset = Trato.objects.none()
+            self.fields['trato'].queryset = Trato.objects.all().order_by('-fecha_creacion')
 
     def clean(self):
         cleaned_data = super().clean()
-        if not self.instance.pk and not cleaned_data.get('archivo'):
-            raise ValidationError('El archivo es requerido para crear una nueva cotización')
+        # La validación de archivos se maneja en la vista ya que necesitamos acceso a request.FILES
         return cleaned_data

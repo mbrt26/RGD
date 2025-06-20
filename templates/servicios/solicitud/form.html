@@ -1,0 +1,419 @@
+{% extends 'base/form_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}Editar Solicitud de Servicio{% else %}Nueva Solicitud de Servicio{% endif %} - Servicios
+{% endblock %}
+
+{% block form_title %}
+    <i class="fas fa-clipboard-list me-2"></i>
+    {% if form.instance.pk %}Editar Solicitud de Servicio{% else %}Nueva Solicitud de Servicio{% endif %}
+{% endblock %}
+
+{% block form_content %}
+<form method="post" enctype="multipart/form-data" id="solicitudForm">
+    {% csrf_token %}
+    
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            <h4>Errores en el formulario:</h4>
+            {{ form.errors }}
+        </div>
+    {% endif %}
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Información del Servicio</h6>
+                </div>
+                <div class="card-body">
+                    {% if form.instance.pk %}
+                        {{ form.estado|as_crispy_field }}
+                    {% endif %}
+                    {{ form.tipo_servicio|as_crispy_field }}
+                    {{ form.fecha_programada|as_crispy_field }}
+                    {{ form.duracion_estimada|as_crispy_field }}
+                    {{ form.tecnico_asignado|as_crispy_field }}
+                    {{ form.director_proyecto|as_crispy_field }}
+                    {{ form.ingeniero_residente|as_crispy_field }}
+                    {{ form.cronograma|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Información del Cliente</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.centro_costo|as_crispy_field }}
+                    {{ form.cliente_crm|as_crispy_field }}
+                    {{ form.trato_origen|as_crispy_field }}
+                    {{ form.nombre_proyecto|as_crispy_field }}
+                    {{ form.contacto_crm|as_crispy_field }}
+                    {{ form.cotizacion_aprobada|as_crispy_field }}
+                    
+                    <div class="form-text">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            El contacto se actualizará automáticamente según el cliente seleccionado.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0">Dirección del Servicio</h6>
+        </div>
+        <div class="card-body">
+            {{ form.direccion_servicio|as_crispy_field }}
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0">Observaciones Internas</h6>
+        </div>
+        <div class="card-body">
+            {{ form.observaciones_internas|as_crispy_field }}
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'servicios:solicitud_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>
+                    {% if form.instance.pk %}Actualizar{% else %}Crear{% endif %} Solicitud
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-cargar contactos y cotizaciones cuando se selecciona un trato
+    const tratoField = document.getElementById('id_trato_origen');
+    const contactoField = document.getElementById('id_contacto_crm');
+    const cotizacionField = document.getElementById('id_cotizacion_aprobada');
+    
+    if (tratoField) {
+        tratoField.addEventListener('change', function() {
+            const tratoId = this.value;
+            console.log('Trato seleccionado:', tratoId);
+            
+            // Limpiar opciones de contacto y cotización
+            if (contactoField) {
+                contactoField.innerHTML = '<option value="">Seleccione un contacto</option>';
+            }
+            if (cotizacionField) {
+                cotizacionField.innerHTML = '<option value="">--- Seleccione una cotización ---</option>';
+            }
+            
+            if (tratoId) {
+                // Cargar contactos y cotizaciones del trato seleccionado
+                cargarContactosTrato(tratoId);
+                cargarCotizacionesTrato(tratoId);
+            }
+        });
+    }
+    
+    // Fallback: Auto-cargar contactos cuando se selecciona un cliente (para casos sin trato)
+    const clienteField = document.getElementById('id_cliente_crm');
+    if (clienteField && contactoField) {
+        clienteField.addEventListener('change', function() {
+            const clienteId = this.value;
+            console.log('Cliente seleccionado:', clienteId);
+            
+            // Solo procesar si no hay trato seleccionado
+            if (!tratoField || !tratoField.value) {
+                // Limpiar opciones de contacto y cotización
+                contactoField.innerHTML = '<option value="">Seleccione un contacto</option>';
+                
+                if (cotizacionField) {
+                    cotizacionField.innerHTML = '<option value="">--- Seleccione una cotización ---</option>';
+                }
+                
+                if (clienteId) {
+                    // Cargar contactos y cotizaciones del cliente seleccionado
+                    cargarContactosCliente(clienteId);
+                    cargarCotizacionesCliente(clienteId);
+                }
+            }
+        });
+    }
+    
+    function cargarContactosCliente(clienteId) {
+        const contactoField = document.getElementById('id_contacto_crm');
+        if (!contactoField) return;
+        
+        // Mostrar indicador de carga
+        contactoField.innerHTML = '<option value="">Cargando contactos...</option>';
+        
+        console.log('Cargando contactos para cliente ID:', clienteId);
+        
+        fetch(`/servicios/api/contactos-cliente/${clienteId}/`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin'  // Include cookies for authentication
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Respuesta del servidor:', data);
+                    
+                    // Limpiar opciones anteriores
+                    contactoField.innerHTML = '<option value="">Seleccione un contacto</option>';
+                    
+                    if (data.error) {
+                        console.error('Error del servidor:', data.error);
+                        contactoField.innerHTML = '<option value="">Error cargando contactos</option>';
+                        return;
+                    }
+                    
+                    if (data.length === 0) {
+                        console.log('No se encontraron contactos para este cliente');
+                        contactoField.innerHTML = '<option value="">No hay contactos disponibles</option>';
+                        return;
+                    }
+                    
+                    console.log(`Agregando ${data.length} contacto(s) al select`);
+                    
+                    // Agregar contactos al select
+                    data.forEach(contacto => {
+                        const option = document.createElement('option');
+                        option.value = contacto.id;
+                        option.textContent = `${contacto.nombre}${contacto.correo ? ` (${contacto.correo})` : ''}`;
+                        contactoField.appendChild(option);
+                        console.log(`Contacto agregado: ${option.textContent}`);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error cargando contactos:', error);
+                    contactoField.innerHTML = '<option value="">Error cargando contactos</option>';
+                    
+                    // Mostrar mensaje de error al usuario
+                    alert('Error al cargar los contactos del cliente. Por favor, intente nuevamente.');
+                });
+    }
+    
+    function cargarCotizacionesCliente(clienteId) {
+        const cotizacionField = document.getElementById('id_cotizacion_aprobada');
+        if (!cotizacionField) return;
+        
+        // Mostrar indicador de carga
+        cotizacionField.innerHTML = '<option value="">Cargando cotizaciones...</option>';
+        
+        console.log('Cargando cotizaciones para cliente ID:', clienteId);
+        
+        fetch(`/servicios/api/cotizaciones-cliente/${clienteId}/`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin'  // Include cookies for authentication
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Respuesta del servidor (cotizaciones):', data);
+                    
+                    // Limpiar opciones anteriores
+                    cotizacionField.innerHTML = '<option value="">--- Seleccione una cotización ---</option>';
+                    
+                    if (data.error) {
+                        console.error('Error del servidor:', data.error);
+                        cotizacionField.innerHTML = '<option value="">Error cargando cotizaciones</option>';
+                        return;
+                    }
+                    
+                    if (data.length === 0) {
+                        console.log('No se encontraron cotizaciones para este cliente');
+                        cotizacionField.innerHTML = '<option value="">No hay cotizaciones disponibles</option>';
+                        return;
+                    }
+                    
+                    console.log(`Agregando ${data.length} cotización(es) al select`);
+                    
+                    // Agregar cotizaciones al select
+                    data.forEach(cotizacion => {
+                        const option = document.createElement('option');
+                        option.value = cotizacion.id;
+                        option.textContent = cotizacion.display_name;
+                        cotizacionField.appendChild(option);
+                        console.log(`Cotización agregada: ${option.textContent}`);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error cargando cotizaciones:', error);
+                    cotizacionField.innerHTML = '<option value="">Error cargando cotizaciones</option>';
+                    
+                    // Mostrar mensaje de error al usuario
+                    alert('Error al cargar las cotizaciones del cliente. Por favor, intente nuevamente.');
+                });
+    }
+    
+    function cargarContactosTrato(tratoId) {
+        const contactoField = document.getElementById('id_contacto_crm');
+        if (!contactoField) return;
+        
+        // Mostrar indicador de carga
+        contactoField.innerHTML = '<option value="">Cargando contactos...</option>';
+        
+        console.log('Cargando contactos para trato ID:', tratoId);
+        
+        fetch(`/servicios/api/contactos-trato/${tratoId}/`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Respuesta del servidor (contactos trato):', data);
+                    
+                    // Limpiar opciones anteriores
+                    contactoField.innerHTML = '<option value="">Seleccione un contacto</option>';
+                    
+                    if (data.error) {
+                        console.error('Error del servidor:', data.error);
+                        contactoField.innerHTML = '<option value="">Error cargando contactos</option>';
+                        return;
+                    }
+                    
+                    if (data.length === 0) {
+                        console.log('No se encontraron contactos para este trato');
+                        contactoField.innerHTML = '<option value="">No hay contactos disponibles</option>';
+                        return;
+                    }
+                    
+                    console.log(`Agregando ${data.length} contacto(s) al select`);
+                    
+                    // Agregar contactos al select (primero el contacto principal del trato)
+                    data.forEach(contacto => {
+                        const option = document.createElement('option');
+                        option.value = contacto.id;
+                        option.textContent = `${contacto.nombre}${contacto.correo ? ` (${contacto.correo})` : ''}${contacto.es_contacto_trato ? ' [Principal]' : ''}`;
+                        contactoField.appendChild(option);
+                        console.log(`Contacto agregado: ${option.textContent}`);
+                        
+                        // Seleccionar automáticamente el contacto principal del trato
+                        if (contacto.es_contacto_trato) {
+                            option.selected = true;
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error cargando contactos:', error);
+                    contactoField.innerHTML = '<option value="">Error cargando contactos</option>';
+                    
+                    // Mostrar mensaje de error al usuario
+                    alert('Error al cargar los contactos del trato. Por favor, intente nuevamente.');
+                });
+    }
+    
+    function cargarCotizacionesTrato(tratoId) {
+        const cotizacionField = document.getElementById('id_cotizacion_aprobada');
+        if (!cotizacionField) return;
+        
+        // Mostrar indicador de carga
+        cotizacionField.innerHTML = '<option value="">Cargando cotizaciones...</option>';
+        
+        console.log('Cargando cotizaciones para trato ID:', tratoId);
+        
+        fetch(`/servicios/api/cotizaciones-trato/${tratoId}/`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Respuesta del servidor (cotizaciones trato):', data);
+                    
+                    // Limpiar opciones anteriores
+                    cotizacionField.innerHTML = '<option value="">--- Seleccione una cotización ---</option>';
+                    
+                    if (data.error) {
+                        console.error('Error del servidor:', data.error);
+                        cotizacionField.innerHTML = '<option value="">Error cargando cotizaciones</option>';
+                        return;
+                    }
+                    
+                    if (data.length === 0) {
+                        console.log('No se encontraron cotizaciones para este trato');
+                        cotizacionField.innerHTML = '<option value="">No hay cotizaciones disponibles</option>';
+                        return;
+                    }
+                    
+                    console.log(`Agregando ${data.length} cotización(es) al select`);
+                    
+                    // Agregar cotizaciones al select
+                    data.forEach(cotizacion => {
+                        const option = document.createElement('option');
+                        option.value = cotizacion.id;
+                        option.textContent = cotizacion.display_name;
+                        cotizacionField.appendChild(option);
+                        console.log(`Cotización agregada: ${option.textContent}`);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error cargando cotizaciones:', error);
+                    cotizacionField.innerHTML = '<option value="">Error cargando cotizaciones</option>';
+                    
+                    // Mostrar mensaje de error al usuario
+                    alert('Error al cargar las cotizaciones del trato. Por favor, intente nuevamente.');
+                });
+    }
+    
+    // Configurar fecha mínima
+    const fechaField = document.getElementById('id_fecha_programada');
+    if (fechaField) {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const minDate = `${yyyy}-${mm}-${dd}T00:00`;
+        fechaField.setAttribute('min', minDate);
+    }
+    
+});
+</script>
+{% endblock %}

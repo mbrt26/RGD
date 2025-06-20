@@ -1,21 +1,127 @@
-{% extends 'base/form_base.html' %}
+{% extends 'base/base.html' %}
+{% load crispy_forms_tags %}
 
 {% block title %}{{ form.instance.pk|yesno:"Editar,Nueva" }} Actividad{% endblock %}
 
-{% block form_title %}
-    {% if form.instance.pk %}
-        Editar Actividad {{ form.instance.nombre }}
-    {% else %}
-        Nueva Actividad
-    {% endif %}
-{% endblock %}
-
-{% block extra_fields %}
-    {% if form.instance.pk %}
-        <div class="mb-3">
-            <p class="text-muted">Creado el: {{ form.instance.fecha_creacion|date:"d/m/Y H:i" }}</p>
-            <p class="text-muted">Estado: {{ form.instance.get_estado_display }}</p>
-            <p class="text-muted">Proyecto: {{ form.instance.proyecto.nombre }}</p>
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    {% if form.instance.pk %}
+                        <i class="fas fa-edit"></i> Editar Actividad
+                    {% else %}
+                        <i class="fas fa-plus"></i> Nueva Actividad
+                    {% endif %}
+                </h3>
+            </div>
+            <div class="card-body">
+                {% include "includes/form_errors.html" %}
+                
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Información Básica -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-info-circle"></i> Información Básica</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.proyecto|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.actividad|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    {{ form.inicio|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.fin|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.duracion|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Responsables -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-users"></i> Responsabilidades</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.responsable_asignado|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.responsable_ejecucion|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Estado y Avance -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-line"></i> Estado y Avance</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.estado|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.avance|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    {{ form.predecesoras|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Observaciones y Archivos -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-paperclip"></i> Observaciones y Archivos</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    {{ form.observaciones|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.adjuntos|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Botones -->
+                    <div class="row mt-4">
+                        <div class="col">
+                            <a href="{% url 'proyectos:actividad_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                        </div>
+                        <div class="col text-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> {% if form.instance.pk %}Actualizar{% else %}Crear{% endif %} Actividad
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
-    {% endif %}
+    </div>
+</div>
 {% endblock %}

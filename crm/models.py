@@ -4,21 +4,42 @@ from django.utils import timezone
 
 User = get_user_model()
 
+def fecha_actual():
+    """Retorna la fecha actual sin hora"""
+    return timezone.now().date()
+
 class Cliente(models.Model):
     nombre = models.CharField('Nombre', max_length=200)
-    sector_actividad = models.CharField('Sector de Actividad', max_length=100, blank=True)
+    SECTOR_ACTIVIDAD_CHOICES = [
+        ('alimentos', 'Alimentos'),
+        ('comercio', 'Comercio'),
+        ('construccion', 'Construcción'),
+        ('cosmeticos', 'Cosméticos'),
+        ('educacion', 'Educación'),
+        ('farmaceutico', 'Farmacéutico'),
+        ('fitoterapeuta', 'Fitoterapeuta'),
+        ('industrial', 'Industrial'),
+        ('infraestructura', 'Infraestructura'),
+        ('salud', 'Salud'),
+        ('servicios_financieros', 'Servicios Financieros'),
+    ]
+    
+    sector_actividad = models.CharField('Sector de Actividad', max_length=100, choices=SECTOR_ACTIVIDAD_CHOICES, blank=True)
+    nit = models.CharField('NIT', max_length=50, blank=True)
     correo = models.EmailField('Correo Electrónico', blank=True)
     telefono = models.CharField('Teléfono', max_length=20, blank=True)
-    direccion = models.TextField('Dirección', blank=True)
+    direccion = models.CharField('Dirección', max_length=300, blank=True)
     notas = models.TextField('Notas', blank=True)
     fecha_creacion = models.DateTimeField('Fecha de Creación', default=timezone.now)
     direccion_linea1 = models.CharField('Dirección Línea 1', max_length=200, blank=True)
     direccion_linea2 = models.CharField('Dirección Línea 2', max_length=200, blank=True)
     ciudad = models.CharField('Ciudad', max_length=100, blank=True)
     estado = models.CharField('Estado/Departamento', max_length=100, blank=True)
-    pais = models.CharField('País', max_length=100, blank=True)
-    codigo_postal = models.CharField('Código Postal', max_length=20, blank=True)
     rut = models.FileField('RUT', upload_to='clientes/rut/', blank=True)
+    cedula = models.FileField('Cédula de Ciudadanía', upload_to='clientes/cedula/', blank=True)
+    ef = models.FileField('Estados Financieros', upload_to='clientes/ef/', blank=True)
+    camara = models.FileField('Cámara de Comercio', upload_to='clientes/camara/', blank=True)
+    formulario_vinculacion = models.FileField('Formulario de Vinculación', upload_to='clientes/vinculacion/', blank=True)
 
     class Meta:
         verbose_name = 'Cliente'
@@ -84,52 +105,54 @@ class Trato(models.Model):
     Modelo para representar un trato o negocio en el CRM.
     """
     ESTADO_CHOICES = [
-        ('nuevo', 'Nuevo'),
-        ('cotizacion', 'Cotización Enviada'),
-        ('negociacion', 'En Negociación'),
+        ('revision_tecnica', 'Revisión Técnica'),
+        ('elaboracion_oferta', 'Elaboración de oferta'),
+        ('envio_negociacion', 'Envío de Oferta - Negociación'),
+        ('formalizacion', 'Formalización'),
         ('ganado', 'Ganado'),
         ('perdido', 'Perdido'),
-        ('cancelado', 'Cancelado'),
+        ('sin_informacion', 'Sin información'),
     ]
     
     FUENTE_CHOICES = [
-        ('web', 'Sitio Web'),
-        ('referido', 'Referido'),
-        ('redes', 'Redes Sociales'),
-        ('publicidad', 'Publicidad'),
-        ('evento', 'Evento'),
+        ('visita', 'Visita'),
+        ('informe_tecnico', 'Informe Técnico'),
+        ('email', 'Email'),
+        ('telefono', 'Teléfono'),
+        ('whatsapp', 'Whatsapp'),
         ('otro', 'Otro'),
     ]
 
     TIPO_CHOICES = [
-        ('producto', 'Venta de Producto'),
-        ('servicio', 'Prestación de Servicio'),
-        ('proyecto', 'Proyecto'),
+        ('contrato', 'Contrato'),
+        ('control', 'Control'),
+        ('diseno', 'Diseño'),
+        ('filtros', 'Filtros'),
         ('mantenimiento', 'Mantenimiento'),
-        ('consultoria', 'Consultoría'),
-        ('otro', 'Otro'),
+        ('servicios', 'Servicios'),
     ]
     
     numero_oferta = models.CharField('# Oferta', max_length=10, unique=True, blank=True)
-    nombre = models.CharField('Nombre del Trato', max_length=200, null=True, blank=True)
+    nombre = models.CharField('Descripción', max_length=200, null=True, blank=True)
     cliente = models.ForeignKey(Cliente, verbose_name='Cliente', on_delete=models.CASCADE, related_name='tratos')
-    contacto = models.CharField('Contacto', max_length=200, blank=True)
+    contacto = models.ForeignKey(Contacto, verbose_name='Contacto', on_delete=models.SET_NULL, null=True, blank=True, related_name='tratos')
     correo = models.EmailField('Correo Electrónico', blank=True)
     telefono = models.CharField('Teléfono', max_length=20, blank=True)
     descripcion = models.TextField('Descripción', blank=True)
     valor = models.DecimalField('Valor Estimado', max_digits=12, decimal_places=2, default=0)
     probabilidad = models.PositiveIntegerField('Probabilidad (%)', default=0)
-    estado = models.CharField('Estado', max_length=20, choices=ESTADO_CHOICES, default='nuevo')
-    tipo_negociacion = models.CharField('Tipo de Negociación', max_length=20, choices=TIPO_CHOICES, default='producto')
+    estado = models.CharField('Estado', max_length=20, choices=ESTADO_CHOICES, default='revision_tecnica')
+    tipo_negociacion = models.CharField('Tipo de Negociación', max_length=20, choices=TIPO_CHOICES, default='contrato')
     
     # Campos adicionales para proyectos
     centro_costos = models.CharField('Centro de Costos', max_length=100, blank=True)
     nombre_proyecto = models.CharField('Nombre Proyecto', max_length=200, blank=True)
     orden_contrato = models.CharField('Orden o Contrato', max_length=100, blank=True)
     dias_prometidos = models.PositiveIntegerField('Promesa de Días', null=True, blank=True)
-    fuente = models.CharField('Fuente', max_length=20, choices=FUENTE_CHOICES, default='web')
-    fecha_creacion = models.DateTimeField('Fecha de Creación', default=timezone.now)
+    fuente = models.CharField('Fuente', max_length=20, choices=FUENTE_CHOICES, default='visita')
+    fecha_creacion = models.DateField('Fecha de Creación', default=fecha_actual)
     fecha_cierre = models.DateField('Fecha de Cierre', null=True, blank=True)
+    fecha_envio_cotizacion = models.DateField('Fecha de Envío de Cotización', null=True, blank=True)
     responsable = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='tratos')
     notas = models.TextField('Notas', blank=True)
     
@@ -139,7 +162,15 @@ class Trato(models.Model):
         ordering = ['-fecha_creacion']
     
     def __str__(self):
-        return f"{self.nombre} - {self.cliente} ({self.get_estado_display()})"
+        if self.descripcion:
+            # Truncar la descripción para que no sea demasiado larga
+            descripcion_corta = self.descripcion[:80] + "..." if len(self.descripcion) > 80 else self.descripcion
+            return f"#{self.numero_oferta} - {descripcion_corta}"
+        elif self.nombre:
+            # Si no hay descripción, usar el nombre
+            nombre_corto = self.nombre[:80] + "..." if len(self.nombre) > 80 else self.nombre
+            return f"#{self.numero_oferta} - {nombre_corto}"
+        return f"#{self.numero_oferta} - {self.cliente}"
     
     def save(self, *args, **kwargs):
         if not self.numero_oferta:
@@ -162,6 +193,19 @@ class Trato(models.Model):
             self.fecha_cierre = timezone.now().date()
         
         super().save(*args, **kwargs)
+    
+    def is_fecha_cierre_vencida(self):
+        """Retorna True si la fecha de cierre está vencida y el trato no está ganado o perdido."""
+        if not self.fecha_cierre:
+            return False
+        return (self.fecha_cierre < timezone.now().date() and 
+                self.estado not in ['ganado', 'perdido'])
+    
+    def get_fecha_cierre_class(self):
+        """Retorna la clase CSS para la fecha de cierre según si está vencida."""
+        if self.is_fecha_cierre_vencida():
+            return 'text-danger fw-bold'
+        return ''
 
 class Cotizacion(models.Model):
     ESTADO_CHOICES = [
@@ -203,7 +247,9 @@ class VersionCotizacion(models.Model):
         unique_together = ['cotizacion', 'version']
 
     def __str__(self):
-        return f"Versión {self.version} - {self.cotizacion}"
+        if self.cotizacion.trato and self.cotizacion.trato.numero_oferta:
+            return f"#{self.cotizacion.trato.numero_oferta} - V{self.version} - {self.cotizacion.cliente.nombre}"
+        return f"COT-{self.cotizacion.id} - V{self.version} - {self.cotizacion.cliente.nombre}"
 
 class TareaVenta(models.Model):
     ESTADO_CHOICES = [
@@ -218,25 +264,19 @@ class TareaVenta(models.Model):
         ('reunion', 'Reunión'),
         ('email', 'Email'),
         ('seguimiento', 'Seguimiento'),
+        ('modificacion', 'Modificación'),
         ('otro', 'Otro'),
     ]
 
-    PRIORIDAD_CHOICES = [
-        ('baja', 'Baja'),
-        ('media', 'Media'),
-        ('alta', 'Alta'),
-        ('urgente', 'Urgente'),
-    ]
 
     titulo = models.CharField('Título', max_length=200, default='Nueva Tarea')
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='tareas')
     trato = models.ForeignKey(Trato, on_delete=models.CASCADE, related_name='tareas', null=True, blank=True)
     tipo = models.CharField('Tipo', max_length=20, choices=TIPO_CHOICES, default='seguimiento')
     descripcion = models.TextField('Descripción')
-    fecha_vencimiento = models.DateTimeField('Fecha de Vencimiento', default=timezone.now)
+    fecha_vencimiento = models.DateField('Fecha de Vencimiento', default=fecha_actual)
     fecha_ejecucion = models.DateTimeField('Fecha de Ejecución', null=True, blank=True)
     estado = models.CharField('Estado', max_length=20, choices=ESTADO_CHOICES, default='pendiente')
-    prioridad = models.CharField('Prioridad', max_length=20, choices=PRIORIDAD_CHOICES, default='media')
     responsable = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tareas_asignadas')
     notas = models.TextField('Notas', blank=True)
     
@@ -262,15 +302,17 @@ class TareaVenta(models.Model):
         }
         return estado_classes.get(self.estado, '')
 
-    def get_prioridad_class(self):
-        """Retorna la clase CSS correspondiente a la prioridad de la tarea."""
-        prioridad_classes = {
-            'baja': 'bg-success text-white',
-            'media': 'bg-info text-white',
-            'alta': 'bg-warning text-dark',
-            'urgente': 'bg-danger text-white',
-        }
-        return prioridad_classes.get(self.prioridad, '')
+    def is_vencida(self):
+        """Retorna True si la tarea está vencida."""
+        if not self.fecha_vencimiento:
+            return False
+        return self.fecha_vencimiento < timezone.now().date() and self.estado not in ['completada', 'cancelada']
+    
+    def get_fecha_class(self):
+        """Retorna la clase CSS para la fecha según si está vencida."""
+        if self.is_vencida():
+            return 'text-danger fw-bold'
+        return ''
 
     def get_numero_oferta(self):
         """Retorna el número de oferta del trato asociado."""
@@ -287,3 +329,108 @@ class TareaVenta(models.Model):
     def get_nombre_cliente(self):
         """Retorna el nombre del cliente."""
         return self.cliente.nombre if self.cliente else "Sin cliente"
+
+
+class Lead(models.Model):
+    ESTADO_CHOICES = [
+        ('nuevo', 'Nuevo'),
+        ('contactado', 'Contactado'),
+        ('calificado', 'Calificado'),
+        ('propuesta', 'Propuesta Enviada'),
+        ('negociacion', 'En Negociación'),
+        ('convertido', 'Convertido'),
+        ('perdido', 'Perdido'),
+        ('descalificado', 'Descalificado'),
+    ]
+    
+    FUENTE_CHOICES = [
+        ('web', 'Página Web'),
+        ('referido', 'Referido'),
+        ('publicidad', 'Publicidad'),
+        ('evento', 'Evento'),
+        ('llamada_fria', 'Llamada Fría'),
+        ('email', 'Email Marketing'),
+        ('redes_sociales', 'Redes Sociales'),
+        ('otro', 'Otro'),
+    ]
+    
+    INTERES_CHOICES = [
+        ('bajo', 'Bajo'),
+        ('medio', 'Medio'),
+        ('alto', 'Alto'),
+        ('muy_alto', 'Muy Alto'),
+    ]
+    
+    # Información básica
+    nombre = models.CharField('Nombre', max_length=200)
+    empresa = models.CharField('Empresa', max_length=200, blank=True)
+    cargo = models.CharField('Cargo', max_length=100, blank=True)
+    correo = models.EmailField('Correo Electrónico')
+    telefono = models.CharField('Teléfono', max_length=20, blank=True)
+    sector_actividad = models.CharField('Sector de Actividad', max_length=100, choices=Cliente.SECTOR_ACTIVIDAD_CHOICES, blank=True)
+    
+    # Información de seguimiento
+    estado = models.CharField('Estado', max_length=20, choices=ESTADO_CHOICES, default='nuevo')
+    fuente = models.CharField('Fuente', max_length=20, choices=FUENTE_CHOICES, default='web')
+    nivel_interes = models.CharField('Nivel de Interés', max_length=20, choices=INTERES_CHOICES, default='medio')
+    
+    # Información adicional
+    necesidad = models.TextField('Necesidad/Problema', blank=True)
+    presupuesto_estimado = models.DecimalField('Presupuesto Estimado', max_digits=12, decimal_places=2, null=True, blank=True)
+    fecha_contacto_inicial = models.DateField('Fecha de Contacto Inicial', default=fecha_actual)
+    fecha_ultima_interaccion = models.DateField('Última Interacción', default=fecha_actual)
+    
+    # Asignación y seguimiento
+    responsable = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='leads_asignados')
+    convertido_a_cliente = models.ForeignKey(Cliente, on_delete=models.SET_NULL, null=True, blank=True, related_name='leads_origen')
+    convertido_a_trato = models.ForeignKey(Trato, on_delete=models.SET_NULL, null=True, blank=True, related_name='leads_origen')
+    
+    # Notas y observaciones
+    notas = models.TextField('Notas', blank=True)
+    
+    # Campos de auditoría
+    fecha_creacion = models.DateTimeField('Fecha de Creación', auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField('Última Actualización', auto_now=True)
+    creado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='leads_creados')
+    
+    class Meta:
+        verbose_name = 'Lead'
+        verbose_name_plural = 'Leads'
+        ordering = ['-fecha_actualizacion']
+    
+    def __str__(self):
+        empresa_info = f" ({self.empresa})" if self.empresa else ""
+        return f"{self.nombre}{empresa_info}"
+    
+    def get_estado_class(self):
+        """Retorna la clase CSS correspondiente al estado del lead."""
+        estado_classes = {
+            'nuevo': 'bg-primary text-white',
+            'contactado': 'bg-info text-white',
+            'calificado': 'bg-warning text-dark',
+            'propuesta': 'bg-secondary text-white',
+            'negociacion': 'bg-warning text-dark',
+            'convertido': 'bg-success text-white',
+            'perdido': 'bg-danger text-white',
+            'descalificado': 'bg-dark text-white',
+        }
+        return estado_classes.get(self.estado, 'bg-secondary text-white')
+    
+    def get_interes_class(self):
+        """Retorna la clase CSS correspondiente al nivel de interés."""
+        interes_classes = {
+            'bajo': 'bg-light text-dark',
+            'medio': 'bg-info text-white',
+            'alto': 'bg-warning text-dark',
+            'muy_alto': 'bg-danger text-white',
+        }
+        return interes_classes.get(self.nivel_interes, 'bg-secondary text-white')
+    
+    @property
+    def esta_convertido(self):
+        """Retorna True si el lead ya fue convertido."""
+        return self.convertido_a_cliente is not None or self.convertido_a_trato is not None
+    
+    def puede_convertir(self):
+        """Retorna True si el lead puede ser convertido."""
+        return not self.esta_convertido and self.estado not in ['perdido', 'descalificado']

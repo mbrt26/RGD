@@ -1,0 +1,165 @@
+{% extends "base/form_base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}Editar{% else %}Nuevo{% endif %} Lead{% endblock %}
+
+{% block form_content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title mb-0">
+            {% if object %}
+                Editar Lead: {{ object.nombre }}
+            {% else %}
+                Nuevo Lead
+            {% endif %}
+        </h3>
+    </div>
+    <div class="card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <!-- Información Personal -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-user text-primary me-2"></i>Información Personal</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.nombre|as_crispy_field }}
+                            {{ form.cargo|as_crispy_field }}
+                            {{ form.correo|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.empresa|as_crispy_field }}
+                            {{ form.telefono|as_crispy_field }}
+                            {{ form.sector_actividad|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Información de Seguimiento -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line text-success me-2"></i>Seguimiento</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.estado|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.fuente|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.nivel_interes|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.fecha_contacto_inicial|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {% if object %}
+                                {{ form.fecha_ultima_interaccion|as_crispy_field }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Información Comercial -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-dollar-sign text-warning me-2"></i>Información Comercial</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.presupuesto_estimado|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.responsable|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            {{ form.necesidad|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notas -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-sticky-note text-info me-2"></i>Notas Adicionales</h5>
+                </div>
+                <div class="card-body">
+                    {{ form.notas|as_crispy_field }}
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col">
+                    <a href="{% url 'crm:lead_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+                <div class="col text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> {% if object %}Actualizar{% else %}Crear{% endif %} Lead
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus en el primer campo
+    const nombreField = document.getElementById('id_nombre');
+    if (nombreField) {
+        nombreField.focus();
+    }
+    
+    // Validación de email en tiempo real
+    const emailField = document.getElementById('id_correo');
+    if (emailField) {
+        emailField.addEventListener('blur', function() {
+            const email = this.value;
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (email && !emailRegex.test(email)) {
+                this.classList.add('is-invalid');
+                let feedback = this.parentNode.querySelector('.invalid-feedback');
+                if (!feedback) {
+                    feedback = document.createElement('div');
+                    feedback.className = 'invalid-feedback';
+                    this.parentNode.appendChild(feedback);
+                }
+                feedback.textContent = 'Por favor ingresa un email válido';
+            } else {
+                this.classList.remove('is-invalid');
+                const feedback = this.parentNode.querySelector('.invalid-feedback');
+                if (feedback) {
+                    feedback.remove();
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

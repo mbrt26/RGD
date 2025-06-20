@@ -1,0 +1,792 @@
+{% extends 'base/form_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}Editar Informe de Trabajo{% else %}Nuevo Informe de Trabajo{% endif %} - Servicios
+{% endblock %}
+
+{% block form_title %}
+    <i class="fas fa-file-alt me-2"></i>
+    {% if form.instance.pk %}Editar Informe de Trabajo{% else %}Nuevo Informe de Trabajo{% endif %}
+{% endblock %}
+
+{% block form_content %}
+<form method="post" enctype="multipart/form-data" id="informeForm">
+    {% csrf_token %}
+    
+    <!-- 1. INFORMACIÓN BÁSICA -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-info-circle me-2"></i>Información Básica</h6>
+                </div>
+                <div class="card-body">
+                    {% if not form.instance.pk %}
+                        {{ form.solicitud_servicio|as_crispy_field }}
+                    {% else %}
+                        <div class="form-group mb-3">
+                            <label class="form-label">Solicitud de Servicio</label>
+                            <div class="form-control-plaintext">
+                                <strong>{{ form.instance.solicitud_servicio.numero_orden }}</strong> - 
+                                {{ form.instance.solicitud_servicio.cliente_crm.nombre }}
+                            </div>
+                        </div>
+                    {% endif %}
+                    {{ form.fecha_servicio|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0"><i class="fas fa-clock me-2"></i>Control de Tiempo</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.hora_ingreso|as_crispy_field }}
+                    {{ form.hora_salida|as_crispy_field }}
+                    {% if form.instance.pk and form.instance.tiempo_total_minutos %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-clock me-2"></i>
+                            <strong>Tiempo total:</strong> {{ form.instance.tiempo_total_horas }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. DIAGNÓSTICO Y DESCRIPCIÓN -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0"><i class="fas fa-search me-2"></i>Diagnóstico y Descripción del Problema</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form.descripcion_problema|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.diagnostico_preliminar|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. TRABAJOS REALIZADOS -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0"><i class="fas fa-tools me-2"></i>Detalle de Trabajos Realizados</h6>
+        </div>
+        <div class="card-body">
+            {{ form.detalle_trabajos|as_crispy_field }}
+        </div>
+    </div>
+
+    <!-- 4. ANÁLISIS TÉCNICO -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0"><i class="fas fa-cogs me-2"></i>Análisis Técnico</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    {{ form.causas_problema|as_crispy_field }}
+                </div>
+                <div class="col-md-4">
+                    {{ form.descripcion_trabajo|as_crispy_field }}
+                </div>
+                {% if form.instance.pk %}
+                <div class="col-md-4">
+                    {{ form.tipos_falla|as_crispy_field }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="form-text mt-2">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Puede seleccionar múltiples opciones en cada categoría
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. MATERIALES REQUERIDOS (para inspecciones) -->
+    <div class="card mt-3" id="materiales-section">
+        <div class="card-header">
+            <h6 class="m-0">
+                <i class="fas fa-list me-2"></i>Materiales Requeridos
+                <span class="badge bg-info ms-2" id="inspeccion-badge" style="display: none;">Obligatorio para Visita de Inspección</span>
+            </h6>
+        </div>
+        <div class="card-body">
+            <div id="materiales-formset">
+                {{ materiales_formset.management_form }}
+                {% for form in materiales_formset %}
+                    <div class="material-form border rounded p-3 mb-3" style="background-color: #f8f9fa;">
+                        <div class="row">
+                            <div class="col-md-3">
+                                {{ form.descripcion|as_crispy_field }}
+                            </div>
+                            <div class="col-md-2">
+                                {{ form.marca|as_crispy_field }}
+                            </div>
+                            <div class="col-md-2">
+                                {{ form.referencia|as_crispy_field }}
+                            </div>
+                            <div class="col-md-2">
+                                {{ form.unidad_medida|as_crispy_field }}
+                            </div>
+                            <div class="col-md-2">
+                                {{ form.cantidad|as_crispy_field }}
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button type="button" class="btn btn-danger btn-sm remove-material" title="Eliminar material">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {{ form.DELETE }}
+                            </div>
+                        </div>
+                        {% for hidden in form.hidden_fields %}
+                            {{ hidden }}
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-success btn-sm" id="add-material">
+                <i class="fas fa-plus me-1"></i>Agregar Material
+            </button>
+        </div>
+    </div>
+
+    <!-- 6. ENCUESTA DE SATISFACCIÓN -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0">
+                <i class="fas fa-star me-2"></i>Encuesta de Satisfacción del Cliente
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <small>
+                    <i class="fas fa-info-circle me-1"></i>
+                    <strong>Basado en la experiencia de RGD Aire Acondicionado</strong> indique su grado de satisfacción:
+                </small>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form.satisfaccion_cliente|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.observaciones_encuesta|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. FIRMAS DIGITALES (solo en edición) -->
+    {% if form.instance.pk %}
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">
+                        <i class="fas fa-user-cog me-2"></i>Firma del Técnico
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.tecnico_nombre|as_crispy_field }}
+                            {{ form.tecnico_cargo|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.tecnico_fecha_firma|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <!-- Canvas para firma digital del técnico -->
+                    <div class="mt-3">
+                        <label class="form-label">Firma Digital del Técnico</label>
+                        <div class="signature-container">
+                            <canvas id="tecnico-signature" width="400" height="150" class="border signature-canvas"></canvas>
+                            <div class="signature-controls mt-2">
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="clearSignature('tecnico-signature')">
+                                    <i class="fas fa-eraser me-1"></i>Limpiar
+                                </button>
+                                <button type="button" class="btn btn-sm btn-success" onclick="saveSignature('tecnico-signature', 'tecnico_firma')">
+                                    <i class="fas fa-save me-1"></i>Guardar Firma
+                                </button>
+                            </div>
+                        </div>
+                        <input type="hidden" id="tecnico_firma_data" name="tecnico_firma_data">
+                        {% if form.instance.tecnico_firma %}
+                            <div class="mt-2">
+                                <small class="text-success">
+                                    <i class="fas fa-check me-1"></i>Firma guardada
+                                </small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">
+                        <i class="fas fa-user me-2"></i>Firma del Cliente
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.cliente_nombre|as_crispy_field }}
+                            {{ form.cliente_cargo|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.cliente_fecha_firma|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <!-- Canvas para firma digital del cliente -->
+                    <div class="mt-3">
+                        <label class="form-label">Firma Digital del Cliente</label>
+                        <div class="signature-container">
+                            <canvas id="cliente-signature" width="400" height="150" class="border signature-canvas"></canvas>
+                            <div class="signature-controls mt-2">
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="clearSignature('cliente-signature')">
+                                    <i class="fas fa-eraser me-1"></i>Limpiar
+                                </button>
+                                <button type="button" class="btn btn-sm btn-success" onclick="saveSignature('cliente-signature', 'cliente_firma')">
+                                    <i class="fas fa-save me-1"></i>Guardar Firma
+                                </button>
+                            </div>
+                        </div>
+                        <input type="hidden" id="cliente_firma_data" name="cliente_firma_data">
+                        {% if form.instance.cliente_firma %}
+                            <div class="mt-2">
+                                <small class="text-success">
+                                    <i class="fas fa-check me-1"></i>Firma guardada
+                                </small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. INFORMACIÓN DE ENTREGA (solo en edición) -->
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">
+                        <i class="fas fa-handshake me-2"></i>Entregado Por
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.entregado_por_nombre|as_crispy_field }}
+                            {{ form.entregado_por_cargo|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.entregado_por_fecha|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <!-- Canvas para firma digital de entrega -->
+                    <div class="mt-3">
+                        <label class="form-label">Firma Digital de Entrega</label>
+                        <div class="signature-container">
+                            <canvas id="entrega-signature" width="400" height="150" class="border signature-canvas"></canvas>
+                            <div class="signature-controls mt-2">
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="clearSignature('entrega-signature')">
+                                    <i class="fas fa-eraser me-1"></i>Limpiar
+                                </button>
+                                <button type="button" class="btn btn-sm btn-success" onclick="saveSignature('entrega-signature', 'entregado_por_firma')">
+                                    <i class="fas fa-save me-1"></i>Guardar Firma
+                                </button>
+                            </div>
+                        </div>
+                        <input type="hidden" id="entregado_por_firma_data" name="entregado_por_firma_data">
+                        {% if form.instance.entregado_por_firma %}
+                            <div class="mt-2">
+                                <small class="text-success">
+                                    <i class="fas fa-check me-1"></i>Firma guardada
+                                </small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">
+                        <i class="fas fa-clipboard-check me-2"></i>Recibido Por (Cliente)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.entregado_cliente_nombre|as_crispy_field }}
+                            {{ form.entregado_cliente_cargo|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.entregado_cliente_fecha|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <!-- Canvas para firma digital de recepción -->
+                    <div class="mt-3">
+                        <label class="form-label">Firma Digital de Recepción</label>
+                        <div class="signature-container">
+                            <canvas id="recepcion-signature" width="400" height="150" class="border signature-canvas"></canvas>
+                            <div class="signature-controls mt-2">
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="clearSignature('recepcion-signature')">
+                                    <i class="fas fa-eraser me-1"></i>Limpiar
+                                </button>
+                                <button type="button" class="btn btn-sm btn-success" onclick="saveSignature('recepcion-signature', 'entregado_cliente_firma')">
+                                    <i class="fas fa-save me-1"></i>Guardar Firma
+                                </button>
+                            </div>
+                        </div>
+                        <input type="hidden" id="entregado_cliente_firma_data" name="entregado_cliente_firma_data">
+                        {% if form.instance.entregado_cliente_firma %}
+                            <div class="mt-2">
+                                <small class="text-success">
+                                    <i class="fas fa-check me-1"></i>Firma guardada
+                                </small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 9. ADJUNTOS Y ARCHIVOS -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0">
+                <i class="fas fa-paperclip me-2"></i>Adjuntos y Archivos
+                <span class="badge bg-secondary ms-2">Opcional</span>
+            </h6>
+        </div>
+        <div class="card-body">
+            <div id="adjuntos-formset">
+                {{ adjuntos_formset.management_form }}
+                {% for form in adjuntos_formset %}
+                    <div class="adjunto-form border rounded p-3 mb-3" style="background-color: #f8f9fa;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.archivo|as_crispy_field }}
+                            </div>
+                            <div class="col-md-5">
+                                {{ form.descripcion|as_crispy_field }}
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button type="button" class="btn btn-danger btn-sm remove-adjunto" title="Eliminar adjunto">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {{ form.DELETE }}
+                            </div>
+                        </div>
+                        {% for hidden in form.hidden_fields %}
+                            {{ hidden }}
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-success btn-sm" id="add-adjunto">
+                <i class="fas fa-plus me-1"></i>Agregar Adjunto
+            </button>
+            <div class="mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <strong>Formatos soportados:</strong> Imágenes (JPG, PNG, GIF), Documentos (PDF, DOC, DOCX), Videos (MP4, AVI), Audio (MP3, WAV) y otros archivos.
+                    <br>
+                    <strong>Tamaño máximo:</strong> 10MB por archivo.
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- 10. RECOMENDACIONES Y OBSERVACIONES -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0"><i class="fas fa-comments me-2"></i>Recomendaciones y Observaciones</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form.recomendaciones|as_crispy_field }}
+                </div>
+                {% if form.instance.pk %}
+                <div class="col-md-6">
+                    {{ form.observaciones_adicionales|as_crispy_field }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTONES DE ACCIÓN -->
+    <div class="card mt-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'servicios:informe_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>
+                    {% if form.instance.pk %}Actualizar{% else %}Crear{% endif %} Informe
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.signature-canvas {
+    background-color: #f8f9fa;
+    cursor: crosshair;
+    border-radius: 5px;
+}
+
+.signature-container {
+    background-color: white;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+}
+
+.signature-controls {
+    text-align: center;
+}
+
+.material-form {
+    transition: all 0.3s ease;
+}
+
+.material-form:hover {
+    background-color: #e9ecef !important;
+}
+
+@media (max-width: 768px) {
+    .signature-canvas {
+        width: 100%;
+        height: 120px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Signature Pad Library -->
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar fecha máxima
+    const fechaFields = ['id_fecha_servicio', 'id_tecnico_fecha_firma', 'id_cliente_fecha_firma', 
+                        'id_entregado_por_fecha', 'id_entregado_cliente_fecha'];
+    fechaFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            const today = new Date().toISOString().split('T')[0];
+            field.setAttribute('max', today);
+        }
+    });
+    
+    // Configurar datetime fields y cálculo automático de tiempo
+    const horaIngresoField = document.getElementById('id_hora_ingreso');
+    const horaSalidaField = document.getElementById('id_hora_salida');
+    
+    if (horaIngresoField && horaSalidaField) {
+        horaIngresoField.setAttribute('step', '60');
+        horaSalidaField.setAttribute('step', '60');
+        
+        function calcularTiempoTotal() {
+            const horaIngreso = horaIngresoField.value;
+            const horaSalida = horaSalidaField.value;
+            
+            if (horaIngreso && horaSalida) {
+                const inicio = new Date(horaIngreso);
+                const fin = new Date(horaSalida);
+                
+                if (fin > inicio) {
+                    const diferencia = fin - inicio;
+                    const horas = Math.floor(diferencia / (1000 * 60 * 60));
+                    const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
+                    
+                    let tiempoDisplay = document.getElementById('tiempo-calculado');
+                    if (!tiempoDisplay) {
+                        tiempoDisplay = document.createElement('div');
+                        tiempoDisplay.id = 'tiempo-calculado';
+                        tiempoDisplay.className = 'alert alert-success mt-2';
+                        horaSalidaField.parentNode.appendChild(tiempoDisplay);
+                    }
+                    tiempoDisplay.innerHTML = `<i class="fas fa-clock me-2"></i><strong>Tiempo total:</strong> ${horas}h ${minutos}m`;
+                } else if (fin <= inicio) {
+                    let tiempoDisplay = document.getElementById('tiempo-calculado');
+                    if (!tiempoDisplay) {
+                        tiempoDisplay = document.createElement('div');
+                        tiempoDisplay.id = 'tiempo-calculado';
+                        tiempoDisplay.className = 'alert alert-warning mt-2';
+                        horaSalidaField.parentNode.appendChild(tiempoDisplay);
+                    }
+                    tiempoDisplay.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>La hora de salida debe ser posterior a la hora de ingreso`;
+                }
+            } else {
+                const tiempoDisplay = document.getElementById('tiempo-calculado');
+                if (tiempoDisplay) {
+                    tiempoDisplay.remove();
+                }
+            }
+        }
+        
+        horaIngresoField.addEventListener('change', calcularTiempoTotal);
+        horaSalidaField.addEventListener('change', calcularTiempoTotal);
+        calcularTiempoTotal();
+    }
+    
+    // Gestión de materiales requeridos
+    const materialesSection = document.getElementById('materiales-section');
+    const solicitudField = document.getElementById('id_solicitud_servicio');
+    const inspeccionBadge = document.getElementById('inspeccion-badge');
+    
+    function toggleMaterialesSection() {
+        if (solicitudField) {
+            const solicitudId = solicitudField.value;
+            if (solicitudId) {
+                fetch(`/servicios/api/solicitud-tipo/${solicitudId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.tipo_servicio === 'inspeccion') {
+                            materialesSection.style.display = 'block';
+                            inspeccionBadge.style.display = 'inline-block';
+                        } else {
+                            materialesSection.style.display = 'block';
+                            inspeccionBadge.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.log('Error obteniendo tipo de servicio:', error);
+                        materialesSection.style.display = 'block';
+                    });
+            } else {
+                materialesSection.style.display = 'block';
+                inspeccionBadge.style.display = 'none';
+            }
+        }
+    }
+    
+    if (solicitudField) {
+        solicitudField.addEventListener('change', toggleMaterialesSection);
+        toggleMaterialesSection();
+    }
+    
+    // Gestión del formset dinámico de materiales
+    const totalFormsInput = document.querySelector('input[name="materialrequerido_set-TOTAL_FORMS"]');
+    let materialIndex = totalFormsInput ? parseInt(totalFormsInput.value) : 0;
+    
+    const addMaterialBtn = document.getElementById('add-material');
+    if (addMaterialBtn) {
+        addMaterialBtn.addEventListener('click', function() {
+            const emptyForm = `
+                <div class="material-form border rounded p-3 mb-3" style="background-color: #f8f9fa;">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="id_materialrequerido_set-${materialIndex}-descripcion">Descripción</label>
+                                <input type="text" name="materialrequerido_set-${materialIndex}-descripcion" class="form-control" maxlength="200" required id="id_materialrequerido_set-${materialIndex}-descripcion">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="id_materialrequerido_set-${materialIndex}-marca">Marca</label>
+                                <input type="text" name="materialrequerido_set-${materialIndex}-marca" class="form-control" maxlength="100" id="id_materialrequerido_set-${materialIndex}-marca">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="id_materialrequerido_set-${materialIndex}-referencia">Referencia</label>
+                                <input type="text" name="materialrequerido_set-${materialIndex}-referencia" class="form-control" maxlength="100" id="id_materialrequerido_set-${materialIndex}-referencia">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="id_materialrequerido_set-${materialIndex}-unidad_medida">Unidad de medida</label>
+                                <input type="text" name="materialrequerido_set-${materialIndex}-unidad_medida" value="Unidad" class="form-control" maxlength="50" required id="id_materialrequerido_set-${materialIndex}-unidad_medida">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="id_materialrequerido_set-${materialIndex}-cantidad">Cantidad</label>
+                                <input type="number" name="materialrequerido_set-${materialIndex}-cantidad" step="0.01" min="0" class="form-control" required id="id_materialrequerido_set-${materialIndex}-cantidad">
+                            </div>
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end mb-3">
+                            <button type="button" class="btn btn-danger btn-sm remove-material" title="Eliminar material">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <input type="hidden" name="materialrequerido_set-${materialIndex}-id" id="id_materialrequerido_set-${materialIndex}-id">
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            addMaterialBtn.insertAdjacentHTML('beforebegin', emptyForm);
+            materialIndex++;
+            if (totalFormsInput) {
+                totalFormsInput.value = materialIndex;
+            }
+        });
+    }
+    
+    // Gestión del formset dinámico de adjuntos
+    const totalAdjuntosInput = document.querySelector('input[name="adjuntoinforme_set-TOTAL_FORMS"]');
+    let adjuntoIndex = totalAdjuntosInput ? parseInt(totalAdjuntosInput.value) : 0;
+    
+    const addAdjuntoBtn = document.getElementById('add-adjunto');
+    if (addAdjuntoBtn) {
+        addAdjuntoBtn.addEventListener('click', function() {
+            const emptyAdjuntoForm = `
+                <div class="adjunto-form border rounded p-3 mb-3" style="background-color: #f8f9fa;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="id_adjuntoinforme_set-${adjuntoIndex}-archivo">Archivo</label>
+                                <input type="file" name="adjuntoinforme_set-${adjuntoIndex}-archivo" class="form-control" id="id_adjuntoinforme_set-${adjuntoIndex}-archivo" accept="image/*,application/pdf,.doc,.docx,.txt,.mp4,.avi,.mov,.mp3,.wav">
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="id_adjuntoinforme_set-${adjuntoIndex}-descripcion">Descripción</label>
+                                <input type="text" name="adjuntoinforme_set-${adjuntoIndex}-descripcion" class="form-control" maxlength="500" id="id_adjuntoinforme_set-${adjuntoIndex}-descripcion" placeholder="Descripción opcional del archivo">
+                            </div>
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end mb-3">
+                            <button type="button" class="btn btn-danger btn-sm remove-adjunto" title="Eliminar adjunto">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <input type="hidden" name="adjuntoinforme_set-${adjuntoIndex}-id" id="id_adjuntoinforme_set-${adjuntoIndex}-id">
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            addAdjuntoBtn.insertAdjacentHTML('beforebegin', emptyAdjuntoForm);
+            adjuntoIndex++;
+            if (totalAdjuntosInput) {
+                totalAdjuntosInput.value = adjuntoIndex;
+            }
+        });
+    }
+    
+    // Eliminar material y adjunto
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-material')) {
+            e.preventDefault();
+            const materialForm = e.target.closest('.material-form');
+            const deleteInput = materialForm.querySelector('input[name$="-DELETE"]');
+            
+            if (deleteInput) {
+                deleteInput.checked = true;
+                materialForm.style.display = 'none';
+            } else {
+                materialForm.remove();
+                const visibleForms = document.querySelectorAll('.material-form:not([style*="display: none"])');
+                if (totalFormsInput) {
+                    totalFormsInput.value = visibleForms.length;
+                }
+            }
+        }
+        
+        if (e.target.closest('.remove-adjunto')) {
+            e.preventDefault();
+            const adjuntoForm = e.target.closest('.adjunto-form');
+            const deleteInput = adjuntoForm.querySelector('input[name$="-DELETE"]');
+            
+            if (deleteInput) {
+                deleteInput.checked = true;
+                adjuntoForm.style.display = 'none';
+            } else {
+                adjuntoForm.remove();
+                const visibleAdjuntos = document.querySelectorAll('.adjunto-form:not([style*="display: none"])');
+                if (totalAdjuntosInput) {
+                    totalAdjuntosInput.value = visibleAdjuntos.length;
+                }
+            }
+        }
+    });
+
+    // Inicializar Signature Pads
+    const signaturePads = {};
+    
+    function initSignaturePad(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (canvas) {
+            const signaturePad = new SignaturePad(canvas, {
+                backgroundColor: '#f8f9fa',
+                penColor: '#000000',
+                minWidth: 1,
+                maxWidth: 3,
+            });
+            
+            signaturePads[canvasId] = signaturePad;
+            
+            // Responsive canvas
+            function resizeCanvas() {
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext('2d').scale(ratio, ratio);
+                signaturePad.clear();
+            }
+            
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+        }
+    }
+    
+    // Inicializar todos los canvas de firma
+    const signatureCanvases = ['tecnico-signature', 'cliente-signature', 'entrega-signature', 'recepcion-signature'];
+    signatureCanvases.forEach(initSignaturePad);
+});
+
+// Funciones globales para manejo de firmas
+function clearSignature(canvasId) {
+    if (window.signaturePads && window.signaturePads[canvasId]) {
+        window.signaturePads[canvasId].clear();
+    }
+}
+
+function saveSignature(canvasId, fieldName) {
+    if (window.signaturePads && window.signaturePads[canvasId]) {
+        const signaturePad = window.signaturePads[canvasId];
+        if (!signaturePad.isEmpty()) {
+            const dataURL = signaturePad.toDataURL();
+            const hiddenInput = document.getElementById(fieldName + '_data');
+            if (hiddenInput) {
+                hiddenInput.value = dataURL;
+                alert('Firma guardada correctamente');
+            }
+        } else {
+            alert('Por favor dibuje una firma antes de guardar');
+        }
+    }
+}
+</script>
+{% endblock %}

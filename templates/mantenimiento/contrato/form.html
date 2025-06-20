@@ -1,0 +1,251 @@
+{% extends 'base/form_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}Editar Contrato{% else %}Nuevo Contrato de Mantenimiento{% endif %} - Mantenimiento
+{% endblock %}
+
+{% block form_title %}
+    <i class="fas fa-file-contract me-2"></i>
+    {% if form.instance.pk %}Editar Contrato{% else %}Nuevo Contrato de Mantenimiento{% endif %}
+{% endblock %}
+
+{% block form_content %}
+<form method="post" enctype="multipart/form-data" id="contratoForm">
+    {% csrf_token %}
+    
+    <!-- CRM Integration -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <h6 class="m-0">Integración CRM (Opcional)</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form.trato_origen|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.cotizacion_aprobada|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Información del Contrato</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.cliente|as_crispy_field }}
+                    {{ form.nombre_contrato|as_crispy_field }}
+                    {{ form.tipo_contrato|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Vigencia</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.fecha_inicio|as_crispy_field }}
+                    {{ form.fecha_fin|as_crispy_field }}
+                    {{ form.meses_duracion|as_crispy_field }}
+                    {{ form.renovacion_automatica|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Términos Económicos</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.valor_mensual|as_crispy_field }}
+                    {{ form.valor_total_contrato|as_crispy_field }}
+                    {{ form.valor_hora_adicional|as_crispy_field }}
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.incluye_materiales|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.incluye_repuestos|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0">Cobertura</h6>
+                </div>
+                <div class="card-body">
+                    {{ form.horas_incluidas_mes|as_crispy_field }}
+                    {{ form.tiempo_respuesta_horas|as_crispy_field }}
+                    {{ form.disponibilidad_24_7|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Contacts -->
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0">Contactos y Responsables</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form.contacto_cliente|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.responsable_tecnico|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="m-0">Condiciones y Observaciones</h6>
+        </div>
+        <div class="card-body">
+            {{ form.condiciones_especiales|as_crispy_field }}
+            {{ form.observaciones|as_crispy_field }}
+            {{ form.clausulas_adicionales|as_crispy_field }}
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'mantenimiento:contrato_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>
+                    {% if form.instance.pk %}Actualizar{% else %}Crear{% endif %} Contrato
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar fechas
+    const fechaInicio = document.getElementById('id_fecha_inicio');
+    const fechaFin = document.getElementById('id_fecha_fin');
+    
+    // Establecer fecha mínima como hoy
+    const today = new Date().toISOString().split('T')[0];
+    if (fechaInicio) {
+        fechaInicio.setAttribute('min', today);
+    }
+    
+    // Cuando cambie la fecha de inicio, actualizar fecha mínima de fin
+    if (fechaInicio && fechaFin) {
+        fechaInicio.addEventListener('change', function() {
+            fechaFin.setAttribute('min', this.value);
+            
+            // Si la fecha de fin es menor que la de inicio, limpiarla
+            if (fechaFin.value && fechaFin.value < this.value) {
+                fechaFin.value = '';
+            }
+        });
+    }
+    
+    // Auto-generar número de contrato si está vacío
+    const numeroContrato = document.getElementById('id_numero_contrato');
+    const clienteField = document.getElementById('id_cliente');
+    
+    function generarNumeroContrato() {
+        if (numeroContrato.value.trim() === '' && clienteField.value) {
+            const clienteOption = clienteField.options[clienteField.selectedIndex];
+            
+            if (clienteOption) {
+                const clienteText = clienteOption.text;
+                const clienteCode = clienteText.split(' ').map(word => word.charAt(0)).join('').toUpperCase().substr(0, 3);
+                const year = new Date().getFullYear();
+                const timestamp = Date.now().toString().substr(-4);
+                
+                numeroContrato.value = `MANT-${clienteCode}-${year}-${timestamp}`;
+            }
+        }
+    }
+    
+    clienteField.addEventListener('change', generarNumeroContrato);
+    
+    // Validación del formulario
+    document.getElementById('contratoForm').addEventListener('submit', function(e) {
+        const numeroContratoVal = document.getElementById('id_numero_contrato').value.trim();
+        const cliente = document.getElementById('id_cliente').value;
+        const tipoContrato = document.getElementById('id_tipo_contrato').value;
+        const fechaInicioVal = document.getElementById('id_fecha_inicio').value;
+        const fechaFinVal = document.getElementById('id_fecha_fin').value;
+        const valorMensual = document.getElementById('id_valor_mensual').value;
+        
+        let errors = [];
+        
+        if (!numeroContratoVal) {
+            errors.push('El número de contrato es obligatorio.');
+        }
+        
+        if (!cliente) {
+            errors.push('Debe seleccionar un cliente.');
+        }
+        
+        if (!tipoContrato) {
+            errors.push('Debe seleccionar un tipo de contrato.');
+        }
+        
+        if (!fechaInicioVal) {
+            errors.push('La fecha de inicio es obligatoria.');
+        }
+        
+        if (!fechaFinVal) {
+            errors.push('La fecha de fin es obligatoria.');
+        }
+        
+        if (fechaInicioVal && fechaFinVal && fechaFinVal <= fechaInicioVal) {
+            errors.push('La fecha de fin debe ser posterior a la fecha de inicio.');
+        }
+        
+        if (!valorMensual || valorMensual <= 0) {
+            errors.push('El valor mensual debe ser mayor a cero.');
+        }
+        
+        if (errors.length > 0) {
+            e.preventDefault();
+            alert('Por favor corrija los siguientes errores:\n\n' + errors.join('\n'));
+            return false;
+        }
+    });
+    
+    // Formatear valores monetarios
+    const valorMensualField = document.getElementById('id_valor_mensual');
+    const valorHoraField = document.getElementById('id_valor_hora_adicional');
+    
+    [valorMensualField, valorHoraField].forEach(field => {
+        if (field) {
+            field.addEventListener('blur', function() {
+                const value = parseFloat(this.value);
+                if (!isNaN(value)) {
+                    this.value = value.toFixed(2);
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

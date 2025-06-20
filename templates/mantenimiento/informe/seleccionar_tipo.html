@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Seleccionar Tipo de Informe - Mantenimiento{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-clipboard-list me-2"></i>Seleccionar Tipo de Informe
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:dashboard' %}">Mantenimiento</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:actividad_list' %}">Actividades</a></li>
+                    {% if actividad %}
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:actividad_detail' actividad.pk %}">{{ actividad.codigo_actividad }}</a></li>
+                    {% endif %}
+                    <li class="breadcrumb-item active">Tipo de Informe</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            {% if actividad %}
+            <a href="{% url 'mantenimiento:actividad_detail' actividad.pk %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Volver
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+    </div>
+    {% elif actividad %}
+    
+    <!-- Información de la Actividad -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="m-0">
+                <i class="fas fa-info-circle me-2"></i>Información de la Actividad
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Código:</strong> {{ actividad.codigo_actividad }}</p>
+                    <p><strong>Título:</strong> {{ actividad.titulo }}</p>
+                    <p><strong>Cliente:</strong> {{ actividad.hoja_vida_equipo.cliente.nombre }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Equipo:</strong> {{ actividad.hoja_vida_equipo.equipo.marca }} {{ actividad.hoja_vida_equipo.equipo.modelo }}</p>
+                    <p><strong>Código Interno:</strong> {{ actividad.hoja_vida_equipo.codigo_interno }}</p>
+                    <p><strong>Fecha Programada:</strong> {{ actividad.fecha_programada|date:"d/m/Y H:i" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Selección de Tipo de Informe -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="m-0">
+                <i class="fas fa-clipboard-check me-2"></i>Seleccione el Tipo de Informe
+            </h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-4">
+                Seleccione el tipo de informe que mejor se adapte al equipo y al tipo de mantenimiento realizado.
+            </p>
+            
+            <div class="row">
+                {% for tipo_key, tipo_nombre in tipos_informe %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100 hover-shadow">
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                {% if tipo_key == 'unidades_paquetes_condensados' %}
+                                    <i class="fas fa-snowflake fa-3x text-primary"></i>
+                                {% elif tipo_key == 'coleccion_polvo' %}
+                                    <i class="fas fa-filter fa-3x text-warning"></i>
+                                {% elif tipo_key == 'unidades_enfriador_agua' %}
+                                    <i class="fas fa-tint fa-3x text-info"></i>
+                                {% elif tipo_key == 'unidad_manejadora' %}
+                                    <i class="fas fa-cogs fa-3x text-success"></i>
+                                {% elif tipo_key == 'unidades_fancoil' %}
+                                    <i class="fas fa-fan fa-3x text-secondary"></i>
+                                {% elif tipo_key == 'unidades_condensadoras' %}
+                                    <i class="fas fa-compress fa-3x text-dark"></i>
+                                {% elif tipo_key == 'ventilador_extraccion' %}
+                                    <i class="fas fa-wind fa-3x text-primary"></i>
+                                {% elif tipo_key == 'unidades_ventilacion' %}
+                                    <i class="fas fa-air-freshener fa-3x text-info"></i>
+                                {% else %}
+                                    <i class="fas fa-clipboard-list fa-3x text-muted"></i>
+                                {% endif %}
+                            </div>
+                            <h6 class="card-title">{{ tipo_nombre }}</h6>
+                            
+                            {% if tipo_key == 'unidades_paquetes_condensados' %}
+                                <a href="{% url 'mantenimiento:informe_unidad_paquete_create' actividad.pk %}" 
+                                   class="btn btn-primary">
+                                    <i class="fas fa-plus me-1"></i>Crear Informe
+                                </a>
+                            {% elif tipo_key == 'coleccion_polvo' %}
+                                <a href="{% url 'mantenimiento:informe_coleccion_polvo_create' actividad.pk %}" 
+                                   class="btn btn-warning">
+                                    <i class="fas fa-plus me-1"></i>Crear Informe
+                                </a>
+                            {% else %}
+                                <button class="btn btn-outline-secondary" disabled>
+                                    <i class="fas fa-clock me-1"></i>Próximamente
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+
+<style>
+.hover-shadow {
+    transition: box-shadow 0.15s ease-in-out;
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}

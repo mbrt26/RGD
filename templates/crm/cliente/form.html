@@ -21,16 +21,19 @@
                     <div class="row">
                         <div class="col-md-6">
                             {{ form.nombre|as_crispy_field }}
+                            {{ form.sector_actividad|as_crispy_field }}
+                            {{ form.nit|as_crispy_field }}
                             {{ form.correo|as_crispy_field }}
-                            {{ form.telefono|as_crispy_field }}
-                            {{ form.direccion_linea1|as_crispy_field }}
-                            {{ form.direccion_linea2|as_crispy_field }}
                         </div>
                         <div class="col-md-6">
+                            {{ form.telefono|as_crispy_field }}
                             {{ form.ciudad|as_crispy_field }}
                             {{ form.estado|as_crispy_field }}
-                            {{ form.pais|as_crispy_field }}
-                            {{ form.codigo_postal|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            {{ form.direccion|as_crispy_field }}
                         </div>
                     </div>
                 </div>
@@ -44,21 +47,13 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="rut" class="form-label">RUT de la empresa</label>
-                                {{ form.rut }}
-                                <small class="form-text text-muted">Documento RUT o identificación fiscal de la empresa</small>
-                            </div>
+                            {{ form.rut|as_crispy_field }}
+                            {{ form.cedula|as_crispy_field }}
+                            {{ form.ef|as_crispy_field }}
                         </div>
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="documentos" class="form-label">Documentos adicionales</label>
-                                <input type="file" name="documentos" id="documentos" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
-                                <small class="form-text text-muted">
-                                    <i class="fas fa-info-circle"></i> Puede seleccionar múltiples archivos<br>
-                                    <i class="fas fa-file-alt"></i> Formatos permitidos: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG
-                                </small>
-                            </div>
+                            {{ form.camara|as_crispy_field }}
+                            {{ form.formulario_vinculacion|as_crispy_field }}
                         </div>
                     </div>
                 </div>

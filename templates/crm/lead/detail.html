@@ -1,0 +1,223 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ lead.nombre }} | Detalle de Lead{% endblock %}
+
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'crm:lead_list' %}">Leads</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ lead.nombre }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Información Principal -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-user-tag me-2"></i>{{ lead.nombre }}
+                        {% if lead.empresa %}
+                            <small class="text-muted">- {{ lead.empresa }}</small>
+                        {% endif %}
+                    </h5>
+                    <div>
+                        <span class="badge {{ lead.get_estado_class }} me-2">{{ lead.get_estado_display }}</span>
+                        <a href="{% url 'crm:lead_update' lead.id %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-edit"></i> Editar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-3"><i class="fas fa-id-card me-2"></i>Información Personal</h6>
+                            <dl class="row">
+                                <dt class="col-sm-4">Nombre:</dt>
+                                <dd class="col-sm-8"><strong>{{ lead.nombre }}</strong></dd>
+                                
+                                {% if lead.empresa %}
+                                <dt class="col-sm-4">Empresa:</dt>
+                                <dd class="col-sm-8">{{ lead.empresa }}</dd>
+                                {% endif %}
+                                
+                                {% if lead.cargo %}
+                                <dt class="col-sm-4">Cargo:</dt>
+                                <dd class="col-sm-8">{{ lead.cargo }}</dd>
+                                {% endif %}
+                                
+                                <dt class="col-sm-4">Email:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="mailto:{{ lead.correo }}">{{ lead.correo }}</a>
+                                </dd>
+                                
+                                {% if lead.telefono %}
+                                <dt class="col-sm-4">Teléfono:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="tel:{{ lead.telefono }}">{{ lead.telefono }}</a>
+                                </dd>
+                                {% endif %}
+                                
+                                {% if lead.sector_actividad %}
+                                <dt class="col-sm-4">Sector:</dt>
+                                <dd class="col-sm-8">{{ lead.get_sector_actividad_display }}</dd>
+                                {% endif %}
+                            </dl>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="text-success mb-3"><i class="fas fa-chart-line me-2"></i>Información de Seguimiento</h6>
+                            <dl class="row">
+                                <dt class="col-sm-4">Estado:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge {{ lead.get_estado_class }}">{{ lead.get_estado_display }}</span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Fuente:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-secondary">{{ lead.get_fuente_display }}</span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Nivel de Interés:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge {{ lead.get_interes_class }}">{{ lead.get_nivel_interes_display }}</span>
+                                </dd>
+                                
+                                {% if lead.presupuesto_estimado %}
+                                <dt class="col-sm-4">Presupuesto:</dt>
+                                <dd class="col-sm-8">
+                                    <strong class="text-success">${{ lead.presupuesto_estimado|floatformat:2|intcomma }}</strong>
+                                </dd>
+                                {% endif %}
+                                
+                                <dt class="col-sm-4">Primer Contacto:</dt>
+                                <dd class="col-sm-8">{{ lead.fecha_contacto_inicial|date:"d/m/Y" }}</dd>
+                                
+                                <dt class="col-sm-4">Última Interacción:</dt>
+                                <dd class="col-sm-8">{{ lead.fecha_ultima_interaccion|date:"d/m/Y" }}</dd>
+                                
+                                {% if lead.responsable %}
+                                <dt class="col-sm-4">Responsable:</dt>
+                                <dd class="col-sm-8">{{ lead.responsable.get_full_name|default:lead.responsable.username }}</dd>
+                                {% endif %}
+                            </dl>
+                        </div>
+                    </div>
+                    
+                    {% if lead.necesidad %}
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h6 class="text-warning mb-3"><i class="fas fa-lightbulb me-2"></i>Necesidad/Problema</h6>
+                            <div class="bg-light p-3 rounded">
+                                {{ lead.necesidad|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if lead.notas %}
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h6 class="text-info mb-3"><i class="fas fa-sticky-note me-2"></i>Notas</h6>
+                            <div class="bg-light p-3 rounded">
+                                {{ lead.notas|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Información de Conversión -->
+            {% if lead.esta_convertido %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-check-circle text-success me-2"></i>Lead Convertido
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if lead.convertido_a_cliente %}
+                    <p><strong>Convertido a Cliente:</strong> 
+                        <a href="{% url 'crm:cliente_detail' lead.convertido_a_cliente.id %}">
+                            {{ lead.convertido_a_cliente.nombre }}
+                        </a>
+                    </p>
+                    {% endif %}
+                    
+                    {% if lead.convertido_a_trato %}
+                    <p><strong>Convertido a ProyectoCRM:</strong> 
+                        <a href="{% url 'crm:trato_detail' lead.convertido_a_trato.id %}">
+                            #{{ lead.convertido_a_trato.numero_oferta }} - {{ lead.convertido_a_trato.nombre }}
+                        </a>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Acciones Rápidas -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Acciones</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'crm:lead_update' lead.id %}" class="btn btn-primary">
+                            <i class="fas fa-edit me-2"></i>Editar Lead
+                        </a>
+                        
+                        {% if lead.puede_convertir %}
+                        <a href="{% url 'crm:lead_convert' lead.id %}" class="btn btn-success">
+                            <i class="fas fa-exchange-alt me-2"></i>Convertir Lead
+                        </a>
+                        {% endif %}
+                        
+                        <a href="mailto:{{ lead.correo }}" class="btn btn-outline-primary">
+                            <i class="fas fa-envelope me-2"></i>Enviar Email
+                        </a>
+                        
+                        {% if lead.telefono %}
+                        <a href="tel:{{ lead.telefono }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-phone me-2"></i>Llamar
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Información Adicional -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Información Adicional</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-6">Creado:</dt>
+                        <dd class="col-6">{{ lead.fecha_creacion|date:"d/m/Y" }}</dd>
+                        
+                        <dt class="col-6">Actualizado:</dt>
+                        <dd class="col-6">{{ lead.fecha_actualizacion|timesince }} atrás</dd>
+                        
+                        {% if lead.creado_por %}
+                        <dt class="col-6">Creado por:</dt>
+                        <dd class="col-6">{{ lead.creado_por.get_full_name|default:lead.creado_por.username }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

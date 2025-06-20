@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block title %}Técnicos - Servicios{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-users me-2"></i>Técnicos de Servicios
+        </h1>
+        <div>
+            <a href="{% url 'servicios:tecnico_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Nuevo Técnico
+            </a>
+        </div>
+    </div>
+
+    <!-- Card with table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Lista de Técnicos</h6>
+        </div>
+        <div class="card-body">
+
+            <!-- Filters -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <form method="get" class="d-flex">
+                        <input type="text" class="form-control" name="q" placeholder="Buscar por código, nombre o especialidad..." 
+                               value="{{ request.GET.q }}">
+                        <button type="submit" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <form method="get" class="d-flex">
+                        <select name="activo" class="form-control me-2">
+                            <option value="">Todos los estados</option>
+                            <option value="1" {% if request.GET.activo == '1' %}selected{% endif %}>Activos</option>
+                            <option value="0" {% if request.GET.activo == '0' %}selected{% endif %}>Inactivos</option>
+                        </select>
+                        <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        <button type="submit" class="btn btn-outline-secondary">Filtrar</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre Completo</th>
+                            <th>Teléfono</th>
+                            <th>Especialidades</th>
+                            <th>Estado</th>
+                            <th>Fecha Registro</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tecnico in tecnicos %}
+                        <tr>
+                            <td>
+                                <strong>{{ tecnico.codigo_tecnico }}</strong>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                         style="width: 32px; height: 32px;">
+                                        <i class="fas fa-user text-white"></i>
+                                    </div>
+                                    <div>
+                                        <div>{{ tecnico.nombre_completo }}</div>
+                                        <small class="text-muted">{{ tecnico.usuario.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ tecnico.telefono|default:"-" }}</td>
+                            <td>
+                                {% if tecnico.especialidades %}
+                                    <span class="text-muted">{{ tecnico.especialidades|truncatechars:50 }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if tecnico.activo %}
+                                    <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ tecnico.fecha_creacion|date:"d/m/Y" }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'servicios:tecnico_detail' tecnico.pk %}" 
+                                       class="btn btn-outline-info btn-sm" title="Ver detalle">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'servicios:tecnico_update' tecnico.pk %}" 
+                                       class="btn btn-outline-primary btn-sm" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-user-times fa-3x mb-3"></i>
+                                    <p>No se encontraron técnicos.</p>
+                                    <a href="{% url 'servicios:tecnico_create' %}" class="btn btn-primary">
+                                        <i class="fas fa-plus me-1"></i>Registrar Primer Técnico
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.activo %}&activo={{ request.GET.activo }}{% endif %}">Primera</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.activo %}&activo={{ request.GET.activo }}{% endif %}">Anterior</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.activo %}&activo={{ request.GET.activo }}{% endif %}">Siguiente</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.activo %}&activo={{ request.GET.activo }}{% endif %}">Última</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

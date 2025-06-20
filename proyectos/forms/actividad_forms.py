@@ -1,6 +1,6 @@
 from django import forms
 from django.forms import DateInput, Select
-from proyectos.models import Actividad, Proyecto
+from proyectos.models import Actividad, Proyecto, Colaborador
 
 class ProyectoChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
@@ -20,6 +20,7 @@ class ActividadForm(forms.ModelForm):
         fields = [
             'proyecto', 'actividad', 'inicio', 'fin',
             'duracion', 'estado', 'avance', 'predecesoras',
+            'responsable_asignado', 'responsable_ejecucion',
             'observaciones', 'adjuntos'
         ]
         widgets = {
@@ -38,4 +39,23 @@ class ActividadForm(forms.ModelForm):
                 'id': 'id_duracion',
                 'min': '1'
             }),
+            'responsable_asignado': forms.Select(attrs={
+                'class': 'form-control',
+                'id': 'id_responsable_asignado'
+            }),
+            'responsable_ejecucion': forms.Select(attrs={
+                'class': 'form-control',
+                'id': 'id_responsable_ejecucion'
+            }),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Configurar el queryset para responsable_asignado
+        self.fields['responsable_asignado'].queryset = Colaborador.objects.all().order_by('nombre')
+        self.fields['responsable_asignado'].empty_label = "--- Seleccione un colaborador ---"
+        
+        # Agregar help text
+        self.fields['responsable_asignado'].help_text = 'Colaborador de RGD Aire responsable de esta actividad'
+        self.fields['responsable_ejecucion'].help_text = 'Indica quién ejecutará la actividad'

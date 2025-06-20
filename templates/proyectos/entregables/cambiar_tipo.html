@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Cambiar Tipo de Entregables - {{ proyecto.nombre_proyecto }} | {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .fase-section {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .fase-header {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        font-weight: 600;
+    }
+    
+    .entregable-item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s ease;
+    }
+    
+    .entregable-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .entregable-item:last-child {
+        border-bottom: none;
+    }
+    
+    .obligatorio-toggle {
+        transform: scale(1.2);
+    }
+    
+    .regla-negocio {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .fase-definitiva {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+    }
+    
+    .fase-definitiva .entregable-item {
+        opacity: 0.7;
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h1 class="card-title mb-0">
+                                <i class="fas fa-toggle-on me-2"></i>
+                                Configurar Tipos de Entregables
+                            </h1>
+                            <p class="text-muted mb-0">{{ proyecto.nombre_proyecto }} - {{ proyecto.cliente }}</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="{% url 'proyectos:gestion_entregables' %}?proyecto={{ proyecto.id }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Volver a Gestión
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Información del Proyecto -->
+                    <div class="stats-card">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h3 class="mb-1">{{ proyecto.nombre_proyecto }}</h3>
+                                <p class="mb-1"><strong>Cliente:</strong> {{ proyecto.cliente }}</p>
+                                <p class="mb-0"><strong>Centro de Costos:</strong> {{ proyecto.centro_costos }}</p>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <h2 class="mb-0">{{ proyecto.entregables_proyecto.count }}</h2>
+                                <small>Entregables Totales</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reglas de Negocio -->
+                    <div class="regla-negocio">
+                        <h5><i class="fas fa-info-circle me-2"></i>Reglas de Configuración</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-danger">Fases con Entregables Obligatorios:</h6>
+                                <ul class="mb-0">
+                                    <li><strong>Definición (Legalización):</strong> Todos obligatorios</li>
+                                    <li><strong>Planeación:</strong> Todos obligatorios</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-success">Fases Configurables:</h6>
+                                <ul class="mb-0">
+                                    <li><strong>Ejecución:</strong> Configure según necesidades del proyecto</li>
+                                    <li><strong>Entrega Administrativa:</strong> Configure según requerimientos</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulario de Configuración -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% for fase, entregables in entregables_por_fase.items %}
+                        {% if entregables %}
+                        <div class="fase-section {% if fase == 'Definición' or fase == 'Planeación' %}fase-definitiva{% endif %}">
+                            <div class="fase-header">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h4 class="mb-0">
+                                            {% if fase == 'Definición' %}
+                                                <i class="fas fa-file-contract me-2"></i>{{ fase }} (Legalización)
+                                                <span class="badge bg-danger ms-2">Todos Obligatorios</span>
+                                            {% elif fase == 'Planeación' %}
+                                                <i class="fas fa-calendar-alt me-2"></i>{{ fase }}
+                                                <span class="badge bg-danger ms-2">Todos Obligatorios</span>
+                                            {% elif fase == 'Ejecución' %}
+                                                <i class="fas fa-cogs me-2"></i>{{ fase }}
+                                                <span class="badge bg-success ms-2">Configurable</span>
+                                            {% elif fase == 'Entrega' %}
+                                                <i class="fas fa-shipping-fast me-2"></i>{{ fase }} Administrativa
+                                                <span class="badge bg-success ms-2">Configurable</span>
+                                            {% endif %}
+                                        </h4>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        {% if fase == 'Ejecución' or fase == 'Entrega' %}
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-success" 
+                                                    onclick="selectAllInPhase('{{ fase }}', true)">
+                                                <i class="fas fa-check-double me-1"></i> Todos Obligatorios
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-warning" 
+                                                    onclick="selectAllInPhase('{{ fase }}', false)">
+                                                <i class="fas fa-times me-1"></i> Todos Opcionales
+                                            </button>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="fase-body">
+                                {% for entregable in entregables %}
+                                <div class="entregable-item" data-fase="{{ fase }}">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-1">
+                                            <div class="form-check">
+                                                <input type="checkbox" 
+                                                       class="form-check-input obligatorio-toggle" 
+                                                       name="entregables_obligatorios" 
+                                                       value="{{ entregable.id }}"
+                                                       id="obligatorio_{{ entregable.id }}"
+                                                       {% if entregable.obligatorio or fase == 'Definición' or fase == 'Planeación' %}checked{% endif %}
+                                                       {% if fase == 'Definición' or fase == 'Planeación' %}disabled{% endif %}>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <strong class="text-primary">{{ entregable.codigo }}</strong>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="obligatorio_{{ entregable.id }}" class="form-check-label">
+                                                <strong>{{ entregable.nombre }}</strong>
+                                            </label>
+                                            {% if entregable.observaciones %}
+                                                <br><small class="text-muted">{{ entregable.observaciones|truncatechars:80 }}</small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <small class="text-muted">
+                                                <strong>Creador:</strong> {{ entregable.creador }}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <span class="badge" id="badge_{{ entregable.id }}">
+                                                {% if entregable.obligatorio or fase == 'Definición' or fase == 'Planeación' %}
+                                                    <span class="badge bg-danger">Obligatorio</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Opcional</span>
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="entregable-item text-center text-muted">
+                                    No hay entregables definidos para esta fase.
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+
+                        <!-- Resumen de Cambios -->
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Resumen de Configuración</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row" id="resumen-stats">
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <h4 class="mb-0 text-danger" id="total-obligatorios">0</h4>
+                                                    <small>Obligatorios</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <h4 class="mb-0 text-secondary" id="total-opcionales">0</h4>
+                                                    <small>Opcionales</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <h4 class="mb-0 text-info" id="total-entregables">{{ proyecto.entregables_proyecto.count }}</h4>
+                                                    <small>Total</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <h4 class="mb-0 text-success" id="porcentaje-obligatorios">0%</h4>
+                                                    <small>% Obligatorios</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'proyectos:gestion_entregables' %}?proyecto={{ proyecto.id }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i> Guardar Configuración
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    // Actualizar resumen inicial
+    updateResumen();
+    
+    // Detectar cambios en checkboxes
+    $('.obligatorio-toggle').on('change', function() {
+        const entregableId = $(this).val();
+        const isChecked = $(this).is(':checked');
+        
+        // Actualizar badge
+        updateBadge(entregableId, isChecked);
+        
+        // Actualizar resumen
+        updateResumen();
+    });
+    
+    // Confirmar antes de enviar
+    $('form').on('submit', function(e) {
+        if (!confirm('¿Está seguro de que desea guardar esta configuración de entregables?')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
+
+// Función para seleccionar/deseleccionar todos en una fase
+function selectAllInPhase(fase, obligatorio) {
+    $(`.entregable-item[data-fase="${fase}"] .obligatorio-toggle:not(:disabled)`).each(function() {
+        $(this).prop('checked', obligatorio);
+        const entregableId = $(this).val();
+        updateBadge(entregableId, obligatorio);
+    });
+    updateResumen();
+}
+
+// Función para actualizar el badge de un entregable
+function updateBadge(entregableId, isObligatorio) {
+    const badge = $(`#badge_${entregableId} .badge`);
+    if (isObligatorio) {
+        badge.removeClass('bg-secondary').addClass('bg-danger').text('Obligatorio');
+    } else {
+        badge.removeClass('bg-danger').addClass('bg-secondary').text('Opcional');
+    }
+}
+
+// Función para actualizar el resumen de estadísticas
+function updateResumen() {
+    const totalEntregables = {{ proyecto.entregables_proyecto.count }};
+    const obligatorios = $('.obligatorio-toggle:checked').length;
+    const opcionales = totalEntregables - obligatorios;
+    const porcentaje = Math.round((obligatorios / totalEntregables) * 100);
+    
+    $('#total-obligatorios').text(obligatorios);
+    $('#total-opcionales').text(opcionales);
+    $('#porcentaje-obligatorios').text(porcentaje + '%');
+}
+</script>
+{% endblock %}

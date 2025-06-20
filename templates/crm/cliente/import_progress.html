@@ -1,0 +1,259 @@
+{% extends "base/base.html" %}
+
+{% block title %}Importando Clientes{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-upload me-2"></i>Importando Clientes
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Archivo:</strong> {{ filename }}
+                    </div>
+                    
+                    <!-- Barra de progreso -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span id="progress-text">Preparando importación...</span>
+                            <span id="progress-percentage">0%</span>
+                        </div>
+                        <div class="progress" style="height: 25px;">
+                            <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                <span id="progress-count">0 / 0</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Estado de la importación -->
+                    <div id="import-status">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title text-primary">
+                                            <i class="fas fa-list-ol"></i> Total
+                                        </h5>
+                                        <h3 id="total-count" class="text-primary">-</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title text-success">
+                                            <i class="fas fa-check-circle"></i> Creados
+                                        </h5>
+                                        <h3 id="created-count" class="text-success">-</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title text-danger">
+                                            <i class="fas fa-exclamation-triangle"></i> Errores
+                                        </h5>
+                                        <h3 id="error-count" class="text-danger">-</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Lista de errores -->
+                    <div id="error-list" class="mt-4" style="display: none;">
+                        <h5 class="text-danger">
+                            <i class="fas fa-exclamation-triangle"></i> Errores encontrados:
+                        </h5>
+                        <div class="alert alert-danger">
+                            <ul id="error-items" class="mb-0"></ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Mensaje de completado -->
+                    <div id="completion-message" class="mt-4" style="display: none;">
+                        <div class="alert alert-success">
+                            <h5 class="alert-heading">
+                                <i class="fas fa-check-circle"></i> ¡Importación completada!
+                            </h5>
+                            <p class="mb-0">
+                                La importación se ha completado exitosamente. 
+                                <span id="final-summary"></span>
+                            </p>
+                        </div>
+                        <div class="text-center">
+                            <a href="{% url 'crm:cliente_list' %}" class="btn btn-primary">
+                                <i class="fas fa-list"></i> Ver Lista de Clientes
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Mensaje de error general -->
+                    <div id="error-message" class="mt-4" style="display: none;">
+                        <div class="alert alert-danger">
+                            <h5 class="alert-heading">
+                                <i class="fas fa-times-circle"></i> Error en la importación
+                            </h5>
+                            <p id="error-text" class="mb-0"></p>
+                        </div>
+                        <div class="text-center">
+                            <a href="{% url 'crm:cliente_import' %}" class="btn btn-secondary">
+                                <i class="fas fa-redo"></i> Intentar de nuevo
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const importId = '{{ import_id }}';
+    const filename = '{{ filename }}';
+    
+    // Iniciar la importación automáticamente
+    startImport();
+    
+    function startImport() {
+        // Iniciar el procesamiento de la importación
+        fetch(`{% url 'crm:cliente_import_process' import_id='PLACEHOLDER' %}`.replace('PLACEHOLDER', importId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                showError(data.error);
+            } else {
+                // Dar un poco de tiempo para que se procese antes de empezar a verificar
+                setTimeout(() => {
+                    updateProgress();
+                }, 500);
+            }
+        })
+        .catch(error => {
+            console.error('Error al iniciar importación:', error);
+            showError(`Error al iniciar la importación: ${error.message}`);
+        });
+    }
+    
+    function updateProgress() {
+        fetch(`{% url 'crm:cliente_import_status' import_id='PLACEHOLDER' %}`.replace('PLACEHOLDER', importId))
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                
+                const { status, total, processed, created, errors } = data;
+                
+                // Actualizar contadores
+                document.getElementById('total-count').textContent = total || 0;
+                document.getElementById('created-count').textContent = created || 0;
+                document.getElementById('error-count').textContent = errors ? errors.length : 0;
+                
+                if (total > 0) {
+                    const percentage = Math.round((processed / total) * 100);
+                    
+                    // Actualizar barra de progreso
+                    const progressBar = document.getElementById('progress-bar');
+                    progressBar.style.width = percentage + '%';
+                    progressBar.setAttribute('aria-valuenow', percentage);
+                    
+                    document.getElementById('progress-percentage').textContent = percentage + '%';
+                    document.getElementById('progress-count').textContent = `${processed} / ${total}`;
+                    
+                    if (status === 'processing') {
+                        document.getElementById('progress-text').textContent = 'Procesando registros...';
+                    }
+                }
+                
+                // Mostrar errores si existen
+                if (errors && errors.length > 0) {
+                    showErrors(errors);
+                }
+                
+                // Verificar si está completado
+                if (status === 'completed') {
+                    showCompletion(total, created, errors ? errors.length : 0);
+                } else if (status === 'error') {
+                    showError(data.error || 'Error desconocido en la importación');
+                } else if (status === 'processing' || status === 'ready') {
+                    // Continuar actualizando el progreso con backoff exponencial
+                    setTimeout(updateProgress, status === 'ready' ? 2000 : 1000);
+                } else {
+                    // Estado desconocido, reintentar en 2 segundos
+                    setTimeout(updateProgress, 2000);
+                }
+            })
+            .catch(error => {
+                console.error('Error al obtener progreso:', error);
+                // Reintentar en caso de error de red, pero con delay más largo
+                setTimeout(() => {
+                    updateProgress();
+                }, 3000);
+            });
+    }
+    
+    function showErrors(errorList) {
+        const errorListDiv = document.getElementById('error-list');
+        const errorItems = document.getElementById('error-items');
+        
+        errorItems.innerHTML = '';
+        errorList.forEach(error => {
+            const li = document.createElement('li');
+            li.textContent = error;
+            errorItems.appendChild(li);
+        });
+        
+        errorListDiv.style.display = 'block';
+    }
+    
+    function showCompletion(total, created, errorCount) {
+        document.getElementById('progress-text').textContent = '¡Importación completada!';
+        document.getElementById('progress-bar').classList.remove('progress-bar-animated');
+        document.getElementById('progress-bar').classList.add('bg-success');
+        
+        const summaryText = `Se procesaron ${total} registros, se crearon ${created} clientes${errorCount > 0 ? ` y se encontraron ${errorCount} errores` : ''}.`;
+        document.getElementById('final-summary').textContent = summaryText;
+        document.getElementById('completion-message').style.display = 'block';
+    }
+    
+    function showError(errorMessage) {
+        document.getElementById('progress-text').textContent = 'Error en la importación';
+        document.getElementById('progress-bar').classList.remove('progress-bar-animated');
+        document.getElementById('progress-bar').classList.add('bg-danger');
+        
+        document.getElementById('error-text').textContent = errorMessage;
+        document.getElementById('error-message').style.display = 'block';
+    }
+});
+</script>
+{% endblock %}

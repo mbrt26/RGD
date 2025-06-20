@@ -1,23 +1,292 @@
-{% extends 'base/form_base.html' %}
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
 
 {% block title %}{{ form.instance.pk|yesno:"Editar,Nuevo" }} Proyecto{% endblock %}
 
-{% block form_title %}
-    {% if form.instance.pk %}
-        Editar Proyecto {{ form.instance.nombre_proyecto }}
-    {% else %}
-        Nuevo Proyecto
-    {% endif %}
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .fecha-calculada-highlight {
+        animation: highlight 2s ease-in-out;
+    }
+    
+    @keyframes highlight {
+        0% { background-color: #fff3cd; }
+        50% { background-color: #ffeaa7; }
+        100% { background-color: #fff3cd; }
+    }
+    
+    .dias-warning {
+        color: #856404;
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .dias-success {
+        color: #155724;
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+    }
+</style>
 {% endblock %}
 
-{% block extra_fields %}
-    {% if form.instance.pk %}
-        <div class="mb-3">
-            <p class="text-muted">Creado el: {{ form.instance.fecha_creacion|date:"d/m/Y H:i" }}</p>
-            <p class="text-muted">Estado: {{ form.instance.get_estado_display }}</p>
-            <p class="text-muted">Avance: {{ form.instance.avance }}%</p>
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    {% if form.instance.pk %}
+                        <i class="fas fa-edit"></i> Editar Proyecto: {{ form.instance.nombre_proyecto }}
+                    {% else %}
+                        <i class="fas fa-plus"></i> Nuevo Proyecto
+                    {% endif %}
+                </h3>
+            </div>
+            <div class="card-body">
+                {% if form.instance.pk %}
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="alert alert-info">
+                                <strong>Información del Proyecto:</strong><br>
+                                <small>Creado el: {{ form.instance.fecha_creacion|date:"d/m/Y H:i" }}</small><br>
+                                <small>Estado: {{ form.instance.get_estado_display }}</small><br>
+                                <small>Avance: {{ form.instance.avance }}%</small>
+                            </div>
+                        </div>
+                        {% if form.instance.trato %}
+                        <div class="col-md-6">
+                            <div class="alert alert-success">
+                                <strong>Trato Asociado:</strong><br>
+                                <small>ID: {{ form.instance.trato.id }}</small><br>
+                                <small>Oferta: {{ form.instance.trato.numero_oferta|default:"Sin número" }}</small><br>
+                                <small>Valor: ${{ form.instance.trato.valor|floatformat:0 }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+                
+                {% include "includes/form_errors.html" %}
+                
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Información Básica -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-info-circle"></i> Información Básica</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.trato|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.cliente|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.centro_costos|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.orden_contrato|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    {{ form.nombre_proyecto|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.dias_prometidos|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Fechas y Plazos -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-calendar"></i> Fechas, Plazos y Avance</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Fechas -->
+                            <div class="row">
+                                <div class="col-md-4">
+                                    {{ form.fecha_inicio|as_crispy_field }}
+                                    <small class="form-text text-info">
+                                        <i class="fas fa-info-circle"></i> Al cambiar la fecha de inicio, se recalculará automáticamente la fecha fin basada en los días prometidos.
+                                    </small>
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.fecha_fin|as_crispy_field }}
+                                    <div class="alert alert-warning p-2" id="fecha-fin-calculada" style="display: none;">
+                                        <small><i class="fas fa-calculator"></i> <strong>Fecha calculada:</strong> <span id="nueva-fecha-fin"></span></small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    {% if form.fecha_fin_real %}
+                                        {{ form.fecha_fin_real|as_crispy_field }}
+                                        {% if not form.instance.pk %}
+                                            <small class="form-text text-muted">(Se completará automáticamente al finalizar el proyecto)</small>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Información de días prometidos -->
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    <div class="alert alert-info p-2">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-3">
+                                                <small><strong>Días prometidos:</strong> <span id="dias-display">{{ form.instance.dias_prometidos|default:'0' }}</span> días</small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small><strong>Duración calculada:</strong> <span id="duracion-actual">0</span> días</small>
+                                            </div>
+                                            <div class="col-md-5">
+                                                <small id="diferencia-dias" class="text-muted">Diferencia: 0 días</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Avance -->
+                            <hr class="my-3">
+                            <h6 class="mb-3"><i class="fas fa-chart-line"></i> Control de Avance</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {% if form.avance_planeado %}
+                                        {{ form.avance_planeado|as_crispy_field }}
+                                        {% if not form.instance.pk %}
+                                            <small class="form-text text-muted">(Avance esperado según cronograma inicial)</small>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    {% if form.avance %}
+                                        {{ form.avance|as_crispy_field }}
+                                        {% if not form.instance.pk %}
+                                            <small class="form-text text-muted">(Avance real - se actualizará conforme avance el proyecto)</small>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Presupuesto -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-dollar-sign"></i> Presupuesto</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.presupuesto|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {% if form.gasto_real %}
+                                        {{ form.gasto_real|as_crispy_field }}
+                                        {% if not form.instance.pk %}
+                                            <small class="form-text text-muted">(Opcional - se actualizará conforme se ejecute el proyecto)</small>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Estado del Proyecto -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-tasks"></i> Estado del Proyecto</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.estado|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    <!-- Espacio reservado para futuras adiciones -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Equipo del Proyecto -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-users"></i> Equipo del Proyecto</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.director_proyecto|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.ingeniero_residente|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Cotización Aprobada -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-file-invoice"></i> Cotización Aprobada</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    {{ form.cotizacion_aprobada|as_crispy_field }}
+                                    <small class="form-text text-muted">
+                                        Seleccione la cotización aprobada asociada a este proyecto. 
+                                        Primero debe seleccionar un trato para ver las cotizaciones disponibles.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Observaciones y Archivos -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-paperclip"></i> Observaciones y Archivos</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    {{ form.observaciones|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.adjunto|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Botones -->
+                    <div class="row mt-4">
+                        <div class="col">
+                            <a href="{% url 'proyectos:proyecto_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                        </div>
+                        <div class="col text-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Guardar Proyecto
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
-    {% endif %}
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -95,10 +364,91 @@
             });
             
             console.log('Campos autocompletados con:', campos);
+            
+            // Actualizar información de fechas después de cambiar días prometidos
+            if (tratoSeleccionado.dias_prometidos) {
+                setTimeout(() => {
+                    actualizarInfoFechas();
+                    
+                    // Si hay fecha inicio, auto-calcular fecha fin
+                    const fechaInicioInput = getElementSafe('id_fecha_inicio');
+                    if (fechaInicioInput && fechaInicioInput.value) {
+                        fechaInicioInput.dispatchEvent(new Event('change'));
+                    }
+                }, 100);
+            }
+            
+            // Cargar cotizaciones del trato seleccionado
+            cargarCotizacionesTrato(tratoId);
         });
+    }
+    
+    // Función para cargar cotizaciones de un trato específico
+    function cargarCotizacionesTrato(tratoId) {
+        const cotizacionSelect = getElementSafe('id_cotizacion_aprobada');
+        if (!cotizacionSelect) return;
+        
+        console.log('Cargando cotizaciones para trato:', tratoId);
+        
+        // Limpiar opciones actuales
+        cotizacionSelect.innerHTML = '<option value="">--- Seleccione una cotización ---</option>';
+        
+        if (!tratoId) {
+            return;
+        }
+        
+        // Hacer petición AJAX para obtener las cotizaciones del trato
+        fetch(`/proyectos/api/cotizaciones-trato/${tratoId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al cargar cotizaciones');
+                }
+                return response.json();
+            })
+            .then(cotizaciones => {
+                console.log('Cotizaciones recibidas:', cotizaciones);
+                
+                // Agregar cada cotización como opción
+                cotizaciones.forEach(cotizacion => {
+                    const option = document.createElement('option');
+                    option.value = cotizacion.id;
+                    option.textContent = `Versión ${cotizacion.version} - $${cotizacion.valor} (${cotizacion.fecha_creacion})`;
+                    cotizacionSelect.appendChild(option);
+                });
+                
+                if (cotizaciones.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No hay cotizaciones disponibles para este trato';
+                    option.disabled = true;
+                    cotizacionSelect.appendChild(option);
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar cotizaciones:', error);
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Error al cargar cotizaciones';
+                option.disabled = true;
+                cotizacionSelect.appendChild(option);
+            });
     }
 
     // Inicializar el autocompletado
     initTratosAutocompletar();
+    
+    // Inicializar auto-cálculo de fechas
+    inicializarAutoCalculoFechas();
+    
+    // Si estamos editando y hay un trato seleccionado, cargar sus cotizaciones
+    document.addEventListener('DOMContentLoaded', function() {
+        const tratoSelect = getElementSafe('id_trato');
+        if (tratoSelect && tratoSelect.value) {
+            cargarCotizacionesTrato(tratoSelect.value);
+        }
+        
+        // Inicializar información de fechas al cargar la página
+        setTimeout(actualizarInfoFechas, 200);
+    });
 </script>
 {% endblock %}

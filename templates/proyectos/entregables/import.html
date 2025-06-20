@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Importar Entregables desde Excel | {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .import-section {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+    }
+    
+    .step {
+        flex: 1;
+        text-align: center;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        background-color: #e9ecef;
+        margin: 0 0.5rem;
+        position: relative;
+    }
+    
+    .step.active {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .step.completed {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .file-drop-zone {
+        border: 2px dashed #007bff;
+        border-radius: 0.5rem;
+        padding: 2rem;
+        text-align: center;
+        background-color: #f8f9fa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .file-drop-zone:hover {
+        border-color: #0056b3;
+        background-color: #e3f2fd;
+    }
+    
+    .file-drop-zone.dragover {
+        border-color: #28a745;
+        background-color: #d4edda;
+    }
+    
+    .example-table {
+        font-size: 0.875rem;
+    }
+    
+    .required-column {
+        background-color: #fff3cd;
+        font-weight: bold;
+    }
+    
+    .optional-column {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h1 class="card-title mb-0">
+                        <i class="fas fa-file-import me-2"></i>
+                        Importar Entregables desde Excel
+                    </h1>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Pasos del Proceso -->
+                    <div class="step-indicator">
+                        <div class="step completed">
+                            <div class="step-number">
+                                <i class="fas fa-download fa-2x mb-2"></i>
+                            </div>
+                            <h6>1. Descargar Plantilla</h6>
+                            <p class="mb-0">Obtener formato Excel</p>
+                        </div>
+                        <div class="step completed">
+                            <div class="step-number">
+                                <i class="fas fa-edit fa-2x mb-2"></i>
+                            </div>
+                            <h6>2. Completar Datos</h6>
+                            <p class="mb-0">Llenar información</p>
+                        </div>
+                        <div class="step active">
+                            <div class="step-number">
+                                <i class="fas fa-upload fa-2x mb-2"></i>
+                            </div>
+                            <h6>3. Subir Archivo</h6>
+                            <p class="mb-0">Importar entregables</p>
+                        </div>
+                    </div>
+
+                    <!-- Información Importante -->
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle me-2"></i>Información Importante</h5>
+                        <ul class="mb-0">
+                            <li><strong>Descargar plantilla:</strong> Use el botón "Descargar Plantilla" para obtener el formato correcto</li>
+                            <li><strong>Columnas obligatorias:</strong> codigo, nombre, fase, creador, consolidador</li>
+                            <li><strong>Fases válidas:</strong> Definición, Planeación, Ejecución, Entrega</li>
+                            <li><strong>Fechas:</strong> Formato YYYY-MM-DD (ej: 2025-06-20)</li>
+                            <li><strong>Códigos únicos:</strong> Cada código debe ser único dentro del proyecto</li>
+                        </ul>
+                    </div>
+
+                    <!-- Botón para Descargar Plantilla -->
+                    <div class="import-section">
+                        <h4><i class="fas fa-download me-2"></i>Paso 1: Descargar Plantilla</h4>
+                        <p>Descargue la plantilla de Excel con el formato correcto y ejemplos.</p>
+                        <a href="{% url 'proyectos:entregable_plantilla_excel' %}" class="btn btn-info">
+                            <i class="fas fa-download me-1"></i> Descargar Plantilla Excel
+                        </a>
+                    </div>
+
+                    <!-- Formulario de Importación -->
+                    <div class="import-section">
+                        <h4><i class="fas fa-upload me-2"></i>Paso 2: Subir Archivo Completado</h4>
+                        
+                        <form method="post" enctype="multipart/form-data" id="importForm">
+                            {% csrf_token %}
+                            
+                            <!-- Selector de Proyecto -->
+                            <div class="mb-4">
+                                <label for="{{ form.proyecto.id_for_label }}" class="form-label">
+                                    {{ form.proyecto.label }}
+                                </label>
+                                {{ form.proyecto }}
+                                {% if form.proyecto.help_text %}
+                                    <div class="form-text">{{ form.proyecto.help_text }}</div>
+                                {% endif %}
+                                {% if form.proyecto.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.proyecto.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Zona de Drop para Archivo -->
+                            <div class="mb-4">
+                                <label for="{{ form.archivo_excel.id_for_label }}" class="form-label">
+                                    {{ form.archivo_excel.label }}
+                                </label>
+                                
+                                <div class="file-drop-zone" id="dropZone">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                                    <h5>Arrastre el archivo Excel aquí</h5>
+                                    <p class="text-muted mb-3">o haga clic para seleccionar</p>
+                                    {{ form.archivo_excel }}
+                                    <div id="fileInfo" class="mt-3" style="display: none;">
+                                        <div class="alert alert-success">
+                                            <i class="fas fa-file-excel me-2"></i>
+                                            <span id="fileName"></span>
+                                            <button type="button" class="btn-close float-end" id="removeFile"></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {% if form.archivo_excel.help_text %}
+                                    <div class="form-text">{{ form.archivo_excel.help_text }}</div>
+                                {% endif %}
+                                {% if form.archivo_excel.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.archivo_excel.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Opciones Adicionales -->
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    {{ form.reemplazar_existentes }}
+                                    <label for="{{ form.reemplazar_existentes.id_for_label }}" class="form-check-label">
+                                        {{ form.reemplazar_existentes.label }}
+                                    </label>
+                                    {% if form.reemplazar_existentes.help_text %}
+                                        <div class="form-text">{{ form.reemplazar_existentes.help_text }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Errores generales del formulario -->
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger">
+                                    {{ form.non_field_errors }}
+                                </div>
+                            {% endif %}
+
+                            <!-- Botones de Acción -->
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'proyectos:gestion_entregables' %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-1"></i> Volver
+                                </a>
+                                <button type="submit" class="btn btn-success" id="submitBtn" disabled>
+                                    <i class="fas fa-upload me-1"></i> Importar Entregables
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Ejemplo de Estructura -->
+                    <div class="import-section">
+                        <h4><i class="fas fa-table me-2"></i>Estructura del Archivo Excel</h4>
+                        <p>Su archivo Excel debe tener la siguiente estructura:</p>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered example-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="required-column">codigo *</th>
+                                        <th class="required-column">nombre *</th>
+                                        <th class="required-column">fase *</th>
+                                        <th class="required-column">creador *</th>
+                                        <th class="required-column">consolidador *</th>
+                                        <th class="optional-column">medio</th>
+                                        <th class="optional-column">dossier_cliente</th>
+                                        <th class="optional-column">fecha_entrega</th>
+                                        <th class="optional-column">observaciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>CUSTOM-1</td>
+                                        <td>Análisis de Requerimientos Especiales</td>
+                                        <td>Definición</td>
+                                        <td>Director de Proyecto</td>
+                                        <td>Director de Proyecto</td>
+                                        <td>Digital</td>
+                                        <td>False</td>
+                                        <td>2025-07-01</td>
+                                        <td>Análisis específico para el cliente</td>
+                                    </tr>
+                                    <tr>
+                                        <td>CUSTOM-2</td>
+                                        <td>Protocolo de Pruebas Personalizadas</td>
+                                        <td>Ejecución</td>
+                                        <td>Ing. Residente</td>
+                                        <td>Director de Proyecto</td>
+                                        <td>Digital</td>
+                                        <td>True</td>
+                                        <td>2025-08-15</td>
+                                        <td>Protocolo adaptado al proyecto</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-exclamation-circle text-warning me-2"></i>Columnas Obligatorias</h6>
+                                <ul class="list-unstyled">
+                                    <li><strong>codigo:</strong> Identificador único</li>
+                                    <li><strong>nombre:</strong> Nombre descriptivo</li>
+                                    <li><strong>fase:</strong> Fase del proyecto</li>
+                                    <li><strong>creador:</strong> Responsable de crear</li>
+                                    <li><strong>consolidador:</strong> Responsable de consolidar</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-info-circle text-info me-2"></i>Columnas Opcionales</h6>
+                                <ul class="list-unstyled">
+                                    <li><strong>medio:</strong> Digital, Físico, etc.</li>
+                                    <li><strong>dossier_cliente:</strong> True/False</li>
+                                    <li><strong>fecha_entrega:</strong> Fecha estimada</li>
+                                    <li><strong>observaciones:</strong> Comentarios</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    const dropZone = $('#dropZone');
+    const fileInput = $('#{{ form.archivo_excel.id_for_label }}');
+    const fileInfo = $('#fileInfo');
+    const fileName = $('#fileName');
+    const removeFile = $('#removeFile');
+    const submitBtn = $('#submitBtn');
+    
+    // Funcionalidad de drag and drop
+    dropZone.on('dragover dragenter', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.addClass('dragover');
+    });
+    
+    dropZone.on('dragleave dragend', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.removeClass('dragover');
+    });
+    
+    dropZone.on('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.removeClass('dragover');
+        
+        const files = e.originalEvent.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput[0].files = files;
+            showFileInfo(files[0]);
+        }
+    });
+    
+    // Click en la zona para abrir selector
+    dropZone.on('click', function(e) {
+        if (e.target === this || e.target.closest('.file-drop-zone') === this) {
+            fileInput.click();
+        }
+    });
+    
+    // Cambio en el input de archivo
+    fileInput.on('change', function() {
+        const file = this.files[0];
+        if (file) {
+            showFileInfo(file);
+        }
+    });
+    
+    // Mostrar información del archivo
+    function showFileInfo(file) {
+        fileName.text(file.name + ' (' + formatFileSize(file.size) + ')');
+        fileInfo.show();
+        submitBtn.prop('disabled', false);
+        
+        // Validar tipo de archivo
+        const validTypes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel'
+        ];
+        
+        if (!validTypes.includes(file.type)) {
+            fileName.parent().removeClass('alert-success').addClass('alert-warning');
+            fileName.text(file.name + ' - ⚠️ Tipo de archivo no válido');
+            submitBtn.prop('disabled', true);
+        } else {
+            fileName.parent().removeClass('alert-warning').addClass('alert-success');
+        }
+    }
+    
+    // Remover archivo
+    removeFile.on('click', function() {
+        fileInput.val('');
+        fileInfo.hide();
+        submitBtn.prop('disabled', true);
+    });
+    
+    // Formatear tamaño de archivo
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Validación del formulario
+    $('#importForm').on('submit', function(e) {
+        const proyecto = $('#{{ form.proyecto.id_for_label }}').val();
+        const archivo = fileInput[0].files.length;
+        
+        if (!proyecto) {
+            e.preventDefault();
+            alert('Por favor seleccione un proyecto.');
+            return false;
+        }
+        
+        if (!archivo) {
+            e.preventDefault();
+            alert('Por favor seleccione un archivo Excel.');
+            return false;
+        }
+        
+        // Mostrar indicador de carga
+        submitBtn.prop('disabled', true);
+        submitBtn.html('<i class="fas fa-spinner fa-spin me-1"></i> Procesando...');
+        
+        return true;
+    });
+    
+    // Mejorar selector de proyecto
+    $('#{{ form.proyecto.id_for_label }}').select2({
+        placeholder: 'Seleccione el proyecto...',
+        allowClear: true,
+        width: '100%'
+    });
+});
+</script>
+{% endblock %}

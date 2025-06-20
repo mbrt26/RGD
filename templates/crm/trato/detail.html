@@ -1,8 +1,46 @@
 {% extends "base/base.html" %}
 
-{% block title %}{{ trato.nombre }} | Detalle de Trato{% endblock %}
+{% block title %}{{ trato.nombre }} | Detalle de ProyectoCRM{% endblock %}
 
 {% load humanize %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+    padding-left: 20px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.timeline-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -25px;
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.timeline-content {
+    margin-left: 5px;
+}
+
+.border-start.border-4 {
+    border-left-width: 4px !important;
+}
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -11,19 +49,19 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{% url 'crm:dashboard' %}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'crm:trato_list' %}">Tratos</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Trato #{{ trato.numero_oferta }}</li>
+                    <li class="breadcrumb-item"><a href="{% url 'crm:trato_list' %}">ProyectosCRM</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">ProyectoCRM #{{ trato.numero_oferta }}</li>
                 </ol>
             </nav>
         </div>
     </div>
 
+    <!-- Información Principal -->
     <div class="row">
-        <!-- Información Principal -->
-        <div class="col-md-8">
+        <div class="col-12">
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">Información del Trato #{{ trato.numero_oferta }}</h5>
+                    <h5 class="card-title mb-0">Información del ProyectoCRM #{{ trato.numero_oferta }}</h5>
                     <div>
                         <a href="{% url 'crm:trato_update' trato.id %}" class="btn btn-primary">
                             <i class="fas fa-edit"></i> Editar
@@ -31,68 +69,134 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <!-- Información Básica -->
+                    <div class="row mb-4">
                         <div class="col-md-6">
+                            <h6 class="text-primary mb-3"><i class="fas fa-building me-2"></i>Información del Cliente</h6>
                             <dl class="row">
                                 <dt class="col-sm-4">Cliente:</dt>
-                                <dd class="col-sm-8">{{ trato.cliente }}</dd>
+                                <dd class="col-sm-8"><strong>{{ trato.cliente }}</strong></dd>
                                 
+                                <dt class="col-sm-4">Contacto:</dt>
+                                <dd class="col-sm-8">{{ trato.contacto|default:"No especificado" }}</dd>
+                                
+                                <dt class="col-sm-4">Email:</dt>
+                                <dd class="col-sm-8">
+                                    {% if trato.correo %}
+                                        <a href="mailto:{{ trato.correo }}">{{ trato.correo }}</a>
+                                    {% else %}
+                                        No especificado
+                                    {% endif %}
+                                </dd>
+                                
+                                <dt class="col-sm-4">Teléfono:</dt>
+                                <dd class="col-sm-8">{{ trato.telefono|default:"No especificado" }}</dd>
+                                
+                                <dt class="col-sm-4">Descripción:</dt>
+                                <dd class="col-sm-8">
+                                    {% if trato.descripcion %}
+                                        {{ trato.descripcion|linebreaksbr }}
+                                    {% elif trato.nombre %}
+                                        {{ trato.nombre }}
+                                    {% else %}
+                                        <span class="text-muted">No especificada</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="text-success mb-3"><i class="fas fa-chart-line me-2"></i>Información Comercial</h6>
+                            <dl class="row">
                                 <dt class="col-sm-4">Valor Estimado:</dt>
-                                <dd class="col-sm-8">${{ trato.valor|floatformat:2|intcomma }}</dd>
+                                <dd class="col-sm-8"><strong class="text-success">${{ trato.valor|floatformat:2|intcomma }}</strong></dd>
                                 
                                 <dt class="col-sm-4">Probabilidad:</dt>
-                                <dd class="col-sm-8">{{ trato.probabilidad }}%</dd>
+                                <dd class="col-sm-8">
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ trato.probabilidad }}%">
+                                            {{ trato.probabilidad }}%
+                                        </div>
+                                    </div>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Estado:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-{% if trato.estado == 'ganado' %}success{% elif trato.estado == 'perdido' %}danger{% elif trato.estado == 'formalizacion' %}warning{% else %}primary{% endif %} fs-6">
+                                        {{ trato.get_estado_display }}
+                                    </span>
+                                </dd>
                                 
                                 <dt class="col-sm-4">Fuente:</dt>
                                 <dd class="col-sm-8">{{ trato.get_fuente_display }}</dd>
                             </dl>
                         </div>
+                    </div>
+                    
+                    <!-- Información de Fechas -->
+                    <div class="row mb-4">
                         <div class="col-md-6">
+                            <h6 class="text-info mb-3"><i class="fas fa-calendar me-2"></i>Fechas Importantes</h6>
                             <dl class="row">
-                                <dt class="col-sm-4">Estado:</dt>
-                                <dd class="col-sm-8">
-                                    <span class="badge bg-{{ trato.estado }}">
-                                        {{ trato.get_estado_display }}
-                                    </span>
-                                </dd>
+                                <dt class="col-sm-5">Fecha de Creación:</dt>
+                                <dd class="col-sm-7">{{ trato.fecha_creacion|date:"d/m/Y" }}</dd>
                                 
-                                <dt class="col-sm-4">Fecha Inicio:</dt>
-                                <dd class="col-sm-8">{{ trato.fecha_creacion|date:"d/m/Y" }}</dd>
+                                <dt class="col-sm-5">Fecha de Cierre:</dt>
+                                <dd class="col-sm-7">{{ trato.fecha_cierre|date:"d/m/Y"|default:"No establecida" }}</dd>
                                 
-                                <dt class="col-sm-4">Fecha Cierre:</dt>
-                                <dd class="col-sm-8">{{ trato.fecha_cierre|date:"d/m/Y"|default:"No establecida" }}</dd>
+                                {% if trato.fecha_envio_cotizacion %}
+                                <dt class="col-sm-5">Envío de Cotización:</dt>
+                                <dd class="col-sm-7">{{ trato.fecha_envio_cotizacion|date:"d/m/Y" }}</dd>
+                                {% endif %}
                                 
+                                {% if trato.dias_prometidos %}
+                                <dt class="col-sm-5">Días Prometidos:</dt>
+                                <dd class="col-sm-7">{{ trato.dias_prometidos }} días</dd>
+                                {% endif %}
+                            </dl>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="text-secondary mb-3"><i class="fas fa-user-tie me-2"></i>Responsabilidad</h6>
+                            <dl class="row">
                                 <dt class="col-sm-4">Responsable:</dt>
                                 <dd class="col-sm-8">{{ trato.responsable.get_full_name|default:trato.responsable.username }}</dd>
+                                
+                                <dt class="col-sm-4">Tipo:</dt>
+                                <dd class="col-sm-8">{{ trato.get_tipo_negociacion_display }}</dd>
                             </dl>
                         </div>
                     </div>
                     
-                    <div class="row mt-3">
+                    <!-- Información de Proyecto (solo si está ganado) -->
+                    {% if trato.estado == 'ganado' %}
+                    <div class="row mb-4">
                         <div class="col-12">
-                            <h6>Descripción:</h6>
-                            <p>{{ trato.descripcion|linebreaksbr }}</p>
+                            <h6 class="text-warning mb-3"><i class="fas fa-project-diagram me-2"></i>Información de Proyecto</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <dl class="row">
+                                        <dt class="col-sm-6">Centro de Costos:</dt>
+                                        <dd class="col-sm-6">{{ trato.centro_costos|default:"No asignado" }}</dd>
+                                    </dl>
+                                </div>
+                                <div class="col-md-4">
+                                    <dl class="row">
+                                        <dt class="col-sm-6">Nombre Proyecto:</dt>
+                                        <dd class="col-sm-6">{{ trato.nombre_proyecto|default:"No asignado" }}</dd>
+                                    </dl>
+                                </div>
+                                <div class="col-md-4">
+                                    <dl class="row">
+                                        <dt class="col-sm-6">Orden/Contrato:</dt>
+                                        <dd class="col-sm-6">{{ trato.orden_contrato|default:"No asignado" }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            
-            <!-- Contacto -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Información de Contacto</h5>
-                </div>
-                <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-3">Contacto:</dt>
-                        <dd class="col-sm-9">{{ trato.contacto }}</dd>
-                        
-                        <dt class="col-sm-3">Email:</dt>
-                        <dd class="col-sm-9">{{ trato.correo|default:"No especificado" }}</dd>
-                        
-                        <dt class="col-sm-3">Teléfono:</dt>
-                        <dd class="col-sm-9">{{ trato.telefono|default:"No especificado" }}</dd>
-                    </dl>
+                    {% endif %}
+                    
                 </div>
             </div>
             
@@ -100,17 +204,21 @@
             {% if trato.notas %}
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Notas</h5>
+                    <h5 class="card-title mb-0"><i class="fas fa-sticky-note me-2"></i>Notas Adicionales</h5>
                 </div>
                 <div class="card-body">
-                    {{ trato.notas|linebreaks }}
+                    <div class="bg-light p-3 rounded">
+                        {{ trato.notas|linebreaks }}
+                    </div>
                 </div>
             </div>
             {% endif %}
         </div>
-        
-        <!-- Sidebar -->
-        <div class="col-md-4">
+    </div>
+    
+    <!-- Cotizaciones y Tareas -->
+    <div class="row">
+        <div class="col-md-6">
             <!-- Cotizaciones Relacionadas -->
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -121,44 +229,76 @@
                 </div>
                 <div class="card-body">
                     {% if cotizaciones %}
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Fecha</th>
-                                        <th>Monto</th>
-                                        <th>Estado</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for cotizacion in cotizaciones %}
-                                    <tr>
-                                        <td>{{ cotizacion.numero_oferta }}</td>
-                                        <td>{{ cotizacion.fecha_creacion|date:"d/m/Y" }}</td>
-                                        <td>${{ cotizacion.monto|floatformat:2|intcomma }}</td>
-                                        <td><span class="badge bg-{{ cotizacion.estado }}">{{ cotizacion.get_estado_display }}</span></td>
-                                        <td>
-                                            <div class="btn-group">
-                                                <a href="{% url 'crm:cotizacion_detail' cotizacion.id %}" class="btn btn-sm btn-info" title="Ver detalle">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a href="{% url 'crm:cotizacion_update' cotizacion.id %}" class="btn btn-sm btn-primary" title="Editar">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                {% if cotizacion.archivo %}
-                                                <a href="{{ cotizacion.archivo.url }}" class="btn btn-sm btn-secondary" target="_blank" title="Ver documento">
-                                                    <i class="fas fa-file-pdf"></i>
-                                                </a>
+                        {% for cotizacion in cotizaciones %}
+                        <div class="card mb-3 border-start border-4 border-primary">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-file-invoice-dollar text-primary me-2"></i>
+                                        Cotización #{{ cotizacion.id }}
+                                    </h6>
+                                    <span class="badge bg-{{ cotizacion.estado }}">{{ cotizacion.get_estado_display }}</span>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <small class="text-muted">Fecha:</small><br>
+                                        <strong>{{ cotizacion.fecha_creacion|date:"d/m/Y H:i" }}</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Monto:</small><br>
+                                        <strong class="text-success">${{ cotizacion.monto|floatformat:2|intcomma }}</strong>
+                                    </div>
+                                </div>
+                                
+                                <!-- Versiones de la cotización -->
+                                {% if cotizacion.versiones.all %}
+                                <div class="mt-3">
+                                    <small class="text-muted"><i class="fas fa-history me-1"></i>Historial de versiones:</small>
+                                    <div class="timeline mt-2">
+                                        {% for version in cotizacion.versiones.all %}
+                                        <div class="timeline-item">
+                                            <div class="timeline-marker bg-primary"></div>
+                                            <div class="timeline-content">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div>
+                                                        <strong>Versión {{ version.version }}</strong>
+                                                        <small class="text-muted d-block">{{ version.fecha_creacion|date:"d/m/Y H:i" }}</small>
+                                                        <small class="text-muted">Por: {{ version.creado_por.get_full_name|default:version.creado_por.username }}</small>
+                                                    </div>
+                                                    <span class="badge bg-info">${{ version.valor|floatformat:2 }}</span>
+                                                </div>
+                                                {% if version.razon_cambio %}
+                                                <div class="mt-1">
+                                                    <small><strong>Razón:</strong> {{ version.razon_cambio }}</small>
+                                                </div>
+                                                {% endif %}
+                                                {% if version.archivo %}
+                                                <div class="mt-1">
+                                                    <a href="{{ version.archivo.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                                        <i class="fas fa-download me-1"></i>Descargar
+                                                    </a>
+                                                </div>
                                                 {% endif %}
                                             </div>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="mt-3">
+                                    <div class="btn-group">
+                                        <a href="{% url 'crm:cotizacion_detail' cotizacion.id %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye me-1"></i>Ver
+                                        </a>
+                                        <a href="{% url 'crm:cotizacion_update' cotizacion.id %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit me-1"></i>Editar
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                        {% endfor %}
                     {% else %}
                         <p class="text-muted text-center mb-0">No hay cotizaciones relacionadas. 
                             <a href="{% url 'crm:cotizacion_create' %}?trato={{ trato.id }}">Crear una nueva cotización</a>
@@ -166,7 +306,9 @@
                     {% endif %}
                 </div>
             </div>
-            
+        </div>
+        
+        <div class="col-md-6">
             <!-- Tareas Relacionadas -->
             <div class="card">
                 <div class="card-header">
@@ -179,19 +321,56 @@
                 </div>
                 <div class="card-body">
                     {% if tareas %}
-                        <div class="list-group list-group-flush">
-                            {% for tarea in tareas %}
-                                <a href="{% url 'crm:tarea_detail' tarea.id %}" class="list-group-item list-group-item-action">
-                                    {{ tarea.descripcion|truncatewords:10 }}
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <small class="text-muted">{{ tarea.get_estado_display }}</small>
-                                        <small class="text-muted">{{ tarea.fecha_vencimiento|date:"d/m/Y" }}</small>
+                        {% for tarea in tareas %}
+                        <div class="card mb-3 border-start border-4 {% if tarea.estado == 'completada' %}border-success{% elif tarea.estado == 'en_progreso' %}border-warning{% elif tarea.is_vencida %}border-danger{% else %}border-secondary{% endif %}">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-tasks me-2"></i>
+                                        {{ tarea.titulo|default:"Sin título" }}
+                                    </h6>
+                                    <span class="badge {{ tarea.get_estado_class }}">{{ tarea.get_estado_display }}</span>
+                                </div>
+                                <p class="card-text text-muted small mb-2">{{ tarea.descripcion|truncatewords:15 }}</p>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <small class="text-muted">Tipo:</small><br>
+                                        <span class="badge bg-secondary">{{ tarea.get_tipo_display }}</span>
                                     </div>
-                                </a>
-                            {% endfor %}
+                                    <div class="col-6">
+                                        <small class="text-muted">Vencimiento:</small><br>
+                                        <strong class="{{ tarea.get_fecha_class }}">{{ tarea.fecha_vencimiento|date:"d/m/Y" }}</strong>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-6">
+                                        <small class="text-muted">Asignado a:</small><br>
+                                        <strong>{{ tarea.responsable.get_full_name|default:tarea.responsable.username }}</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        {% if tarea.fecha_ejecucion %}
+                                        <small class="text-muted">Ejecutado:</small><br>
+                                        <strong class="text-success">{{ tarea.fecha_ejecucion|date:"d/m/Y H:i" }}</strong>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="btn-group">
+                                        <a href="{% url 'crm:tarea_detail' tarea.id %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye me-1"></i>Ver
+                                        </a>
+                                        <a href="{% url 'crm:tarea_update' tarea.id %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit me-1"></i>Editar
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                        {% endfor %}
                     {% else %}
-                        <p class="text-muted">No hay tareas relacionadas.</p>
+                        <p class="text-muted text-center mb-0">No hay tareas relacionadas. 
+                            <a href="{% url 'crm:tarea_create' %}?trato={{ trato.id }}">Crear una nueva tarea</a>
+                        </p>
                     {% endif %}
                 </div>
             </div>

@@ -1,0 +1,390 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}Editar Informe{% else %}Nuevo Informe{% endif %} - Mantenimiento General
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-clipboard-check me-2"></i>
+                {% if form.instance.pk %}Editar Informe{% else %}Nuevo Informe{% endif %} - Mantenimiento General
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:dashboard' %}">Mantenimiento</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:actividad_list' %}">Actividades</a></li>
+                    {% if actividad %}
+                    <li class="breadcrumb-item"><a href="{% url 'mantenimiento:actividad_detail' actividad.pk %}">{{ actividad.codigo_actividad }}</a></li>
+                    {% endif %}
+                    <li class="breadcrumb-item active">Informe General</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            {% if actividad %}
+            <a href="{% url 'mantenimiento:actividad_detail' actividad.pk %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Volver
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+    </div>
+    {% else %}
+
+    <!-- Información de la Actividad -->
+    {% if actividad %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="m-0">
+                <i class="fas fa-info-circle me-2"></i>Información de la Actividad
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Código:</strong> {{ actividad.codigo_actividad }}</p>
+                    <p><strong>Título:</strong> {{ actividad.titulo }}</p>
+                    <p><strong>Cliente:</strong> {{ actividad.hoja_vida_equipo.cliente.nombre }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Equipo:</strong> {{ actividad.hoja_vida_equipo.equipo.marca }} {{ actividad.hoja_vida_equipo.equipo.modelo }}</p>
+                    <p><strong>Código Interno:</strong> {{ actividad.hoja_vida_equipo.codigo_interno }}</p>
+                    <p><strong>Fecha Programada:</strong> {{ actividad.fecha_programada|date:"d/m/Y H:i" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <!-- Información Básica -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="m-0">
+                    <i class="fas fa-clipboard me-2"></i>Información Básica del Informe
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.actividad|as_crispy_field }}
+                        {{ form.tecnico_ejecutor|as_crispy_field }}
+                        {{ form.fecha_ejecucion|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.hora_inicio|as_crispy_field }}
+                        {{ form.hora_fin|as_crispy_field }}
+                        {{ form.resultado|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trabajos Realizados -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="m-0">
+                    <i class="fas fa-tools me-2"></i>Trabajos Realizados
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.trabajos_realizados|as_crispy_field }}
+                        {{ form.problemas_encontrados|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.soluciones_aplicadas|as_crispy_field }}
+                        {{ form.funcionamiento_optimo|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estado del Equipo -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="m-0">
+                    <i class="fas fa-cog me-2"></i>Estado del Equipo
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.estado_equipo_antes|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.estado_equipo_despues|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Materiales y Costos -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="m-0">
+                    <i class="fas fa-box me-2"></i>Materiales y Costos
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.materiales_utilizados|as_crispy_field }}
+                        {{ form.repuestos_cambiados|as_crispy_field }}
+                        {{ form.checklist_realizado|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.costo_materiales|as_crispy_field }}
+                        {{ form.costo_repuestos|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recomendaciones y Seguimiento -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="m-0">
+                    <i class="fas fa-lightbulb me-2"></i>Recomendaciones y Seguimiento
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.recomendaciones|as_crispy_field }}
+                        {{ form.trabajos_pendientes|as_crispy_field }}
+                        {{ form.proxima_revision|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.requiere_repuestos|as_crispy_field }}
+                        {{ form.repuestos_requeridos|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Satisfacción del Cliente -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="m-0">
+                    <i class="fas fa-star me-2"></i>Satisfacción del Cliente
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.cliente_presente|as_crispy_field }}
+                        {{ form.nombre_cliente_receptor|as_crispy_field }}
+                        {{ form.cargo_cliente_receptor|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.satisfaccion_cliente|as_crispy_field }}
+                        {{ form.observaciones_cliente|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evidencias Fotográficas -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="m-0">
+                    <i class="fas fa-camera me-2"></i>Evidencias Fotográficas
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-info">Fotos Antes del Mantenimiento</h6>
+                        {{ form.foto_antes_1|as_crispy_field }}
+                        {{ form.foto_antes_2|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-success">Fotos Después del Mantenimiento</h6>
+                        {{ form.foto_despues_1|as_crispy_field }}
+                        {{ form.foto_despues_2|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Firmas -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="m-0">
+                    <i class="fas fa-signature me-2"></i>Firmas
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.firma_tecnico|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.firma_cliente|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Observaciones Finales -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="m-0">
+                    <i class="fas fa-comments me-2"></i>Observaciones Finales
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.observaciones_tecnicas|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.observaciones_adicionales|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        {% if actividad %}
+                        <a href="{% url 'mantenimiento:actividad_detail' actividad.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Cancelar
+                        </a>
+                        {% else %}
+                        <a href="{% url 'mantenimiento:actividad_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Cancelar
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i>
+                            {% if form.instance.pk %}Actualizar{% else %}Crear{% endif %} Informe
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validación del formulario
+    const form = document.querySelector('.needs-validation');
+    
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        
+        form.classList.add('was-validated');
+    });
+    
+    // Auto-calcular duración si se llenan ambos campos de hora
+    const horaInicio = document.getElementById('id_hora_inicio');
+    const horaFin = document.getElementById('id_hora_fin');
+    
+    function calcularDuracion() {
+        if (horaInicio.value && horaFin.value) {
+            const inicio = new Date('2000-01-01 ' + horaInicio.value);
+            const fin = new Date('2000-01-01 ' + horaFin.value);
+            
+            if (fin > inicio) {
+                const duracionMs = fin - inicio;
+                const duracionHoras = duracionMs / (1000 * 60 * 60);
+                
+                // Si existe un campo de duración, actualizarlo
+                const duracionField = document.getElementById('id_duracion_horas');
+                if (duracionField) {
+                    duracionField.value = duracionHoras.toFixed(2);
+                }
+            }
+        }
+    }
+    
+    if (horaInicio && horaFin) {
+        horaInicio.addEventListener('change', calcularDuracion);
+        horaFin.addEventListener('change', calcularDuracion);
+    }
+    
+    // Auto-calcular costo total
+    const costoMateriales = document.getElementById('id_costo_materiales');
+    const costoRepuestos = document.getElementById('id_costo_repuestos');
+    
+    function calcularCostoTotal() {
+        if (costoMateriales && costoRepuestos) {
+            const materiales = parseFloat(costoMateriales.value) || 0;
+            const repuestos = parseFloat(costoRepuestos.value) || 0;
+            const total = materiales + repuestos;
+            
+            // Mostrar el total en algún lugar del formulario
+            let totalDisplay = document.getElementById('costo-total-display');
+            if (!totalDisplay) {
+                totalDisplay = document.createElement('div');
+                totalDisplay.id = 'costo-total-display';
+                totalDisplay.className = 'alert alert-info mt-2';
+                costoRepuestos.parentNode.appendChild(totalDisplay);
+            }
+            totalDisplay.innerHTML = `<strong>Costo Total: $${total.toFixed(2)}</strong>`;
+        }
+    }
+    
+    if (costoMateriales && costoRepuestos) {
+        costoMateriales.addEventListener('input', calcularCostoTotal);
+        costoRepuestos.addEventListener('input', calcularCostoTotal);
+        calcularCostoTotal(); // Calcular al cargar
+    }
+});
+</script>
+
+<style>
+.card {
+    border-radius: 10px;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.form-check-input:checked {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn {
+    border-radius: 6px;
+}
+
+textarea {
+    min-height: 100px;
+}
+
+.text-info {
+    color: #17a2b8 !important;
+}
+
+.text-success {
+    color: #28a745 !important;
+}
+</style>
+{% endblock %}
+{% endblock %}

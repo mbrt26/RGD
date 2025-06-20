@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .required-field {
+        color: #dc3545;
+    }
+    
+    .form-section {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-section h5 {
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h1 class="card-title mb-0">
+                        <i class="fas fa-plus-circle me-2"></i>
+                        {{ title }}
+                    </h1>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Información del Proyecto -->
+                    <div class="alert alert-info mb-4">
+                        <h5><i class="fas fa-project-diagram me-2"></i>{{ proyecto.nombre_proyecto }}</h5>
+                        <p class="mb-1"><strong>Cliente:</strong> {{ proyecto.cliente }}</p>
+                        <p class="mb-0"><strong>Centro de Costos:</strong> {{ proyecto.centro_costos }}</p>
+                    </div>
+
+                    <!-- Información Importante -->
+                    <div class="alert alert-warning mb-4">
+                        <h6><i class="fas fa-info-circle me-2"></i>Información Importante:</h6>
+                        <ul class="mb-0">
+                            <li>Los entregables personalizados se crean como <strong>opcionales</strong> y <strong>seleccionados</strong> por defecto</li>
+                            <li>El código debe ser único dentro del proyecto</li>
+                            <li>La fecha de entrega es obligatoria</li>
+                            <li>Una vez creado, el entregable aparecerá en la gestión normal de entregables</li>
+                        </ul>
+                    </div>
+
+                    <!-- Formulario -->
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Información Básica -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-info-circle me-2"></i>Información Básica</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.codigo.id_for_label }}" class="form-label">
+                                            {{ form.codigo.label }}
+                                        </label>
+                                        {{ form.codigo }}
+                                        {% if form.codigo.help_text %}
+                                            <div class="form-text">{{ form.codigo.help_text }}</div>
+                                        {% endif %}
+                                        {% if form.codigo.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.codigo.errors|join:", " }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.fase.id_for_label }}" class="form-label">
+                                            {{ form.fase.label }}
+                                        </label>
+                                        {{ form.fase }}
+                                        {% if form.fase.help_text %}
+                                            <div class="form-text">{{ form.fase.help_text }}</div>
+                                        {% endif %}
+                                        {% if form.fase.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.fase.errors|join:", " }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.nombre.id_for_label }}" class="form-label">
+                                    {{ form.nombre.label }}
+                                </label>
+                                {{ form.nombre }}
+                                {% if form.nombre.help_text %}
+                                    <div class="form-text">{{ form.nombre.help_text }}</div>
+                                {% endif %}
+                                {% if form.nombre.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.nombre.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Responsabilidades -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-users me-2"></i>Responsabilidades</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.creador.id_for_label }}" class="form-label">
+                                            {{ form.creador.label }}
+                                        </label>
+                                        {{ form.creador }}
+                                        {% if form.creador.help_text %}
+                                            <div class="form-text">{{ form.creador.help_text }}</div>
+                                        {% endif %}
+                                        {% if form.creador.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.creador.errors|join:", " }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.consolidador.id_for_label }}" class="form-label">
+                                            {{ form.consolidador.label }}
+                                        </label>
+                                        {{ form.consolidador }}
+                                        {% if form.consolidador.help_text %}
+                                            <div class="form-text">{{ form.consolidador.help_text }}</div>
+                                        {% endif %}
+                                        {% if form.consolidador.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.consolidador.errors|join:", " }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configuración Adicional -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-cog me-2"></i>Configuración Adicional</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.medio.id_for_label }}" class="form-label">
+                                            {{ form.medio.label }}
+                                        </label>
+                                        {{ form.medio }}
+                                        {% if form.medio.help_text %}
+                                            <div class="form-text">{{ form.medio.help_text }}</div>
+                                        {% endif %}
+                                        {% if form.medio.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.medio.errors|join:", " }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.fecha_entrega.id_for_label }}" class="form-label">
+                                            {{ form.fecha_entrega.label }}
+                                        </label>
+                                        {{ form.fecha_entrega }}
+                                        {% if form.fecha_entrega.help_text %}
+                                            <div class="form-text">{{ form.fecha_entrega.help_text }}</div>
+                                        {% endif %}
+                                        {% if form.fecha_entrega.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.fecha_entrega.errors|join:", " }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-check mb-3">
+                                        {{ form.dossier_cliente }}
+                                        <label for="{{ form.dossier_cliente.id_for_label }}" class="form-check-label">
+                                            {{ form.dossier_cliente.label }}
+                                        </label>
+                                        {% if form.dossier_cliente.help_text %}
+                                            <div class="form-text">{{ form.dossier_cliente.help_text }}</div>
+                                        {% endif %}
+                                        {% if form.dossier_cliente.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.dossier_cliente.errors|join:", " }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.observaciones.id_for_label }}" class="form-label">
+                                    {{ form.observaciones.label }}
+                                </label>
+                                {{ form.observaciones }}
+                                {% if form.observaciones.help_text %}
+                                    <div class="form-text">{{ form.observaciones.help_text }}</div>
+                                {% endif %}
+                                {% if form.observaciones.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.observaciones.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Errores generales del formulario -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'proyectos:gestion_entregables' %}?proyecto={{ proyecto.id }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i> Crear Entregable Personalizado
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    // Validación del formulario
+    const form = document.querySelector('.needs-validation');
+    
+    // Validar en tiempo real
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    }, false);
+    
+    // Generar código automáticamente basado en el nombre
+    $('#{{ form.nombre.id_for_label }}').on('blur', function() {
+        const nombre = $(this).val();
+        const codigoField = $('#{{ form.codigo.id_for_label }}');
+        
+        if (nombre && !codigoField.val()) {
+            // Generar código sugerido
+            let codigo = nombre.substring(0, 10).toUpperCase();
+            codigo = codigo.replace(/[^A-Z0-9]/g, '');
+            codigo = 'CUSTOM-' + codigo;
+            codigoField.val(codigo);
+        }
+    });
+    
+    // Autocompletar responsables comunes
+    const responsablesComunes = [
+        'Director de Proyecto',
+        'Ingeniero Residente', 
+        'Coordinación Calidad y SST',
+        'Dirección Comercial',
+        'Dirección Administrativa y Financiera',
+        'Diseñador'
+    ];
+    
+    $('#{{ form.creador.id_for_label }}, #{{ form.consolidador.id_for_label }}').autocomplete({
+        source: responsablesComunes,
+        minLength: 2
+    });
+    
+    // Tooltip para campos con ayuda
+    $('[data-bs-toggle="tooltip"]').tooltip();
+});
+</script>
+{% endblock %}
