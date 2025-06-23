@@ -19,6 +19,8 @@ urlpatterns = [
     path('users/<int:pk>/', views.UserDetailView.as_view(), name='user_detail'),
     path('users/<int:pk>/edit/', views.UserUpdateView.as_view(), name='user_edit'),
     path('users/<int:pk>/delete/', views.UserDeleteView.as_view(), name='user_delete'),
+    path('users/import/template/', views.users_import_template, name='users_import_template'),
+    path('users/import/', views.users_import_excel, name='users_import_excel'),
     
     # Role management URLs
     path('roles/', views.RoleListView.as_view(), name='role_list'),
@@ -27,6 +29,8 @@ urlpatterns = [
     path('roles/<int:pk>/edit/', views.RoleUpdateView.as_view(), name='role_edit'),
     path('roles/<int:pk>/delete/', views.RoleDeleteView.as_view(), name='role_delete'),
     path('roles/<int:pk>/permissions/', views.role_permissions_view, name='role_permissions'),
+    path('roles/import/template/', views.roles_import_template, name='roles_import_template'),
+    path('roles/import/', views.roles_import_excel, name='roles_import_excel'),
     
     # Password reset URLs
     path('password_reset/', 

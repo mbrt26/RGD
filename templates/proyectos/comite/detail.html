@@ -91,6 +91,11 @@
 {% endblock %}
 
 {% block content %}
+<!-- Token CSRF para JavaScript -->
+<form style="display: none;">
+    {% csrf_token %}
+</form>
+
 <!-- Header del comité -->
 <div class="card header-card mb-4">
     <div class="card-body">
@@ -389,9 +394,9 @@
                 <h6 class="mb-0">
                     <i class="fas fa-users me-2"></i>Participantes ({{ participantes.count }})
                 </h6>
-                <button class="btn btn-sm btn-outline-primary" onclick="gestionarParticipantes()">
+                <a href="{% url 'proyectos:gestionar_participantes_comite' comite.pk %}" class="btn btn-sm btn-outline-primary" title="Gestionar participantes">
                     <i class="fas fa-user-plus"></i>
-                </button>
+                </a>
             </div>
             <div class="card-body p-0">
                 {% if participantes %}
@@ -467,57 +472,111 @@
 
 {% block extra_js %}
 <script>
-function gestionarParticipantes() {
-    // Implementar modal para gestionar participantes
-    alert('Funcionalidad de gestión de participantes en desarrollo');
+// Función helper para obtener el token CSRF de manera robusta
+function getCSRFToken() {
+    // Buscar token CSRF en múltiples ubicaciones
+    let csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    
+    // Si no se encuentra, buscar en cookies como alternativa
+    if (!csrfToken) {
+        const csrfCookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+        if (csrfCookie) {
+            return csrfCookie.split('=')[1];
+        }
+    }
+    
+    return csrfToken ? csrfToken.value : null;
 }
 
 function iniciarComite() {
     if (confirm('¿Está seguro de que desea iniciar este comité?')) {
-        // Actualizar estado a 'en_curso'
+        const csrfTokenValue = getCSRFToken();
+        
+        // Debug: verificar si encontramos el token CSRF
+        if (!csrfTokenValue) {
+            alert('Error: No se encontró el token CSRF. Recargue la página e intente nuevamente.');
+            return;
+        }
+        
+        console.log('Token CSRF encontrado:', csrfTokenValue);
+        
         fetch(`/proyectos/comite/{{ comite.pk }}/iniciar/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfTokenValue,
+                'Content-Type': 'application/x-www-form-urlencoded',
             },
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                return response.text().then(text => {
+                    console.error('Error response:', text);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Response data:', data);
             if (data.success) {
+                alert(data.message);
                 location.reload();
             } else {
-                alert('Error al iniciar el comité');
+                alert(data.message || 'Error al iniciar el comité');
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Error al iniciar el comité');
+            console.error('Error completo:', error);
+            alert(`Error de conexión al iniciar el comité: ${error.message}`);
         });
     }
 }
 
 function finalizarComite() {
     if (confirm('¿Está seguro de que desea finalizar este comité?')) {
-        // Actualizar estado a 'finalizado'
+        const csrfTokenValue = getCSRFToken();
+        
+        // Debug: verificar si encontramos el token CSRF
+        if (!csrfTokenValue) {
+            alert('Error: No se encontró el token CSRF. Recargue la página e intente nuevamente.');
+            return;
+        }
+        
+        console.log('Token CSRF encontrado:', csrfTokenValue);
+        
         fetch(`/proyectos/comite/{{ comite.pk }}/finalizar/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfTokenValue,
+                'Content-Type': 'application/x-www-form-urlencoded',
             },
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            
+            if (!response.ok) {
+                return response.text().then(text => {
+                    console.error('Error response:', text);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Response data:', data);
             if (data.success) {
+                alert(data.message);
                 location.reload();
             } else {
-                alert('Error al finalizar el comité');
+                alert(data.message || 'Error al finalizar el comité');
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Error al finalizar el comité');
+            console.error('Error completo:', error);
+            alert(`Error de conexión al finalizar el comité: ${error.message}`);
         });
     }
 }

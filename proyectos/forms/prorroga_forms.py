@@ -11,7 +11,7 @@ class ProrrogaProyectoForm(forms.ModelForm):
     class Meta:
         model = ProrrogaProyecto
         fields = [
-            'fecha_fin_propuesta', 'tipo_prorroga', 'justificacion', 
+            'fecha_fin_propuesta', 'tipo_prorroga', 'dias_extension', 'justificacion', 
             'documento_soporte'
         ]
         widgets = {
@@ -23,6 +23,14 @@ class ProrrogaProyectoForm(forms.ModelForm):
                 }
             ),
             'tipo_prorroga': forms.Select(attrs={'class': 'form-select'}),
+            'dias_extension': forms.NumberInput(
+                attrs={
+                    'class': 'form-control',
+                    'min': '1',
+                    'max': '365',
+                    'placeholder': 'Número de días'
+                }
+            ),
             'justificacion': forms.Textarea(
                 attrs={
                     'class': 'form-control',
@@ -40,12 +48,14 @@ class ProrrogaProyectoForm(forms.ModelForm):
         labels = {
             'fecha_fin_propuesta': 'Nueva Fecha de Finalización',
             'tipo_prorroga': 'Tipo de Prórroga',
+            'dias_extension': 'Días de Extensión',
             'justificacion': 'Justificación Detallada',
             'documento_soporte': 'Documento de Soporte (Opcional)'
         }
         help_texts = {
             'fecha_fin_propuesta': 'Fecha propuesta para la nueva finalización del proyecto',
             'tipo_prorroga': 'Seleccione la razón principal de la solicitud de prórroga',
+            'dias_extension': 'Número de días que se extenderá el proyecto (máximo 365 días)',
             'justificacion': 'Explique detalladamente las circunstancias que requieren la extensión del plazo',
             'documento_soporte': 'Adjunte documentos que respalden la solicitud (cartas, cotizaciones, etc.)'
         }
@@ -53,6 +63,9 @@ class ProrrogaProyectoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.proyecto = kwargs.pop('proyecto', None)
         super().__init__(*args, **kwargs)
+        
+        # Make fecha_fin_propuesta optional since we can calculate it from dias_extension
+        self.fields['fecha_fin_propuesta'].required = False
         
         if self.proyecto:
             # Establecer la fecha fin original automáticamente
@@ -71,8 +84,9 @@ class ProrrogaProyectoForm(forms.ModelForm):
     def clean_fecha_fin_propuesta(self):
         fecha_propuesta = self.cleaned_data.get('fecha_fin_propuesta')
         
+        # Only validate if fecha_propuesta is provided (since it's optional now)
         if not fecha_propuesta:
-            raise ValidationError('La fecha de finalización propuesta es obligatoria.')
+            return fecha_propuesta
         
         if self.proyecto:
             # Validar que la nueva fecha sea posterior a la fecha fin actual
@@ -110,6 +124,30 @@ class ProrrogaProyectoForm(forms.ModelForm):
         
         return justificacion
     
+    def clean_dias_extension(self):
+        dias = self.cleaned_data.get('dias_extension')
+        
+        if dias is not None:
+            if dias < 1:
+                raise ValidationError('Los días de extensión deben ser al menos 1.')
+            if dias > 365:
+                raise ValidationError('Los días de extensión no pueden exceder 365 días.')
+        
+        return dias
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        fecha_propuesta = cleaned_data.get('fecha_fin_propuesta')
+        dias_extension = cleaned_data.get('dias_extension')
+        
+        # Validar que se proporcione al menos uno de los dos campos
+        if not fecha_propuesta and not dias_extension:
+            raise ValidationError(
+                'Debe proporcionar la nueva fecha de finalización o el número de días de extensión.'
+            )
+        
+        return cleaned_data
+    
     def save(self, commit=True):
         prorroga = super().save(commit=False)
         
@@ -117,10 +155,14 @@ class ProrrogaProyectoForm(forms.ModelForm):
             prorroga.proyecto = self.proyecto
             prorroga.fecha_fin_original = self.proyecto.fecha_fin
             
-            # Calcular días de extensión
+            # Si se proporcionó fecha_fin_propuesta, calcular días de extensión
             if prorroga.fecha_fin_propuesta and prorroga.fecha_fin_original:
                 delta = prorroga.fecha_fin_propuesta - prorroga.fecha_fin_original
                 prorroga.dias_extension = delta.days
+            # Si se proporcionaron días de extensión pero no fecha, calcular la fecha
+            elif prorroga.dias_extension and prorroga.fecha_fin_original and not prorroga.fecha_fin_propuesta:
+                from datetime import timedelta
+                prorroga.fecha_fin_propuesta = prorroga.fecha_fin_original + timedelta(days=prorroga.dias_extension)
         
         if commit:
             prorroga.save()
@@ -138,8 +180,8 @@ class ProrrogaAprobacionForm(forms.ModelForm):
     ]
     
     decision = forms.ChoiceField(
-        choices=DECISION_CHOICES,
-        widget=forms.Select(attrs={'class': 'form-select'}),
+        choices=[('aprobada', 'Aprobar Prórroga'), ('rechazada', 'Rechazar Prórroga')],
+        widget=forms.RadioSelect(),
         label='Decisión'
     )
     

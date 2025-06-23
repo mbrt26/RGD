@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .comite-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+    }
+    .participante-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border-left: 4px solid #007bff;
+    }
+    .participante-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .estado-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .colaborador-item {
+        transition: all 0.2s;
+        cursor: pointer;
+        border-left: 3px solid transparent;
+    }
+    .colaborador-item:hover {
+        background-color: #f8f9fa;
+        border-left-color: #007bff;
+    }
+    .colaborador-item.selected {
+        background-color: #e7f3ff;
+        border-left-color: #007bff;
+    }
+    .stats-card {
+        background: rgba(255, 255, 255, 0.95);
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #6c757d;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 0.75rem;
+    }
+    .add-form {
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 0.5rem;
+        transition: all 0.2s;
+    }
+    .add-form:hover {
+        border-color: #007bff;
+        background: #e7f3ff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header del comité -->
+    <div class="comite-header p-4 mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-1">
+                    <i class="fas fa-users me-2"></i>{{ title }}
+                </h2>
+                <p class="mb-0 opacity-75">
+                    <i class="fas fa-calendar me-2"></i>{{ comite.fecha_comite|date:"d/m/Y H:i" }}
+                    {% if comite.lugar %} • <i class="fas fa-map-marker-alt me-1"></i>{{ comite.lugar }}{% endif %}
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="stats-card card">
+                    <div class="card-body p-3">
+                        <h5 class="text-primary mb-0">{{ participantes_actuales.count }}</h5>
+                        <small class="text-muted">Participantes Actuales</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botones de navegación -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{% url 'proyectos:comite_detail' comite.pk %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver al Comité
+            </a>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-outline-primary" onclick="toggleAddForm()">
+                <i class="fas fa-user-plus me-2"></i>Agregar Participante
+            </button>
+            <a href="{% url 'proyectos:comite_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-list me-2"></i>Lista de Comités
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Participantes actuales -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>Participantes Actuales
+                    </h5>
+                    <span class="badge bg-primary">{{ participantes_actuales.count }}</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if participantes_actuales %}
+                        {% for participante in participantes_actuales %}
+                        <div class="participante-card p-3 border-bottom">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle">
+                                            {{ participante.colaborador.nombre|first|upper }}
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">{{ participante.colaborador.nombre }}</h6>
+                                            <small class="text-muted">{{ participante.colaborador.cargo|default:"Sin cargo especificado" }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <span class="badge estado-badge {% if participante.estado_asistencia == 'confirmado' %}bg-success{% elif participante.estado_asistencia == 'asistio' %}bg-primary{% elif participante.estado_asistencia == 'no_asistio' %}bg-danger{% else %}bg-warning{% endif %}">
+                                            {{ participante.get_estado_asistencia_display }}
+                                        </span>
+                                        <br>
+                                        <small class="text-muted">{{ participante.get_tipo_participacion_display }}</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="btn-group btn-group-sm w-100">
+                                        {% if participante.estado_asistencia == 'pendiente' %}
+                                        <form method="post" style="display: inline;" class="flex-fill">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="accion" value="confirmar">
+                                            <input type="hidden" name="colaborador_id" value="{{ participante.colaborador.id }}">
+                                            <button type="submit" class="btn btn-outline-success w-100" title="Confirmar asistencia">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                        <form method="post" style="display: inline;" class="flex-fill">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="accion" value="eliminar">
+                                            <input type="hidden" name="colaborador_id" value="{{ participante.colaborador.id }}">
+                                            <button type="submit" class="btn btn-outline-danger w-100" 
+                                                    onclick="return confirm('¿Está seguro de eliminar a {{ participante.colaborador.nombre }} del comité?')"
+                                                    title="Eliminar del comité">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% if participante.rol_en_comite %}
+                            <div class="mt-2">
+                                <small class="text-info">
+                                    <i class="fas fa-tag me-1"></i>{{ participante.rol_en_comite }}
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-users text-muted mb-3" style="font-size: 3rem;"></i>
+                        <h5 class="text-muted">No hay participantes en este comité</h5>
+                        <p class="text-muted">Agregue participantes usando el formulario de la derecha.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario para agregar participantes -->
+        <div class="col-lg-4">
+            <div class="card add-form" id="addForm" style="display: none;">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-user-plus me-2"></i>Agregar Participante
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="addParticipanteForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="agregar">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Colaborador <span class="text-danger">*</span></label>
+                            <select name="colaborador_id" class="form-select" required id="colaboradorSelect">
+                                <option value="">Seleccione un colaborador...</option>
+                                {% for colaborador in colaboradores_disponibles %}
+                                <option value="{{ colaborador.id }}">{{ colaborador.nombre }} - {{ colaborador.cargo|default:"Sin cargo" }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Tipo de Participación</label>
+                            <select name="tipo_participacion" class="form-select">
+                                <option value="obligatorio">Obligatorio</option>
+                                <option value="opcional">Opcional</option>
+                                <option value="observador">Observador</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Rol en el Comité</label>
+                            <input type="text" name="rol_en_comite" class="form-control" 
+                                   placeholder="Ej: Coordinador, Secretario, etc.">
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Agregar al Comité
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="toggleAddForm()">
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Colaboradores disponibles -->
+            <div class="card" id="availableList">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-user-friends me-2"></i>Colaboradores Disponibles
+                        <span class="badge bg-secondary ms-2">{{ colaboradores_disponibles.count }}</span>
+                    </h6>
+                </div>
+                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                    {% if colaboradores_disponibles %}
+                        {% for colaborador in colaboradores_disponibles %}
+                        <div class="colaborador-item p-3 border-bottom" 
+                             onclick="selectCollaborator({{ colaborador.id }}, '{{ colaborador.nombre|escapejs }}')">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle" style="width: 32px; height: 32px; font-size: 0.75rem;">
+                                    {{ colaborador.nombre|first|upper }}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold">{{ colaborador.nombre }}</div>
+                                    <small class="text-muted">{{ colaborador.cargo|default:"Sin cargo especificado" }}</small>
+                                </div>
+                                <div>
+                                    <i class="fas fa-plus text-primary"></i>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle text-success mb-2" style="font-size: 2rem;"></i>
+                        <p class="text-muted mb-0">Todos los colaboradores están en el comité</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Información del comité -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Información del Comité
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        <div class="mb-2">
+                            <strong>Estado:</strong> 
+                            <span class="badge {% if comite.estado == 'programado' %}bg-info{% elif comite.estado == 'en_curso' %}bg-warning{% elif comite.estado == 'finalizado' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ comite.get_estado_display }}
+                            </span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Tipo:</strong> {{ comite.get_tipo_comite_display }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Coordinador:</strong> {{ comite.coordinador.nombre|default:"Sin asignar" }}
+                        </div>
+                        <div>
+                            <strong>Proyectos:</strong> {{ comite.seguimientos.count }} para revisar
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleAddForm() {
+    const addForm = document.getElementById('addForm');
+    const availableList = document.getElementById('availableList');
+    
+    if (addForm.style.display === 'none') {
+        addForm.style.display = 'block';
+        availableList.style.display = 'none';
+    } else {
+        addForm.style.display = 'none';
+        availableList.style.display = 'block';
+        // Limpiar formulario
+        document.getElementById('addParticipanteForm').reset();
+        document.querySelectorAll('.colaborador-item').forEach(item => item.classList.remove('selected'));
+    }
+}
+
+function selectCollaborator(id, nombre) {
+    // Mostrar formulario
+    toggleAddForm();
+    
+    // Seleccionar el colaborador en el dropdown
+    const select = document.getElementById('colaboradorSelect');
+    select.value = id;
+    
+    // Resaltar el colaborador seleccionado
+    document.querySelectorAll('.colaborador-item').forEach(item => item.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+}
+
+// Validación del formulario
+document.getElementById('addParticipanteForm').addEventListener('submit', function(e) {
+    const colaboradorSelect = document.getElementById('colaboradorSelect');
+    
+    if (!colaboradorSelect.value) {
+        e.preventDefault();
+        alert('Debe seleccionar un colaborador.');
+        colaboradorSelect.focus();
+        return;
+    }
+});
+
+// Auto-mostrar formulario si no hay colaboradores disponibles pero hay participantes
+document.addEventListener('DOMContentLoaded', function() {
+    const participantesCount = {{ participantes_actuales.count }};
+    const disponiblesCount = {{ colaboradores_disponibles.count }};
+    
+    if (participantesCount === 0 && disponiblesCount > 0) {
+        toggleAddForm();
+    }
+});
+</script>
+{% endblock %}

@@ -838,3 +838,79 @@ def tasks_cost_center_report(request):
     }
     
     return render(request, 'tasks/cost_center_report.html', context)
+
+@login_required
+def get_proyecto_centro_costos(request):
+    """Vista AJAX para obtener el centro de costos de un proyecto."""
+    proyecto_id = request.GET.get('proyecto_id')
+    
+    if not proyecto_id:
+        return JsonResponse({'error': 'No se proporcionó ID del proyecto'}, status=400)
+    
+    try:
+        # Importar aquí para evitar imports circulares
+        from proyectos.models import Proyecto
+        proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+        
+        return JsonResponse({
+            'centro_costos': proyecto.centro_costos or '',
+            'proyecto_nombre': proyecto.nombre_proyecto
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def get_centro_costos_related_items(request):
+    """Vista AJAX para obtener proyectos, servicios y contratos relacionados con un centro de costos."""
+    centro_costos = request.GET.get('centro_costos')
+    
+    if not centro_costos:
+        return JsonResponse({'error': 'No se proporcionó centro de costos'}, status=400)
+    
+    try:
+        data = {
+            'proyectos': [],
+            'servicios': [],
+            'mantenimiento': []
+        }
+        
+        # Obtener proyectos relacionados
+        try:
+            from proyectos.models import Proyecto
+            proyectos = Proyecto.objects.filter(
+                centro_costos=centro_costos,
+                estado__in=['pendiente', 'en_ejecucion']
+            ).values('id', 'nombre_proyecto', 'orden_contrato', 'estado').order_by('-estado', '-fecha_inicio')
+            data['proyectos'] = list(proyectos)
+        except ImportError:
+            pass
+        
+        # Obtener servicios relacionados
+        try:
+            from servicios.models import SolicitudServicio
+            servicios = SolicitudServicio.objects.filter(
+                centro_costo=centro_costos
+            ).exclude(
+                estado__in=['cancelada', 'completada']
+            ).values('id', 'nombre_proyecto', 'numero_orden')
+            data['servicios'] = list(servicios)
+        except ImportError:
+            pass
+        
+        # Obtener contratos de mantenimiento relacionados
+        try:
+            from mantenimiento.models import ContratoMantenimiento
+            # Buscar por centro_costos a través del trato_origen
+            contratos = ContratoMantenimiento.objects.filter(
+                trato_origen__centro_costos=centro_costos
+            ).filter(
+                estado='activo'
+            ).values('id', 'nombre_contrato', 'numero_contrato')
+            data['mantenimiento'] = list(contratos)
+        except (ImportError, AttributeError):
+            pass
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

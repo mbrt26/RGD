@@ -9,11 +9,25 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1><i class="fas fa-user-tag"></i> Roles</h1>
-                {% if can_add %}
-                <a href="{% url 'users:role_create' %}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Nuevo Rol
-                </a>
-                {% endif %}
+                <div class="btn-group" role="group">
+                    {% if can_add %}
+                    <a href="{% url 'users:role_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Nuevo Rol
+                    </a>
+                    {% endif %}
+                    {% if can_import %}
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-file-excel"></i> Importar Excel
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'users:roles_import_template' %}"><i class="fas fa-download"></i> Descargar Plantilla</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#importRolesModal"><i class="fas fa-upload"></i> Subir Archivo</a></li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
@@ -156,6 +170,49 @@
                     {% endif %}
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Importar Roles -->
+<div class="modal fade" id="importRolesModal" tabindex="-1" aria-labelledby="importRolesModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importRolesModalLabel">
+                    <i class="fas fa-file-excel"></i> Importar Roles desde Excel
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'users:roles_import_excel' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="excel_file" class="form-label">Archivo Excel</label>
+                        <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx,.xls" required>
+                        <div class="form-text">
+                            Solo se aceptan archivos Excel (.xlsx, .xls). 
+                            <a href="{% url 'users:roles_import_template' %}" class="text-decoration-none">
+                                <i class="fas fa-download"></i> Descargar plantilla de ejemplo
+                            </a>
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Columnas requeridas en el archivo:</h6>
+                        <ul class="mb-0">
+                            <li><strong>name:</strong> Nombre del rol (único)</li>
+                            <li><strong>description:</strong> Descripción del rol (opcional)</li>
+                            <li><strong>is_active:</strong> Estado activo (True/False, opcional)</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-upload"></i> Importar Roles
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

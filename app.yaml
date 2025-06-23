@@ -3,10 +3,10 @@ runtime: python312
 # Crear un servicio separado para RGD AIRE (no afecta el servicio default de ARCOPACK)
 service: rgd-aire
 
-# Configuración del entrypoint simplificado - el usuario admin se crea automáticamente en main.py
+# Configuración del entrypoint optimizado para arranque rápido
 entrypoint: >
-  bash -c "python manage.py collectstatic --noinput --settings=rgd_aire.settings_appengine \
-           && gunicorn rgd_aire.wsgi:application --bind 0.0.0.0:\$PORT"
+  bash -c "python manage.py create_admin --settings=rgd_aire.settings_appengine \
+           && gunicorn rgd_aire.wsgi:application --bind 0.0.0.0:\$PORT --workers 2 --timeout 60 --preload"
 
 # Variables de entorno para RGD AIRE
 env_variables:
@@ -14,8 +14,8 @@ env_variables:
   USE_CLOUD_SQL: "true"
   # Variables configuradas con tus recursos reales:
   DJANGO_SECRET_KEY: "RGD-Aire-2024-SuperSecure-Key-For-Production-9j8h7g6f5d4s3a2"
-  DB_NAME: "rgd_aire_db"
-  DB_USER: "postgres"
+  DB_NAME: "rgd_aire_db_new"
+  DB_USER: "rgd_aire_user"
   DB_PASSWORD: "RGD2024SecureDB!"
   CLOUD_SQL_CONNECTION_NAME: "appsindunnova:us-central1:rgd-aire-db"
   GS_BUCKET_NAME: "appsindunnova-rgd-aire-storage"
@@ -24,15 +24,17 @@ env_variables:
   ADMIN_USERNAME: "rgd_admin"
   ADMIN_EMAIL: "admin@rgdaire.com"
   ADMIN_PASSWORD: "Catalina18"
+  # Desactivar cache problemático temporalmente
+  DISABLE_MEMCACHE: "true"
 
-# Configuración de escalado automático para App Engine Standard
+# Configuración de escalado automático optimizada para arranque rápido
 automatic_scaling:
-  min_instances: 1
+  min_instances: 1  # Mantener al menos 1 instancia caliente
   max_instances: 10
   target_cpu_utilization: 0.6
   target_throughput_utilization: 0.6
-  min_pending_latency: 30ms
-  max_pending_latency: 80ms
+  min_pending_latency: 10ms  # Reducido para respuesta más rápida
+  max_pending_latency: 50ms  # Reducido para respuesta más rápida
 
 # Configuración de recursos
 resources:

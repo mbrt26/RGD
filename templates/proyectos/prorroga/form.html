@@ -287,9 +287,15 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const diasInput = document.getElementById('{{ form.dias_extension.id_for_label }}');
+    const diasInput = document.getElementById('id_dias_extension');
     const diasMostrar = document.getElementById('diasMostrar');
     const nuevaFecha = document.getElementById('nuevaFecha');
+    
+    // Verificar que los elementos existan
+    if (!diasInput) {
+        console.error('No se encontró el campo dias_extension');
+        return;
+    }
     
     // Fecha fin original del proyecto
     const fechaFinOriginal = new Date('{{ proyecto.fecha_fin|date:"Y-m-d" }}');
@@ -320,10 +326,28 @@ document.addEventListener('DOMContentLoaded', function() {
     // Validación del formulario
     document.getElementById('prorrogaForm').addEventListener('submit', function(e) {
         const dias = parseInt(diasInput.value) || 0;
+        const tipoProrroga = document.getElementById('id_tipo_prorroga').value;
+        const justificacion = document.querySelector('textarea[name="justificacion"]').value.trim();
+        
         if (dias <= 0) {
             e.preventDefault();
             alert('Por favor, ingrese un número válido de días para la extensión.');
             diasInput.focus();
+            return;
+        }
+        
+        if (!tipoProrroga) {
+            e.preventDefault();
+            alert('Por favor, seleccione el tipo de prórroga.');
+            document.getElementById('id_tipo_prorroga').focus();
+            return;
+        }
+        
+        if (justificacion.length < 50) {
+            e.preventDefault();
+            alert('La justificación debe tener al menos 50 caracteres.');
+            document.querySelector('textarea[name="justificacion"]').focus();
+            return;
         }
     });
 });

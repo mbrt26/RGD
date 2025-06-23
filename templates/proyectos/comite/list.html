@@ -124,136 +124,142 @@
     </div>
 
     <!-- Lista de comités -->
-<div class="row">
-    {% for comite in comites %}
-    <div class="col-lg-6 mb-4">
-        <div class="card comite-card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">
-                    <a href="{% url 'proyectos:comite_detail' comite.pk %}" class="text-decoration-none">
-                        {{ comite.nombre }}
-                    </a>
-                </h6>
-                <span class="badge estado-badge {% if comite.estado == 'programado' %}bg-info{% elif comite.estado == 'en_curso' %}bg-warning text-dark{% elif comite.estado == 'finalizado' %}bg-success{% else %}bg-secondary{% endif %}">
-                    {{ comite.get_estado_display }}
-                </span>
-            </div>
-            <div class="card-body">
-                <div class="row g-2 mb-3">
-                    <div class="col-6">
-                        <small class="text-muted">Fecha y Hora</small>
-                        <div class="fw-bold">
-                            <i class="fas fa-calendar me-1"></i>
-                            {{ comite.fecha_comite|date:"d/m/Y H:i" }}
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <small class="text-muted">Tipo</small>
-                        <div class="fw-bold">
-                            <i class="fas fa-tag me-1"></i>
-                            {{ comite.get_tipo_comite_display }}
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <small class="text-muted">Coordinador</small>
-                        <div class="fw-bold">
-                            <i class="fas fa-user-tie me-1"></i>
-                            {{ comite.coordinador.nombre|default:"Sin asignar" }}
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <small class="text-muted">Lugar</small>
-                        <div class="fw-bold">
-                            <i class="fas fa-map-marker-alt me-1"></i>
-                            {{ comite.lugar|default:"Virtual" }}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row g-2 mb-3">
-                    <div class="col-4 text-center">
-                        <div class="border rounded p-2">
-                            <div class="h5 mb-0 text-primary">{{ comite.numero_participantes }}</div>
-                            <small class="text-muted">Participantes</small>
-                        </div>
-                    </div>
-                    <div class="col-4 text-center">
-                        <div class="border rounded p-2">
-                            <div class="h5 mb-0 text-info">{{ comite.proyectos_revisados }}</div>
-                            <small class="text-muted">Proyectos</small>
-                        </div>
-                    </div>
-                    <div class="col-4 text-center">
-                        <div class="border rounded p-2">
-                            <div class="h5 mb-0 text-warning">{{ comite.duracion_estimada }}</div>
-                            <small class="text-muted">Min. Est.</small>
-                        </div>
-                    </div>
-                </div>
-
-                {% if comite.participantes.all %}
-                <div class="mb-2">
-                    <small class="text-muted">Participantes:</small>
-                    <div class="mt-1">
-                        {% for participante in comite.participantes.all|slice:":5" %}
-                            <span class="participante-avatar" title="{{ participante.nombre }}">
-                                {{ participante.nombre|first }}
-                            </span>
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Comité</th>
+                            <th>Fecha y Hora</th>
+                            <th>Estado</th>
+                            <th>Coordinador</th>
+                            <th>Participantes</th>
+                            <th>Proyectos</th>
+                            <th>Lugar</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for comite in comites %}
+                        <tr>
+                            <td>
+                                <div>
+                                    <a href="{% url 'proyectos:comite_detail' comite.pk %}" class="text-decoration-none fw-bold">
+                                        {{ comite.nombre }}
+                                    </a>
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-tag me-1"></i>{{ comite.get_tipo_comite_display }}
+                                    </small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-bold">{{ comite.fecha_comite|date:"d/m/Y" }}</div>
+                                <small class="text-muted">{{ comite.fecha_comite|date:"H:i" }}</small>
+                            </td>
+                            <td>
+                                <span class="badge estado-badge {% if comite.estado == 'programado' %}bg-info{% elif comite.estado == 'en_curso' %}bg-warning text-dark{% elif comite.estado == 'finalizado' %}bg-success{% else %}bg-secondary{% endif %}">
+                                    {{ comite.get_estado_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="participante-avatar me-2" style="width: 32px; height: 32px; font-size: 12px;">
+                                        {{ comite.coordinador.nombre|first|upper|default:"?" }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ comite.coordinador.nombre|default:"Sin asignar" }}</div>
+                                        {% if comite.coordinador.email %}
+                                        <small class="text-muted">{{ comite.coordinador.email }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-primary me-2">{{ comite.numero_participantes }}</span>
+                                    <div>
+                                        {% for participante in comite.participantes.all|slice:":3" %}
+                                            <span class="participante-avatar" title="{{ participante.nombre }}" style="width: 24px; height: 24px; font-size: 10px;">
+                                                {{ participante.nombre|first|upper }}
+                                            </span>
+                                        {% endfor %}
+                                        {% if comite.participantes.count > 3 %}
+                                            <span class="participante-avatar bg-secondary" title="+{{ comite.participantes.count|add:"-3" }} más" style="width: 24px; height: 24px; font-size: 10px;">
+                                                +{{ comite.participantes.count|add:"-3" }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ comite.proyectos_revisados }}</span>
+                                <small class="text-muted d-block">proyectos</small>
+                            </td>
+                            <td>
+                                <div>
+                                    <i class="fas fa-map-marker-alt me-1 text-muted"></i>
+                                    <span class="small">{{ comite.lugar|default:"Virtual"|truncatechars:20 }}</span>
+                                </div>
+                                {% if comite.duracion_estimada %}
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>{{ comite.duracion_estimada }} min
+                                </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'proyectos:comite_detail' comite.pk %}" class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'proyectos:comite_update' comite.pk %}" class="btn btn-sm btn-outline-secondary" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-sm btn-outline-dark dropdown-toggle" data-bs-toggle="dropdown">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="{% url 'proyectos:comite_acta' comite.pk %}"><i class="fas fa-file-alt me-2"></i>Ver Acta</a></li>
+                                            <li><a class="dropdown-item" href="{% url 'proyectos:comite_export' comite.pk %}"><i class="fas fa-download me-2"></i>Exportar</a></li>
+                                            {% if comite.estado == 'programado' %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form method="post" action="{% url 'proyectos:comite_iniciar' comite.pk %}" style="display: inline;">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="dropdown-item" onclick="return confirm('¿Está seguro de iniciar este comité?')">
+                                                        <i class="fas fa-play me-2"></i>Iniciar Comité
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            {% endif %}
+                                            {% if comite.estado == 'programado' %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item" href="{% url 'proyectos:duplicar_comite' comite.pk %}"><i class="fas fa-copy me-2"></i>Duplicar</a></li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="fas fa-users text-muted" style="font-size: 4rem;"></i>
+                                <h4 class="text-muted mt-3">No hay comités registrados</h4>
+                                <p class="text-muted">Comience creando su primer comité de proyectos.</p>
+                                <a href="{% url 'proyectos:comite_create' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i>Crear Primer Comité
+                                </a>
+                            </td>
+                        </tr>
                         {% endfor %}
-                        {% if comite.participantes.count > 5 %}
-                            <span class="badge bg-light text-dark">+{{ comite.participantes.count|add:"-5" }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if comite.agenda %}
-                <div class="text-muted small">
-                    <i class="fas fa-clipboard-list me-1"></i>
-                    {{ comite.agenda|truncatechars:80 }}
-                </div>
-                {% endif %}
-            </div>
-            <div class="card-footer d-flex justify-content-between align-items-center">
-                <small class="text-muted">
-                    Creado: {{ comite.fecha_creacion|date:"d/m/Y" }}
-                </small>
-                <div class="btn-group btn-group-sm">
-                    <a href="{% url 'proyectos:comite_detail' comite.pk %}" 
-                       class="btn btn-outline-primary" 
-                       title="Ver detalle">
-                        <i class="fas fa-eye"></i>
-                    </a>
-                    <a href="{% url 'proyectos:comite_update' comite.pk %}" 
-                       class="btn btn-outline-secondary" 
-                       title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </a>
-                    {% if comite.estado == 'programado' %}
-                    <button type="button" 
-                            class="btn btn-outline-success" 
-                            onclick="duplicarComite({{ comite.pk }})"
-                            title="Duplicar comité">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                    {% endif %}
-                </div>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
-    {% empty %}
-    <div class="col-12">
-        <div class="text-center py-5">
-            <i class="fas fa-users text-muted" style="font-size: 4rem;"></i>
-            <h4 class="text-muted mt-3">No hay comités registrados</h4>
-            <p class="text-muted">Comience creando su primer comité de proyectos</p>
-            <a href="{% url 'proyectos:comite_create' %}" class="btn btn-primary">
-                <i class="fas fa-plus me-2"></i>Crear Comité
-            </a>
-        </div>
-    </div>
-    {% endfor %}
-</div>
 
 <!-- Paginación -->
 {% if is_paginated %}

@@ -40,4 +40,8 @@ urlpatterns = [
     
     # Reports
     path('reports/cost-centers/', views.tasks_cost_center_report, name='cost_center_report'),
+    
+    # AJAX endpoints
+    path('ajax/get-proyecto-centro-costos/', views.get_proyecto_centro_costos, name='get_proyecto_centro_costos'),
+    path('ajax/get-centro-costos-related/', views.get_centro_costos_related_items, name='get_centro_costos_related_items'),
 ]

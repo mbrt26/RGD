@@ -2,7 +2,7 @@ from django.views.generic import ListView, CreateView, UpdateView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.http import JsonResponse, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.db import transaction
 from django.utils import timezone
@@ -239,7 +239,24 @@ class SeguimientoUpdateView(LoginRequiredMixin, UpdateView):
         context['comite'] = seguimiento.comite
         context['proyecto'] = seguimiento.proyecto
         context['colaboradores'] = Colaborador.objects.all().order_by('nombre')
+        
+        # Auto-popular el progreso desde el proyecto si no se ha reportado aún
+        if seguimiento.avance_reportado == 0 and seguimiento.proyecto.avance:
+            context['avance_sugerido'] = seguimiento.proyecto.avance
+            context['avance_desde_proyecto'] = True
+        
         return context
+    
+    def get_initial(self):
+        """Auto-popular el avance reportado con el avance del proyecto"""
+        initial = super().get_initial()
+        seguimiento = self.get_object()
+        
+        # Si no se ha reportado avance aún, usar el del proyecto
+        if seguimiento.avance_reportado == 0 and seguimiento.proyecto.avance:
+            initial['avance_reportado'] = seguimiento.proyecto.avance
+            
+        return initial
 
     def form_valid(self, form):
         messages.success(
@@ -307,8 +324,27 @@ def gestionar_participantes_comite(request, comite_id):
                 )
             except ParticipanteComite.DoesNotExist:
                 messages.error(request, 'Participante no encontrado.')
+        
+        # Después de procesar POST, redirigir a la misma página
+        return redirect('proyectos:gestionar_participantes_comite', comite_id=comite_id)
     
-    return redirect('proyectos:comite_detail', pk=comite_id)
+    # GET request - mostrar la interfaz de gestión
+    participantes_actuales = comite.participantecomite_set.select_related('colaborador').order_by('colaborador__nombre')
+    
+    # Colaboradores que NO están en el comité
+    participantes_ids = participantes_actuales.values_list('colaborador_id', flat=True)
+    colaboradores_disponibles = Colaborador.objects.exclude(
+        id__in=participantes_ids
+    ).order_by('nombre')
+    
+    context = {
+        'comite': comite,
+        'participantes_actuales': participantes_actuales,
+        'colaboradores_disponibles': colaboradores_disponibles,
+        'title': f'Gestionar Participantes - {comite.nombre}',
+    }
+    
+    return render(request, 'proyectos/comite/gestionar_participantes.html', context)
 
 
 def duplicar_comite(request, comite_id):
@@ -393,3 +429,164 @@ def ajax_buscar_colaboradores(request):
         ]
     
     return JsonResponse({'colaboradores': colaboradores})
+
+
+class ComiteActaView(LoginRequiredMixin, DetailView):
+    """Vista para mostrar el acta de un comité"""
+    model = ComiteProyecto
+    template_name = 'proyectos/comite/acta.html'
+    context_object_name = 'comite'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        comite = self.get_object()
+        
+        # Obtener seguimientos ordenados
+        context['seguimientos'] = comite.seguimientos.select_related('proyecto').order_by('orden_presentacion', 'proyecto__nombre_proyecto')
+        
+        # Obtener participantes con asistencia confirmada
+        context['participantes_asistieron'] = comite.participantecomite_set.filter(
+            estado_asistencia='asistio'
+        ).select_related('colaborador').order_by('colaborador__nombre')
+        
+        # Calcular estadísticas
+        total_proyectos = context['seguimientos'].count()
+        proyectos_verdes = context['seguimientos'].filter(estado_seguimiento='verde').count()
+        proyectos_rojos = context['seguimientos'].filter(estado_seguimiento='rojo').count()
+        
+        context.update({
+            'title': f'Acta - {comite.nombre}',
+            'total_proyectos': total_proyectos,
+            'proyectos_verdes': proyectos_verdes,
+            'proyectos_rojos': proyectos_rojos,
+        })
+        
+        return context
+
+
+class ComiteExportView(LoginRequiredMixin, DetailView):
+    """Vista para exportar información de un comité"""
+    model = ComiteProyecto
+    
+    def get(self, request, *args, **kwargs):
+        from django.http import HttpResponse
+        import csv
+        
+        comite = self.get_object()
+        
+        # Crear respuesta CSV
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="comite_{comite.pk}_{comite.fecha_comite.strftime("%Y%m%d")}.csv"'
+        
+        writer = csv.writer(response)
+        
+        # Headers
+        writer.writerow([
+            'Proyecto', 'Responsable', 'Estado Avance', 'Porcentaje Avance',
+            'Semáforo', 'Decisiones Requeridas', 'Observaciones'
+        ])
+        
+        # Datos de seguimientos
+        for seguimiento in comite.seguimientos.select_related('proyecto').order_by('orden_presentacion'):
+            writer.writerow([
+                seguimiento.proyecto.nombre_proyecto,
+                seguimiento.proyecto.responsable.nombre if seguimiento.proyecto.responsable else 'Sin asignar',
+                seguimiento.get_estado_seguimiento_display(),
+                f"{seguimiento.avance_reportado}%",
+                seguimiento.get_estado_seguimiento_display(),
+                'Sí' if seguimiento.requiere_decision else 'No',
+                seguimiento.observaciones or ''
+            ])
+        
+        return response
+
+
+class ComiteIniciarView(LoginRequiredMixin, DetailView):
+    """Vista para iniciar un comité (cambiar estado a 'en_curso')"""
+    model = ComiteProyecto
+    
+    def post(self, request, *args, **kwargs):
+        from django.http import JsonResponse
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        comite = self.get_object()
+        
+        logger.info(f"Intentando iniciar comité {comite.pk}: {comite.nombre}, estado actual: {comite.estado}")
+        
+        # Verificar que el comité esté en estado 'programado'
+        if comite.estado != 'programado':
+            logger.warning(f"Comité {comite.pk} no está en estado 'programado', estado actual: {comite.estado}")
+            return JsonResponse({
+                'success': False, 
+                'message': f'Solo se pueden iniciar comités programados. Estado actual: {comite.get_estado_display()}'
+            })
+        
+        # Verificar que tenga participantes
+        if not comite.participantecomite_set.exists():
+            return JsonResponse({
+                'success': False, 
+                'message': 'No se puede iniciar un comité sin participantes.'
+            })
+        
+        # Verificar que tenga proyectos para revisar
+        if not comite.seguimientos.exists():
+            return JsonResponse({
+                'success': False, 
+                'message': 'No se puede iniciar un comité sin proyectos para revisar.'
+            })
+        
+        # Cambiar estado a 'en_curso'
+        comite.estado = 'en_curso'
+        comite.save()
+        
+        # Marcar asistencia de participantes confirmados
+        comite.participantecomite_set.filter(
+            estado_asistencia='confirmado'
+        ).update(estado_asistencia='asistio')
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Comité "{comite.nombre}" iniciado exitosamente.'
+        })
+    
+    def get(self, request, *args, **kwargs):
+        # Redirigir GET requests al detalle del comité
+        return redirect('proyectos:comite_detail', pk=self.kwargs['pk'])
+
+
+class ComiteFinalizarView(LoginRequiredMixin, DetailView):
+    """Vista para finalizar un comité (cambiar estado a 'finalizado')"""
+    model = ComiteProyecto
+    
+    def post(self, request, *args, **kwargs):
+        from django.http import JsonResponse
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        comite = self.get_object()
+        
+        logger.info(f"Intentando finalizar comité {comite.pk}: {comite.nombre}, estado actual: {comite.estado}")
+        
+        # Verificar que el comité esté en estado 'en_curso'
+        if comite.estado != 'en_curso':
+            logger.warning(f"Comité {comite.pk} no está en estado 'en_curso', estado actual: {comite.estado}")
+            return JsonResponse({
+                'success': False, 
+                'message': f'Solo se pueden finalizar comités en curso. Estado actual: {comite.get_estado_display()}'
+            })
+        
+        # Cambiar estado a 'finalizado'
+        comite.estado = 'finalizado'
+        comite.save()
+        
+        logger.info(f"Comité {comite.pk} finalizado exitosamente")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Comité "{comite.nombre}" finalizado exitosamente.'
+        })
+    
+    def get(self, request, *args, **kwargs):
+        # Redirigir GET requests al detalle del comité
+        return redirect('proyectos:comite_detail', pk=self.kwargs['pk'])

@@ -229,6 +229,32 @@ input[type="datetime-local"] {
         margin-bottom: 20px;
     }
 }
+
+/* Cost center dropdown functionality styles */
+.auto-filled-info {
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.loading-dropdown {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.form-select.auto-populated {
+    background-color: #e8f5e8;
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+.dropdown-updated {
+    animation: highlightUpdate 0.5s ease-in-out;
+}
+
+@keyframes highlightUpdate {
+    0% { background-color: #fff3cd; }
+    100% { background-color: transparent; }
+}
 </style>
 {% endblock %}
 
@@ -332,6 +358,197 @@ $(document).ready(function() {
         
         $('#id_due_date').val(year + '-' + month + '-' + day + 'T' + hours + ':' + minutes);
     }
+    
+    // Auto-rellenar campos relacionados cuando se selecciona un centro de costos
+    $('#id_centro_costos_dropdown').on('change', function() {
+        var centroCostos = $(this).val();
+        var proyectoField = $('#id_proyecto_relacionado');
+        var servicioField = $('#id_solicitud_servicio');
+        var mantenimientoField = $('#id_contrato_mantenimiento');
+        
+        // Limpiar campos relacionados y clases CSS
+        proyectoField.empty().append('<option value="">---------</option>').removeClass('auto-populated');
+        servicioField.empty().append('<option value="">---------</option>').removeClass('auto-populated');
+        mantenimientoField.empty().append('<option value="">---------</option>').removeClass('auto-populated');
+        
+        // Remover mensajes informativos previos
+        $('.auto-filled-info').remove();
+        
+        if (centroCostos) {
+            // Mostrar indicador de carga y aplicar clase CSS
+            var loadingIndicator = '<div class="auto-filled-info text-info mt-2"><i class="fas fa-spinner fa-spin"></i> Cargando opciones relacionadas...</div>';
+            $(this).after(loadingIndicator);
+            
+            // Aplicar clase de loading a los dropdowns
+            proyectoField.addClass('loading-dropdown');
+            servicioField.addClass('loading-dropdown');
+            mantenimientoField.addClass('loading-dropdown');
+            
+            // Hacer petición AJAX para obtener elementos relacionados
+            $.ajax({
+                url: '{% url "tasks:get_centro_costos_related_items" %}',
+                data: {
+                    'centro_costos': centroCostos
+                },
+                success: function(data) {
+                    // Remover indicador de carga y clases CSS
+                    $('.auto-filled-info').remove();
+                    proyectoField.removeClass('loading-dropdown');
+                    servicioField.removeClass('loading-dropdown');
+                    mantenimientoField.removeClass('loading-dropdown');
+                    
+                    // Llenar dropdown de proyectos
+                    if (data.proyectos && data.proyectos.length > 0) {
+                        $.each(data.proyectos, function(index, proyecto) {
+                            var displayText = proyecto.nombre_proyecto;
+                            if (proyecto.orden_contrato) {
+                                displayText = proyecto.orden_contrato + ' - ' + proyecto.nombre_proyecto;
+                            }
+                            proyectoField.append('<option value="' + proyecto.id + '">' + displayText + '</option>');
+                        });
+                        proyectoField.addClass('auto-populated dropdown-updated');
+                        
+                        // Auto-seleccionar proyecto si solo hay uno disponible
+                        if (data.proyectos.length === 1) {
+                            proyectoField.val(data.proyectos[0].id);
+                            proyectoField.addClass('auto-populated');
+                        } 
+                        // Si hay múltiples proyectos, seleccionar el que está en ejecución
+                        else if (data.proyectos.length > 1) {
+                            var proyectoEnEjecucion = data.proyectos.find(function(proyecto) {
+                                return proyecto.estado === 'en_ejecucion';
+                            });
+                            if (proyectoEnEjecucion) {
+                                proyectoField.val(proyectoEnEjecucion.id);
+                                proyectoField.addClass('auto-populated');
+                            }
+                        }
+                    }
+                    
+                    // Llenar dropdown de servicios
+                    if (data.servicios && data.servicios.length > 0) {
+                        $.each(data.servicios, function(index, servicio) {
+                            var displayText = servicio.nombre_proyecto || 'Servicio #' + servicio.id;
+                            if (servicio.numero_orden) {
+                                displayText = servicio.numero_orden + ' - ' + displayText;
+                            }
+                            servicioField.append('<option value="' + servicio.id + '">' + displayText + '</option>');
+                        });
+                        servicioField.addClass('auto-populated dropdown-updated');
+                        
+                        // Auto-seleccionar servicio si solo hay uno disponible
+                        if (data.servicios.length === 1) {
+                            servicioField.val(data.servicios[0].id);
+                            servicioField.addClass('auto-populated');
+                        }
+                    }
+                    
+                    // Llenar dropdown de mantenimiento
+                    if (data.mantenimiento && data.mantenimiento.length > 0) {
+                        $.each(data.mantenimiento, function(index, contrato) {
+                            var displayText = contrato.nombre_contrato;
+                            if (contrato.numero_contrato) {
+                                displayText = contrato.numero_contrato + ' - ' + contrato.nombre_contrato;
+                            }
+                            mantenimientoField.append('<option value="' + contrato.id + '">' + displayText + '</option>');
+                        });
+                        mantenimientoField.addClass('auto-populated dropdown-updated');
+                        
+                        // Auto-seleccionar contrato si solo hay uno disponible
+                        if (data.mantenimiento.length === 1) {
+                            mantenimientoField.val(data.mantenimiento[0].id);
+                            mantenimientoField.addClass('auto-populated');
+                        }
+                    }
+                    
+                    // Mostrar mensaje informativo
+                    var totalItems = (data.proyectos ? data.proyectos.length : 0) + 
+                                   (data.servicios ? data.servicios.length : 0) + 
+                                   (data.mantenimiento ? data.mantenimiento.length : 0);
+                    
+                    var autoSelected = 0;
+                    var autoSelectedText = '';
+                    
+                    // Verificar si se auto-seleccionó proyecto
+                    var proyectoAutoSeleccionado = false;
+                    if (data.proyectos && data.proyectos.length === 1) {
+                        proyectoAutoSeleccionado = true;
+                        autoSelectedText += 'proyecto';
+                    } else if (data.proyectos && data.proyectos.length > 1) {
+                        var proyectoEnEjecucion = data.proyectos.find(function(proyecto) {
+                            return proyecto.estado === 'en_ejecucion';
+                        });
+                        if (proyectoEnEjecucion) {
+                            proyectoAutoSeleccionado = true;
+                            autoSelectedText += 'proyecto (en ejecución)';
+                        }
+                    }
+                    
+                    if (proyectoAutoSeleccionado) {
+                        autoSelected++;
+                    }
+                    if (data.servicios && data.servicios.length === 1) {
+                        autoSelected++;
+                        if (autoSelectedText) autoSelectedText += ', ';
+                        autoSelectedText += 'servicio';
+                    }
+                    if (data.mantenimiento && data.mantenimiento.length === 1) {
+                        autoSelected++;
+                        if (autoSelectedText) autoSelectedText += ', ';
+                        autoSelectedText += 'mantenimiento';
+                    }
+                    
+                    if (totalItems > 0) {
+                        var message = '<i class="fas fa-check"></i> Se encontraron ' + totalItems + ' elementos relacionados';
+                        if (autoSelected > 0) {
+                            message += ' (' + autoSelectedText + ' seleccionado automáticamente)';
+                        }
+                        $('#id_centro_costos_dropdown').after(
+                            '<div class="auto-filled-info text-success mt-2">' + message + '</div>'
+                        );
+                    } else {
+                        $('#id_centro_costos_dropdown').after(
+                            '<div class="auto-filled-info text-warning mt-2">' +
+                            '<i class="fas fa-info-circle"></i> No se encontraron elementos relacionados con este centro de costos' +
+                            '</div>'
+                        );
+                    }
+                },
+                error: function() {
+                    $('.auto-filled-info').remove();
+                    $('#id_centro_costos_dropdown').after(
+                        '<div class="auto-filled-info text-danger mt-2">' +
+                        '<i class="fas fa-exclamation-triangle"></i> Error al cargar elementos relacionados' +
+                        '</div>'
+                    );
+                }
+            });
+        }
+    });
+    
+    // Auto-rellenar centro de costos cuando se selecciona un proyecto (funcionalidad original)
+    $('#id_proyecto_relacionado').on('change', function() {
+        var proyectoId = $(this).val();
+        var centroCostosField = $('#id_centro_costos_dropdown');
+        
+        if (proyectoId && !centroCostosField.val()) {
+            // Solo auto-rellenar si no hay centro de costos seleccionado
+            $.ajax({
+                url: '{% url "tasks:get_proyecto_centro_costos" %}',
+                data: {
+                    'proyecto_id': proyectoId
+                },
+                success: function(data) {
+                    if (data.centro_costos) {
+                        centroCostosField.val(data.centro_costos).trigger('change');
+                    }
+                },
+                error: function() {
+                    console.log('Error al obtener centro de costos del proyecto');
+                }
+            });
+        }
+    });
     
     // Tooltip para ayuda
     $('[data-bs-toggle="tooltip"]').tooltip();

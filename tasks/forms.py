@@ -45,6 +45,18 @@ class TaskForm(forms.ModelForm):
         self.fields['solicitud_servicio'].required = False
         self.fields['contrato_mantenimiento'].required = False
         
+        # Configurar centro_costos como dropdown con opciones dinámicas
+        self.fields['centro_costos'] = forms.ChoiceField(
+            choices=self.get_centro_costos_choices(),
+            required=True,
+            label=_('Centro de Costos'),
+            help_text=_('Seleccione el centro de costos - se auto-rellenarán los proyectos/servicios relacionados'),
+            widget=forms.Select(attrs={
+                'class': 'form-select',
+                'id': 'id_centro_costos_dropdown'
+            })
+        )
+        
         # Si no es superusuario, limitar las opciones
         if self.user and not self.user.is_superuser:
             # Solo puede asignar a sí mismo o a usuarios de su mismo equipo
@@ -69,12 +81,15 @@ class TaskForm(forms.ModelForm):
                 Column('category', css_class='form-group col-md-6 mb-0'),
                 css_class='form-row'
             ),
-            HTML('<h5 class="mt-3 mb-2"><i class="fas fa-link"></i> Relaciones del Proyecto</h5>'),
-            'centro_costos',
+            HTML('<h5 class="mt-3 mb-2"><i class="fas fa-building"></i> Centro de Costos y Relaciones</h5>'),
             Row(
-                Column('proyecto_relacionado', css_class='form-group col-md-4 mb-0'),
-                Column('solicitud_servicio', css_class='form-group col-md-4 mb-0'),
-                Column('contrato_mantenimiento', css_class='form-group col-md-4 mb-0'),
+                Column('centro_costos', css_class='form-group col-md-6 mb-0'),
+                Column('proyecto_relacionado', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row'
+            ),
+            Row(
+                Column('solicitud_servicio', css_class='form-group col-md-6 mb-0'),
+                Column('contrato_mantenimiento', css_class='form-group col-md-6 mb-0'),
                 css_class='form-row'
             ),
             Row(
@@ -124,6 +139,14 @@ class TaskForm(forms.ModelForm):
         if is_recurring and not recurrence_pattern:
             raise forms.ValidationError(_('Debe especificar un patrón de recurrencia para tareas recurrentes.'))
         
+        # Validar centro de costos
+        centro_costos = cleaned_data.get('centro_costos')
+        proyecto_relacionado = cleaned_data.get('proyecto_relacionado')
+        
+        # El centro de costos ahora es obligatorio desde el dropdown
+        if not centro_costos:
+            raise forms.ValidationError(_('Debe seleccionar un centro de costos.'))
+        
         return cleaned_data
     
     def get_proyecto_queryset(self):
@@ -133,6 +156,73 @@ class TaskForm(forms.ModelForm):
             return Proyecto.objects.filter(estado__in=['pendiente', 'en_ejecucion']).order_by('nombre_proyecto')
         except ImportError:
             return None
+    
+    def get_centro_costos_choices(self):
+        """Obtiene todas las opciones de centros de costos disponibles en el sistema."""
+        choices = [('', '--- Seleccione un centro de costos ---')]
+        
+        # Obtener centros de costos únicos de diferentes módulos
+        centro_costos_set = set()
+        
+        try:
+            # Desde proyectos
+            from proyectos.models import Proyecto
+            proyectos_centros = Proyecto.objects.exclude(
+                centro_costos__isnull=True
+            ).exclude(
+                centro_costos__exact=''
+            ).values_list('centro_costos', flat=True).distinct()
+            centro_costos_set.update(proyectos_centros)
+            
+            # Desde servicios
+            from servicios.models import SolicitudServicio
+            servicios_centros = SolicitudServicio.objects.exclude(
+                centro_costo__isnull=True
+            ).exclude(
+                centro_costo__exact=''
+            ).values_list('centro_costo', flat=True).distinct()
+            centro_costos_set.update(servicios_centros)
+            
+            # Desde mantenimiento (a través del trato_origen)
+            try:
+                from mantenimiento.models import ContratoMantenimiento
+                mant_centros = ContratoMantenimiento.objects.exclude(
+                    trato_origen__centro_costos__isnull=True
+                ).exclude(
+                    trato_origen__centro_costos__exact=''
+                ).values_list('trato_origen__centro_costos', flat=True).distinct()
+                centro_costos_set.update(mant_centros)
+            except (ImportError, AttributeError):
+                pass
+            
+            # Desde CRM (tratos/deals)
+            try:
+                from crm.models import Trato
+                crm_centros = Trato.objects.exclude(
+                    centro_costos__isnull=True
+                ).exclude(
+                    centro_costos__exact=''
+                ).values_list('centro_costos', flat=True).distinct()
+                centro_costos_set.update(crm_centros)
+            except ImportError:
+                pass
+            
+            # Desde tareas existentes
+            tareas_centros = Task.objects.exclude(
+                centro_costos__isnull=True
+            ).exclude(
+                centro_costos__exact=''
+            ).values_list('centro_costos', flat=True).distinct()
+            centro_costos_set.update(tareas_centros)
+            
+        except ImportError:
+            pass
+        
+        # Convertir a lista ordenada y crear choices
+        centro_costos_list = sorted(list(centro_costos_set))
+        choices.extend([(cc, cc) for cc in centro_costos_list])
+        
+        return choices
 
 class TaskQuickCreateForm(forms.ModelForm):
     """Formulario rápido para crear tareas."""
@@ -632,20 +722,35 @@ class TaskFilterForm(forms.Form):
     TYPE_CHOICES = [('', _('Todos los tipos'))] + Task.TYPE_CHOICES
     
     search = forms.CharField(
-        required=False, 
+        required=False,
+        label=_('Buscar'),
         widget=forms.TextInput(attrs={'placeholder': _('Buscar en título o descripción...')})
     )
-    status = forms.ChoiceField(choices=STATUS_CHOICES, required=False)
-    priority = forms.ChoiceField(choices=PRIORITY_CHOICES, required=False)
-    task_type = forms.ChoiceField(choices=TYPE_CHOICES, required=False)
+    status = forms.ChoiceField(
+        choices=STATUS_CHOICES,
+        required=False,
+        label=_('Estado')
+    )
+    priority = forms.ChoiceField(
+        choices=PRIORITY_CHOICES,
+        required=False,
+        label=_('Prioridad')
+    )
+    task_type = forms.ChoiceField(
+        choices=TYPE_CHOICES,
+        required=False,
+        label=_('Tipo')
+    )
     assigned_to = forms.ModelChoiceField(
         queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
         required=False,
+        label=_('Asignado a'),
         empty_label=_('Todos los usuarios')
     )
     category = forms.ModelChoiceField(
         queryset=TaskCategory.objects.filter(is_active=True),
         required=False,
+        label=_('Categoría'),
         empty_label=_('Todas las categorías')
     )
     due_date_from = forms.DateField(

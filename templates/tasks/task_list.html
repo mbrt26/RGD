@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
+{% load crispy_forms_tags %}
 
 {% block title %}{% trans "Lista de Tareas" %}{% endblock %}
 
@@ -24,16 +25,13 @@
     <!-- Filtros -->
     <div class="card mb-4">
         <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-filter"></i> {% trans "Filtros" %}</h5>
+            <h5 class="mb-0"><i class="fas fa-filter"></i> {% trans "Filtros de Tareas" %}</h5>
         </div>
         <div class="card-body">
             {% if filter_form %}
-            <form method="get" class="form-inline">
-                {{ filter_form.as_p }}
+            <form method="get">
+                {% crispy filter_form %}
                 <div class="mt-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-search"></i> {% trans "Filtrar" %}
-                    </button>
                     <a href="{% url 'tasks:task_list' %}" class="btn btn-secondary">
                         <i class="fas fa-times"></i> {% trans "Limpiar" %}
                     </a>
@@ -70,6 +68,8 @@
                     <table class="table table-hover">
                         <thead class="table-light">
                             <tr>
+                                <th>{% trans "Centro de Costos" %}</th>
+                                <th>{% trans "Proyecto" %}</th>
                                 <th>{% trans "Título" %}</th>
                                 <th>{% trans "Asignado a" %}</th>
                                 <th>{% trans "Estado" %}</th>
@@ -83,6 +83,24 @@
                         <tbody>
                             {% for task in tasks %}
                             <tr class="{% if task.is_overdue %}table-danger{% elif task.priority == 'urgent' %}table-warning{% endif %}">
+                                <td>
+                                    {% with centro_costos=task.get_centro_costos_display %}
+                                        {% if centro_costos %}
+                                            <span class="badge bg-info">{{ centro_costos }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    {% if task.proyecto_relacionado %}
+                                        <a href="{% url 'proyectos:proyecto_detail' task.proyecto_relacionado.pk %}" class="text-decoration-none">
+                                            <span class="badge bg-primary">{{ task.proyecto_relacionado.nombre_proyecto|truncatechars:30 }}</span>
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     <a href="{% url 'tasks:task_detail' task.pk %}" class="text-decoration-none">
                                         <strong>{{ task.title }}</strong>
@@ -172,6 +190,25 @@
                                         {{ task.title }}
                                     </a>
                                 </h6>
+                                
+                                <!-- Centro de Costos y Proyecto -->
+                                <div class="mb-2">
+                                    {% with centro_costos=task.get_centro_costos_display %}
+                                        {% if centro_costos %}
+                                            <span class="badge bg-info me-1">
+                                                <i class="fas fa-building"></i> {{ centro_costos }}
+                                            </span>
+                                        {% endif %}
+                                    {% endwith %}
+                                    {% if task.proyecto_relacionado %}
+                                        <a href="{% url 'proyectos:proyecto_detail' task.proyecto_relacionado.pk %}" class="text-decoration-none">
+                                            <span class="badge bg-primary">
+                                                <i class="fas fa-project-diagram"></i> {{ task.proyecto_relacionado.nombre_proyecto|truncatechars:25 }}
+                                            </span>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                                
                                 {% if task.description %}
                                 <p class="card-text">{{ task.description|truncatechars:100 }}</p>
                                 {% endif %}

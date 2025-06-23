@@ -108,9 +108,24 @@
                         </h5>
                     </div>
                     <div class="card-body">
+                        <!-- Campo Aprobada Por -->
+                        <div class="mb-3">
+                            <label for="{{ form.aprobada_por.id_for_label }}" class="form-label">
+                                <i class="fas fa-user me-1"></i>{{ form.aprobada_por.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.aprobada_por }}
+                            <div class="form-text">
+                                Nombre del responsable que toma la decisión sobre esta prórroga
+                            </div>
+                            {% if form.aprobada_por.errors %}
+                                <div class="text-danger small mt-1">{{ form.aprobada_por.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Campo Observaciones -->
                         <div class="mb-3">
                             <label for="{{ form.observaciones_aprobacion.id_for_label }}" class="form-label">
-                                Comentarios y Observaciones <span class="text-danger">*</span>
+                                <i class="fas fa-comment-alt me-1"></i>Comentarios y Observaciones <span class="text-danger">*</span>
                             </label>
                             {{ form.observaciones_aprobacion }}
                             <div class="form-text">
@@ -317,10 +332,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Validación del formulario
     document.getElementById('approvalForm').addEventListener('submit', function(e) {
         const selectedDecision = document.querySelector('input[name="decision"]:checked');
+        const aprobadaPorField = document.querySelector('input[name="aprobada_por"]');
         
         if (!selectedDecision) {
             e.preventDefault();
             alert('Por favor, seleccione una decisión (Aprobar o Rechazar).');
+            return;
+        }
+        
+        if (!aprobadaPorField.value.trim()) {
+            e.preventDefault();
+            alert('Por favor, ingrese el nombre del responsable que toma la decisión.');
+            aprobadaPorField.focus();
             return;
         }
         
@@ -345,6 +368,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function previewDecision() {
     const selectedDecision = document.querySelector('input[name="decision"]:checked');
     const observaciones = document.getElementById('{{ form.observaciones_aprobacion.id_for_label }}').value;
+    const aprobadaPor = document.querySelector('input[name="aprobada_por"]').value;
     
     if (!selectedDecision) {
         alert('Por favor, seleccione una decisión primero.');
@@ -381,6 +405,7 @@ function previewDecision() {
             </div>
         </div>
         
+        ${aprobadaPor ? `<hr><strong>Decisión tomada por:</strong><br><small class="text-muted">${aprobadaPor}</small>` : ''}
         ${observaciones ? `<hr><strong>Observaciones:</strong><br><small class="text-muted">${observaciones}</small>` : ''}
     `;
     

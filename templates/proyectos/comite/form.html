@@ -138,6 +138,9 @@
                     <div class="mb-3">
                         <label for="{{ form.agenda.id_for_label }}" class="form-label">
                             {{ form.agenda.label }}
+                            <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="cargarBorradorAgenda()">
+                                <i class="fas fa-file-alt me-1"></i>Cargar Borrador
+                            </button>
                         </label>
                         {{ form.agenda }}
                         <div class="form-text">Agenda detallada del comité</div>
@@ -381,5 +384,166 @@ document.querySelector('#id_tipo_comite').addEventListener('change', function() 
         nombreField.value = `${tipo} - ${fechaTexto}`;
     }
 });
+
+function cargarBorradorAgenda() {
+    const agendaField = document.querySelector('#id_agenda');
+    const tipoComite = document.querySelector('#id_tipo_comite').value;
+    const fechaComite = document.querySelector('#id_fecha_comite').value;
+    
+    let fechaTexto = 'Fecha a definir';
+    if (fechaComite) {
+        const fecha = new Date(fechaComite);
+        fechaTexto = fecha.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+    
+    let borrador = '';
+    
+    if (tipoComite === 'semanal') {
+        borrador = `AGENDA - COMITÉ SEMANAL DE PROYECTOS
+${fechaTexto}
+
+1. APERTURA Y VERIFICACIÓN DE ASISTENCIA
+   - Bienvenida a participantes
+   - Verificación de quórum
+
+2. REVISIÓN DE ACUERDOS ANTERIORES
+   - Seguimiento de compromisos de la sesión anterior
+   - Estado de acciones pendientes
+
+3. REVISIÓN DE PROYECTOS ACTIVOS
+   - Estado general de avance
+   - Identificación de riesgos y oportunidades
+   - Proyectos que requieren atención especial
+
+4. NUEVOS TEMAS Y PROPUESTAS
+   - Presentación de nuevos proyectos
+   - Solicitudes de apoyo o recursos
+
+5. DECISIONES Y COMPROMISOS
+   - Definición de acciones a seguir
+   - Asignación de responsables
+   - Fechas límite
+
+6. PRÓXIMA REUNIÓN
+   - Fecha y hora de siguiente comité
+   - Temas prioritarios a revisar
+
+7. CIERRE DE SESIÓN`;
+    } else if (tipoComite === 'mensual') {
+        borrador = `AGENDA - COMITÉ MENSUAL DE PROYECTOS
+${fechaTexto}
+
+1. APERTURA Y VERIFICACIÓN DE ASISTENCIA
+   - Bienvenida a participantes
+   - Verificación de quórum
+
+2. REVISIÓN EJECUTIVA DEL MES
+   - Resumen de logros del período
+   - Indicadores clave de rendimiento
+   - Estado financiero de proyectos
+
+3. ANÁLISIS DETALLADO POR PROYECTO
+   - Avance contra cronograma planificado
+   - Uso de recursos y presupuesto
+   - Calidad de entregables
+   - Gestión de riesgos
+
+4. TEMAS ESTRATÉGICOS
+   - Alineación con objetivos organizacionales
+   - Propuestas de mejora de procesos
+   - Nuevas oportunidades de negocio
+
+5. DECISIONES GERENCIALES
+   - Aprobación de cambios significativos
+   - Asignación de recursos adicionales
+   - Escalamiento de problemas críticos
+
+6. PLANIFICACIÓN PRÓXIMO PERÍODO
+   - Objetivos para el siguiente mes
+   - Prioridades y recursos requeridos
+
+7. CIERRE Y PRÓXIMOS PASOS`;
+    } else if (tipoComite === 'extraordinario') {
+        borrador = `AGENDA - COMITÉ EXTRAORDINARIO DE PROYECTOS
+${fechaTexto}
+
+1. APERTURA Y VERIFICACIÓN DE ASISTENCIA
+   - Contexto de la convocatoria extraordinaria
+   - Objetivos específicos de la sesión
+
+2. PRESENTACIÓN DEL TEMA URGENTE
+   - Descripción detallada de la situación
+   - Impacto en proyectos actuales
+   - Análisis de alternativas
+
+3. DISCUSIÓN Y ANÁLISIS
+   - Evaluación de opciones disponibles
+   - Consideraciones de riesgo
+   - Implicaciones de recursos
+
+4. TOMA DE DECISIONES CRÍTICAS
+   - Definición de acciones inmediatas
+   - Asignación de responsabilidades
+   - Cronograma de implementación
+
+5. COMUNICACIÓN Y SEGUIMIENTO
+   - Plan de comunicación a stakeholders
+   - Mecanismos de monitoreo
+   - Próximas revisiones
+
+6. CIERRE DE SESIÓN EXTRAORDINARIA`;
+    } else {
+        borrador = `AGENDA - COMITÉ DE PROYECTOS
+${fechaTexto}
+
+1. APERTURA Y VERIFICACIÓN DE ASISTENCIA
+   - Bienvenida a participantes
+   - Verificación de quórum
+
+2. REVISIÓN DE TEMAS ANTERIORES
+   - Seguimiento de acuerdos previos
+   - Estado de compromisos
+
+3. REVISIÓN DE PROYECTOS
+   - Estado de avance por proyecto
+   - Identificación de riesgos
+   - Solicitudes de apoyo
+
+4. NUEVOS TEMAS
+   - Propuestas y discusiones
+   - Toma de decisiones
+
+5. COMPROMISOS Y ACCIONES
+   - Definición de tareas
+   - Asignación de responsables
+   - Fechas de cumplimiento
+
+6. PRÓXIMA REUNIÓN
+   - Programación siguiente sesión
+
+7. CIERRE`;
+    }
+    
+    if (agendaField) {
+        if (agendaField.value.trim() && !confirm('¿Desea reemplazar la agenda actual con el borrador?')) {
+            return;
+        }
+        agendaField.value = borrador;
+        agendaField.focus();
+        
+        // Mostrar confirmación visual
+        agendaField.style.backgroundColor = '#d4edda';
+        setTimeout(() => {
+            agendaField.style.backgroundColor = '';
+        }, 2000);
+    }
+}
 </script>
 {% endblock %}

@@ -193,6 +193,15 @@
                                     <div class="avance-text" id="avanceText">{{ form.avance_reportado.value|default:0 }}%</div>
                                 </div>
                             </div>
+                            {% if avance_desde_proyecto %}
+                            <div class="alert alert-info mt-2 mb-0" style="font-size: 0.875rem;">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Avance auto-completado:</strong> Se ha cargado el {{ avance_sugerido }}% desde el progreso actual del proyecto.
+                                <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="actualizarDesdeProyecto()">
+                                    <i class="fas fa-sync-alt me-1"></i>Actualizar desde Proyecto
+                                </button>
+                            </div>
+                            {% endif %}
                             {% if object.avance_anterior %}
                             <div class="comparacion-avance" id="comparacionAvance">
                                 <!-- Se actualizará via JavaScript -->
@@ -550,6 +559,33 @@ document.addEventListener('DOMContentLoaded', function() {
         avanceInput.addEventListener('input', updateAvance);
     }
 });
+
+function actualizarDesdeProyecto() {
+    const avanceProyecto = {{ proyecto.avance|default:0 }};
+    const avanceInput = document.getElementById('id_avance_reportado');
+    
+    if (avanceInput && avanceProyecto) {
+        avanceInput.value = avanceProyecto;
+        
+        // Disparar evento para actualizar la visualización
+        const event = new Event('input', { bubbles: true });
+        avanceInput.dispatchEvent(event);
+        
+        // Mostrar notificación temporal
+        const alert = document.querySelector('.alert-info');
+        if (alert) {
+            alert.innerHTML = `<i class="fas fa-check-circle me-2"></i><strong>Actualizado:</strong> Avance actualizado al ${avanceProyecto}% desde el proyecto.`;
+            alert.classList.remove('alert-info');
+            alert.classList.add('alert-success');
+            
+            setTimeout(() => {
+                alert.classList.remove('alert-success');
+                alert.classList.add('alert-info');
+                alert.innerHTML = `<i class="fas fa-info-circle me-2"></i><strong>Avance sincronizado:</strong> Mostrando el ${avanceProyecto}% del progreso actual del proyecto. <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="actualizarDesdeProyecto()"><i class="fas fa-sync-alt me-1"></i>Actualizar desde Proyecto</button>`;
+            }, 3000);
+        }
+    }
+}
 
 function seleccionarEstado(estado, elemento) {
     // Quitar selección de otros elementos

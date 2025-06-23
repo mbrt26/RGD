@@ -155,17 +155,28 @@ LOGGING = {
     },
 }
 
-# Configuración de cache:
-if os.environ.get('USE_CLOUD_SQL') == 'true':
-    # En App Engine: usar Memcache nativo (requiere pymemcache en el entorno de App Engine)
+# Configuración de cache mejorada para evitar errores de pymemcache:
+if os.environ.get('DISABLE_MEMCACHE') == 'true':
+    # Cache desactivado para evitar problemas de dependencias
     CACHES = {
         'default': {
-            'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
-            'LOCATION': '127.0.0.1:11211',
+            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+        }
+    }
+elif os.environ.get('USE_CLOUD_SQL') == 'true':
+    # En App Engine: usar cache en memoria local como alternativa segura
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'rgd-aire-cache',
+            'OPTIONS': {
+                'MAX_ENTRIES': 1000,
+                'CULL_FREQUENCY': 3,
+            }
         }
     }
 else:
-    # En local/desarrollo: usar caché en memoria para no requerir pymemcache
+    # En local/desarrollo: usar caché en memoria 
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -188,6 +199,47 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Configuración optimizada para arranque rápido en App Engine
+DEBUG = False
+
+# Optimizaciones de rendimiento para arranque rápido
+CONN_MAX_AGE = 300  # Reutilizar conexiones de BD por 5 minutos
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'  # Evitar warnings
+
+# Deshabilitar migraciones automáticas en runtime para arranque más rápido
+# Las migraciones se ejecutan solo durante deployment
+MIGRATION_MODULES = {}
+
+# Optimizar INSTALLED_APPS - remover apps innecesarias en producción
+INSTALLED_APPS = [
+    # Django core (mínimo necesario)
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django.contrib.humanize',  # Para formateo de números y fechas en templates
+    
+    # Apps del proyecto
+    'users',
+    'crm',
+    'proyectos', 
+    'servicios',
+    'mantenimiento',
+    'mejora_continua',
+    'tasks',
+    
+    # Third party (solo los esenciales)
+    'storages',  # Para Google Cloud Storage
+    'crispy_forms',  # Para formularios en templates
+    'crispy_bootstrap5',  # Bootstrap 5 para crispy forms (ya instalado)
+]
+
+# Configuración de crispy forms para Bootstrap 5
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # Mensajes de verificación al iniciar
 print(f"✅ App Engine configuración cargada para proyecto: {PROJECT_ID}")
