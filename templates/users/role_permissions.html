@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestionar Permisos - {{ role.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .permission-module {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .permission-module-header {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 8px 8px 0 0;
+    }
+    .permission-actions {
+        padding: 15px;
+    }
+    .permission-item {
+        display: flex;
+        justify-content-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .permission-item:last-child {
+        border-bottom: none;
+    }
+    .permission-item .form-label {
+        color: #212529 !important;
+        font-weight: 500;
+        font-size: 0.95em;
+    }
+    .permission-item .form-label i {
+        color: #6c757d;
+        margin-right: 6px;
+    }
+    .form-check {
+        margin: 0;
+    }
+    .module-toggle-all {
+        font-size: 0.9em;
+    }
+    .permission-module-header h6 {
+        color: #495057 !important;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-key"></i> Gestionar Permisos: {{ role.name }}</h1>
+                <div>
+                    <a href="{% url 'users:role_detail' role.pk %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Volver al Rol
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5><i class="fas fa-shield-alt"></i> Configuración de Permisos</h5>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-success" id="selectAll">
+                                    <i class="fas fa-check-double"></i> Seleccionar Todo
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" id="unselectAll">
+                                    <i class="fas fa-times"></i> Deseleccionar Todo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% for module_name, permissions_list in permissions_by_module.items %}
+                        <div class="permission-module">
+                            <div class="permission-module-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-folder"></i> {{ module_name }}
+                                    </h6>
+                                    <div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary module-toggle-all" 
+                                                data-module="{{ module_name }}">
+                                            <i class="fas fa-toggle-on"></i> Alternar Todos
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="permission-actions">
+                                <div class="row">
+                                    {% for permission_data in permissions_list %}
+                                    <div class="col-md-6 col-lg-4">
+                                        <div class="permission-item">
+                                            <label for="{{ permission_data.field.id_for_label }}" class="form-label mb-0">
+                                                <i class="fas fa-{% if permission_data.action_key == 'view' %}eye{% elif permission_data.action_key == 'add' %}plus{% elif permission_data.action_key == 'change' %}edit{% elif permission_data.action_key == 'delete' %}trash{% elif permission_data.action_key == 'export' %}download{% else %}upload{% endif %}"></i>
+                                                {{ permission_data.action }}
+                                            </label>
+                                            <div class="form-check form-switch">
+                                                {{ permission_data.field }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'users:role_detail' role.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Guardar Permisos
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Función para seleccionar/deseleccionar todos los checkboxes
+    $('#selectAll').click(function() {
+        $('.form-check-input').prop('checked', true);
+    });
+    
+    $('#unselectAll').click(function() {
+        $('.form-check-input').prop('checked', false);
+    });
+    
+    // Función para alternar todos los checkboxes de un módulo
+    $('.module-toggle-all').click(function() {
+        var module = $(this).data('module');
+        var moduleContainer = $(this).closest('.permission-module');
+        var checkboxes = moduleContainer.find('.form-check-input');
+        
+        // Verificar si todos están marcados
+        var allChecked = checkboxes.length === checkboxes.filter(':checked').length;
+        
+        // Si todos están marcados, desmarca todos, sino marca todos
+        checkboxes.prop('checked', !allChecked);
+    });
+    
+    // Añadir confirmación antes de enviar el formulario
+    $('form').submit(function(e) {
+        var checkedCount = $('.form-check-input:checked').length;
+        if (checkedCount === 0) {
+            if (!confirm('No has seleccionado ningún permiso. ¿Estás seguro de que quieres continuar?')) {
+                e.preventDefault();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,463 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ task.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="fas fa-eye"></i> {% trans "Detalle de Tarea" %}
+        </h1>
+        <div>
+            <a href="{% url 'tasks:task_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> {% trans "Volver a Lista" %}
+            </a>
+            {% if can_edit %}
+            <a href="{% url 'tasks:task_edit' task.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> {% trans "Editar" %}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Columna principal -->
+        <div class="col-lg-8">
+            <!-- Información básica de la tarea -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ task.title }}</h5>
+                    <div>
+                        <span class="badge bg-{% if task.status == 'completed' %}success{% elif task.status == 'in_progress' %}info{% elif task.status == 'cancelled' %}secondary{% else %}warning{% endif %} me-2">
+                            {{ task.get_status_display }}
+                        </span>
+                        <span class="badge bg-{% if task.priority == 'urgent' %}danger{% elif task.priority == 'high' %}warning{% elif task.priority == 'medium' %}info{% else %}secondary{% endif %}">
+                            {{ task.get_priority_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if task.description %}
+                    <p class="card-text">{{ task.description|linebreaks }}</p>
+                    {% else %}
+                    <p class="text-muted fst-italic">{% trans "Sin descripción" %}</p>
+                    {% endif %}
+
+                    <!-- Alertas de estado -->
+                    {% if task.is_overdue %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>{% trans "¡Tarea Vencida!" %}</strong>
+                        {% trans "Esta tarea venció el" %} {{ task.due_date|date:"d/m/Y H:i" }}
+                    </div>
+                    {% elif task.days_until_due <= 1 and task.days_until_due >= 0 %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-clock"></i>
+                        <strong>{% trans "¡Vence Pronto!" %}</strong>
+                        {% if task.days_until_due == 0 %}
+                        {% trans "Esta tarea vence hoy" %}
+                        {% else %}
+                        {% trans "Esta tarea vence en" %} {{ task.days_until_due }} {% trans "día" %}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Progreso -->
+                    <div class="mb-3">
+                        <label class="form-label">{% trans "Progreso:" %}</label>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar {% if task.progress_percentage == 100 %}bg-success{% elif task.progress_percentage >= 75 %}bg-info{% elif task.progress_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                 role="progressbar" 
+                                 style="width: {{ task.progress_percentage }}%" 
+                                 aria-valuenow="{{ task.progress_percentage }}" 
+                                 aria-valuemin="0" aria-valuemax="100">
+                                {{ task.progress_percentage }}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información adicional -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-info-circle"></i> {% trans "Información General" %}</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>{% trans "Tipo:" %}</strong></td>
+                                    <td>{{ task.get_task_type_display }}</td>
+                                </tr>
+                                {% if task.category %}
+                                <tr>
+                                    <td><strong>{% trans "Categoría:" %}</strong></td>
+                                    <td>
+                                        <span class="badge" style="background-color: {{ task.category.color }}">
+                                            {{ task.category.name }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td><strong>{% trans "Asignado a:" %}</strong></td>
+                                    <td>{{ task.assigned_to.get_full_name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>{% trans "Creado por:" %}</strong></td>
+                                    <td>{{ task.created_by.get_full_name }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-calendar"></i> {% trans "Fechas y Tiempo" %}</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>{% trans "Creada:" %}</strong></td>
+                                    <td>{{ task.created_at|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                                {% if task.start_date %}
+                                <tr>
+                                    <td><strong>{% trans "Inicio:" %}</strong></td>
+                                    <td>{{ task.start_date|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if task.due_date %}
+                                <tr>
+                                    <td><strong>{% trans "Vencimiento:" %}</strong></td>
+                                    <td class="{% if task.is_overdue %}text-danger{% endif %}">
+                                        {{ task.due_date|date:"d/m/Y H:i" }}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% if task.completed_date %}
+                                <tr>
+                                    <td><strong>{% trans "Completada:" %}</strong></td>
+                                    <td>{{ task.completed_date|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if task.estimated_hours %}
+                                <tr>
+                                    <td><strong>{% trans "Horas estimadas:" %}</strong></td>
+                                    <td>{{ task.estimated_hours }}h</td>
+                                </tr>
+                                {% endif %}
+                                {% if task.actual_hours %}
+                                <tr>
+                                    <td><strong>{% trans "Horas reales:" %}</strong></td>
+                                    <td>{{ task.actual_hours }}h</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Objeto relacionado -->
+                    {% if task.related_object %}
+                    <div class="mt-3">
+                        <h6><i class="fas fa-link"></i> {% trans "Objeto Relacionado" %}</h6>
+                        <p class="mb-0">{{ task.get_related_object_display }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Configuraciones adicionales -->
+                    {% if task.is_recurring or task.reminder_date %}
+                    <div class="mt-3">
+                        <h6><i class="fas fa-cog"></i> {% trans "Configuraciones" %}</h6>
+                        {% if task.is_recurring %}
+                        <span class="badge bg-info me-2">
+                            <i class="fas fa-repeat"></i> {% trans "Recurrente" %}
+                            {% if task.recurrence_pattern %}
+                            ({{ task.recurrence_pattern }})
+                            {% endif %}
+                        </span>
+                        {% endif %}
+                        {% if task.reminder_date %}
+                        <span class="badge bg-warning">
+                            <i class="fas fa-bell"></i> {% trans "Recordatorio:" %} {{ task.reminder_date|date:"d/m/Y H:i" }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Comentarios -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments"></i> {% trans "Comentarios" %} 
+                        <span class="badge bg-secondary">{{ comments.count }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if can_comment %}
+                    <!-- Formulario para nuevo comentario -->
+                    <form method="post" action="{% url 'tasks:add_comment' task.pk %}" class="mb-4">
+                        {% csrf_token %}
+                        {% crispy comment_form %}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> {% trans "Agregar Comentario" %}
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <!-- Lista de comentarios -->
+                    {% for comment in comments %}
+                    <div class="comment-item border-start border-primary border-3 ps-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    {{ comment.author.get_full_name }}
+                                    {% if comment.is_internal %}
+                                    <span class="badge bg-warning badge-sm">{% trans "Interno" %}</span>
+                                    {% endif %}
+                                </h6>
+                                <p class="mb-2">{{ comment.content|linebreaks }}</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock"></i> {{ comment.created_at|date:"d/m/Y H:i" }}
+                                    {% if comment.updated_at != comment.created_at %}
+                                    ({% trans "editado" %})
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center">
+                        <i class="fas fa-comment-slash fa-2x mb-2"></i><br>
+                        {% trans "No hay comentarios aún." %}
+                        {% if can_comment %}
+                        <br>{% trans "¡Sé el primero en comentar!" %}
+                        {% endif %}
+                    </p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Acciones rápidas -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-bolt"></i> {% trans "Acciones" %}</h6>
+                </div>
+                <div class="card-body">
+                    {% if can_edit %}
+                    <a href="{% url 'tasks:task_edit' task.pk %}" class="btn btn-warning btn-sm w-100 mb-2">
+                        <i class="fas fa-edit"></i> {% trans "Editar Tarea" %}
+                    </a>
+                    {% endif %}
+                    
+                    {% if can_attach %}
+                    <button type="button" class="btn btn-info btn-sm w-100 mb-2" data-bs-toggle="modal" data-bs-target="#attachmentModal">
+                        <i class="fas fa-paperclip"></i> {% trans "Adjuntar Archivo" %}
+                    </button>
+                    {% endif %}
+                    
+                    <a href="{% url 'tasks:task_list' %}?assigned_to={{ task.assigned_to.pk }}" class="btn btn-outline-primary btn-sm w-100 mb-2">
+                        <i class="fas fa-user"></i> {% trans "Ver tareas de" %} {{ task.assigned_to.first_name }}
+                    </a>
+                    
+                    {% if task.category %}
+                    <a href="{% url 'tasks:task_list' %}?category={{ task.category.pk }}" class="btn btn-outline-secondary btn-sm w-100">
+                        <i class="fas fa-tag"></i> {% trans "Ver tareas de" %} {{ task.category.name }}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Incluir nueva sección de archivos e imágenes -->
+            {% include 'tasks/task_detail_attachments.html' %}
+
+            <!-- Historial -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-history"></i> {% trans "Historial" %}</h6>
+                </div>
+                <div class="card-body">
+                    {% for entry in history %}
+                    <div class="history-item border-start border-info border-2 ps-2 mb-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <strong>{{ entry.get_action_display }}</strong>
+                                {% if entry.description %}
+                                <br><small>{{ entry.description }}</small>
+                                {% endif %}
+                                <br><small class="text-muted">
+                                    {{ entry.user.get_full_name }} - {{ entry.created_at|date:"d/m/Y H:i" }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center">
+                        <i class="fas fa-history fa-2x mb-2"></i><br>
+                        {% trans "No hay historial disponible." %}
+                    </p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para adjuntar archivos -->
+{% if can_attach %}
+<div class="modal fade" id="attachmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% trans "Adjuntar Archivo" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'tasks:add_attachment' task.pk %}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    {% crispy attachment_form %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancelar" %}</button>
+                    <button type="submit" class="btn btn-primary">{% trans "Adjuntar" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'tasks/js/file_upload.js' %}"></script>
+<script>
+// Additional task-specific JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Add task-image-preview class to all task images
+    const taskImages = document.querySelectorAll('.card-img-top');
+    taskImages.forEach(img => {
+        img.classList.add('task-image-preview');
+        
+        // Add data attributes for preview modal
+        const card = img.closest('.card');
+        if (card) {
+            const dimensions = card.querySelector('.text-muted');
+            if (dimensions) {
+                const dimensionText = dimensions.textContent;
+                const sizeMatch = dimensionText.match(/(\d+x\d+)/);
+                const fileSizeMatch = dimensionText.match(/(\d+(?:\.\d+)?\s*[KMGT]?B)/);
+                
+                if (sizeMatch) img.dataset.dimensions = sizeMatch[1];
+                if (fileSizeMatch) img.dataset.size = fileSizeMatch[1];
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.comment-item {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.attachment-item {
+    transition: background-color 0.2s;
+}
+
+.attachment-item:hover {
+    background-color: #f8f9fa;
+}
+
+.history-item {
+    background-color: #f1f3f4;
+    border-radius: 5px;
+    padding: 10px;
+}
+
+.progress {
+    background-color: #e9ecef;
+}
+
+.table-sm td {
+    padding: 0.3rem;
+    border: none;
+}
+
+.badge-sm {
+    font-size: 0.7em;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    .btn-sm {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Auto-refresh cada 2 minutos para actualizar comentarios y cambios
+    setInterval(function() {
+        // Solo recargar si no hay modales abiertos
+        if (!$('.modal').hasClass('show')) {
+            location.reload();
+        }
+    }, 120000);
+    
+    // Confirmación para acciones importantes
+    $('form[action*="delete"]').on('submit', function(e) {
+        if (!confirm('{% trans "¿Estás seguro de que quieres eliminar esta tarea?" %}')) {
+            e.preventDefault();
+        }
+    });
+    
+    // Manejo de tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // Copiar enlace de la tarea
+    function copyTaskLink() {
+        navigator.clipboard.writeText(window.location.href).then(function() {
+            alert('{% trans "Enlace copiado al portapapeles" %}');
+        });
+    }
+    
+    // Agregar botón de compartir si es necesario
+    {% if can_edit %}
+    setTimeout(function() {
+        var shareBtn = '<button type="button" class="btn btn-outline-info btn-sm w-100 mb-2" onclick="copyTaskLink()">' +
+                      '<i class="fas fa-share"></i> {% trans "Compartir Enlace" %}</button>';
+        $('.card .card-body a[href*="task_list"]').first().parent().append(shareBtn);
+    }, 100);
+    {% endif %}
+});
+
+function copyTaskLink() {
+    navigator.clipboard.writeText(window.location.href).then(function() {
+        alert('{% trans "Enlace de la tarea copiado al portapapeles" %}');
+    });
+}
+</script>
+{% endblock %}

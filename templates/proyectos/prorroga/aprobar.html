@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Procesar Prórroga - {{ object.proyecto.nombre_proyecto }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .approval-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-left: 4px solid #ffc107;
+    }
+    .decision-card {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        transition: all 0.3s;
+    }
+    .decision-card.approve:hover {
+        border-color: #28a745;
+        background: #f8fff9;
+    }
+    .decision-card.reject:hover {
+        border-color: #dc3545;
+        background: #fff8f8;
+    }
+    .prorroga-details {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+    }
+    .impact-analysis {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="approval-header p-4 rounded mb-4">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h2 class="mb-2">
+                    <i class="fas fa-gavel me-2"></i>Procesar Prórroga
+                </h2>
+                <h4 class="text-warning mb-1">{{ object.proyecto.nombre_proyecto }}</h4>
+                <p class="text-muted mb-0">
+                    Solicitud de {{ object.get_tipo_prorroga_display|lower }} por {{ object.dias_extension }} días
+                </p>
+            </div>
+            <div class="text-end">
+                <span class="badge bg-warning text-dark fs-6">Pendiente de Aprobación</span>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        Solicitada: {{ object.fecha_solicitud|date:"d/m/Y H:i" }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Formulario de Decisión -->
+        <div class="col-lg-8">
+            <form method="post" id="approvalForm">
+                {% csrf_token %}
+                
+                <!-- Opciones de Decisión -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="decision-card approve p-4 text-center">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" 
+                                       name="decision" value="aprobada" id="approve">
+                                <label class="form-check-label w-100" for="approve">
+                                    <i class="fas fa-check-circle text-success mb-2" style="font-size: 3rem;"></i>
+                                    <h5 class="text-success">Aprobar Prórroga</h5>
+                                    <p class="text-muted small mb-0">
+                                        La prórroga será aplicada automáticamente al proyecto
+                                    </p>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="decision-card reject p-4 text-center">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" 
+                                       name="decision" value="rechazada" id="reject">
+                                <label class="form-check-label w-100" for="reject">
+                                    <i class="fas fa-times-circle text-danger mb-2" style="font-size: 3rem;"></i>
+                                    <h5 class="text-danger">Rechazar Prórroga</h5>
+                                    <p class="text-muted small mb-0">
+                                        La solicitud será marcada como rechazada
+                                    </p>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Observaciones -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-comment-alt me-2"></i>Observaciones de la Decisión
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="{{ form.observaciones_aprobacion.id_for_label }}" class="form-label">
+                                Comentarios y Observaciones <span class="text-danger">*</span>
+                            </label>
+                            {{ form.observaciones_aprobacion }}
+                            <div class="form-text">
+                                Proporcione detalles sobre su decisión, especialmente si rechaza la prórroga
+                            </div>
+                            {% if form.observaciones_aprobacion.errors %}
+                                <div class="text-danger small mt-1">{{ form.observaciones_aprobacion.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Análisis de Impacto -->
+                        <div class="impact-analysis p-3">
+                            <h6 class="mb-3">
+                                <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                Análisis de Impacto
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <small class="text-muted">Fecha Fin Actual</small>
+                                    <div class="fw-bold">{{ object.fecha_fin_original|date:"d/m/Y" }}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">Nueva Fecha Fin</small>
+                                    <div class="fw-bold text-success">{{ object.fecha_fin_propuesta|date:"d/m/Y" }}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">Extensión Solicitada</small>
+                                    <div class="fw-bold text-info">{{ object.dias_extension }} días</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">Avance Actual</small>
+                                    <div class="fw-bold">{{ object.proyecto.avance|default:0 }}%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'proyectos:prorroga_detail' object.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver
+                    </a>
+                    <div>
+                        <button type="button" class="btn btn-outline-primary me-2" 
+                                onclick="previewDecision()">
+                            <i class="fas fa-eye me-2"></i>Vista Previa
+                        </button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-gavel me-2"></i>Procesar Decisión
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Panel de Información -->
+        <div class="col-lg-4">
+            <!-- Detalles de la Prórroga -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Detalles de la Solicitud
+                    </h5>
+                </div>
+                <div class="card-body prorroga-details">
+                    <dl class="row small">
+                        <dt class="col-5">Tipo:</dt>
+                        <dd class="col-7">{{ object.get_tipo_prorroga_display }}</dd>
+                        
+                        <dt class="col-5">Días:</dt>
+                        <dd class="col-7">{{ object.dias_extension }}</dd>
+                        
+                        <dt class="col-5">Solicitada:</dt>
+                        <dd class="col-7">{{ object.fecha_solicitud|date:"d/m/Y H:i" }}</dd>
+                        
+                        <dt class="col-5">Por:</dt>
+                        <dd class="col-7">{{ object.solicitada_por|default:"Sistema" }}</dd>
+                    </dl>
+                    
+                    {% if object.justificacion %}
+                    <hr>
+                    <h6 class="small text-muted">Justificación:</h6>
+                    <div class="small">{{ object.justificacion }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Información del Proyecto -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-project-diagram me-2"></i>Proyecto
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary mb-3">{{ object.proyecto.nombre_proyecto }}</h6>
+                    
+                    <dl class="row small">
+                        <dt class="col-5">Código:</dt>
+                        <dd class="col-7">{{ object.proyecto.codigo_proyecto|default:"N/A" }}</dd>
+                        
+                        <dt class="col-5">Estado:</dt>
+                        <dd class="col-7">
+                            <span class="badge bg-info">{{ object.proyecto.get_estado_display }}</span>
+                        </dd>
+                        
+                        <dt class="col-5">Director:</dt>
+                        <dd class="col-7">{{ object.proyecto.director.nombre|default:"N/A" }}</dd>
+                        
+                        <dt class="col-5">Ingeniero:</dt>
+                        <dd class="col-7">{{ object.proyecto.ingeniero.nombre|default:"N/A" }}</dd>
+                        
+                        <dt class="col-5">Avance:</dt>
+                        <dd class="col-7">
+                            <div class="progress" style="height: 12px;">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {{ object.proyecto.avance|default:0 }}%">
+                                    {{ object.proyecto.avance|default:0 }}%
+                                </div>
+                            </div>
+                        </dd>
+                    </dl>
+                    
+                    <div class="mt-3">
+                        <a href="{% url 'proyectos:proyecto_detail' object.proyecto.pk %}" 
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-external-link-alt me-1"></i>Ver Proyecto
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historial de Prórrogas -->
+            {% if object.proyecto.prorrogas.count > 1 %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Historial de Prórrogas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for prorroga in object.proyecto.prorrogas.all %}
+                    {% if prorroga.pk != object.pk %}
+                    <div class="small border-bottom pb-2 mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span class="badge {% if prorroga.estado == 'aprobada' %}bg-success{% elif prorroga.estado == 'rechazada' %}bg-danger{% else %}bg-warning{% endif %}">
+                                {{ prorroga.get_estado_display }}
+                            </span>
+                            <span class="text-muted">{{ prorroga.fecha_solicitud|date:"d/m/Y" }}</span>
+                        </div>
+                        <div class="mt-1">
+                            <strong>{{ prorroga.dias_extension }} días</strong> - {{ prorroga.get_tipo_prorroga_display }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Vista Previa -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Vista Previa de la Decisión</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="previewContent">
+                <!-- Contenido dinámico -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmDecision()">Confirmar Decisión</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Manejar selección de decisión
+    const decisionRadios = document.querySelectorAll('input[name="decision"]');
+    const observacionesField = document.getElementById('{{ form.observaciones_aprobacion.id_for_label }}');
+    
+    decisionRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'rechazada') {
+                observacionesField.placeholder = 'Por favor, explique las razones del rechazo...';
+                observacionesField.required = true;
+            } else {
+                observacionesField.placeholder = 'Comentarios adicionales (opcional)...';
+                observacionesField.required = false;
+            }
+        });
+    });
+    
+    // Validación del formulario
+    document.getElementById('approvalForm').addEventListener('submit', function(e) {
+        const selectedDecision = document.querySelector('input[name="decision"]:checked');
+        
+        if (!selectedDecision) {
+            e.preventDefault();
+            alert('Por favor, seleccione una decisión (Aprobar o Rechazar).');
+            return;
+        }
+        
+        if (selectedDecision.value === 'rechazada' && !observacionesField.value.trim()) {
+            e.preventDefault();
+            alert('Es obligatorio proporcionar una justificación cuando se rechaza una prórroga.');
+            observacionesField.focus();
+            return;
+        }
+        
+        // Confirmación final
+        const confirmMessage = selectedDecision.value === 'aprobada' 
+            ? '¿Está seguro de que desea APROBAR esta prórroga? El proyecto se extenderá automáticamente.'
+            : '¿Está seguro de que desea RECHAZAR esta prórroga?';
+            
+        if (!confirm(confirmMessage)) {
+            e.preventDefault();
+        }
+    });
+});
+
+function previewDecision() {
+    const selectedDecision = document.querySelector('input[name="decision"]:checked');
+    const observaciones = document.getElementById('{{ form.observaciones_aprobacion.id_for_label }}').value;
+    
+    if (!selectedDecision) {
+        alert('Por favor, seleccione una decisión primero.');
+        return;
+    }
+    
+    const isApproval = selectedDecision.value === 'aprobada';
+    const statusClass = isApproval ? 'success' : 'danger';
+    const statusText = isApproval ? 'APROBADA' : 'RECHAZADA';
+    const actionText = isApproval ? 'aprobará' : 'rechazará';
+    
+    const previewContent = `
+        <div class="alert alert-${statusClass}">
+            <h6><i class="fas fa-${isApproval ? 'check' : 'times'}-circle me-2"></i>Prórroga ${statusText}</h6>
+            <p class="mb-0">Esta prórroga será ${actionText} y se procesará inmediatamente.</p>
+        </div>
+        
+        <div class="row g-3">
+            <div class="col-6">
+                <strong>Proyecto:</strong><br>
+                <small class="text-muted">{{ object.proyecto.nombre_proyecto }}</small>
+            </div>
+            <div class="col-6">
+                <strong>Extensión:</strong><br>
+                <small class="text-muted">{{ object.dias_extension }} días</small>
+            </div>
+            <div class="col-6">
+                <strong>Fecha Fin Actual:</strong><br>
+                <small class="text-muted">{{ object.fecha_fin_original|date:"d/m/Y" }}</small>
+            </div>
+            <div class="col-6">
+                <strong>Nueva Fecha Fin:</strong><br>
+                <small class="text-muted">{{ object.fecha_fin_propuesta|date:"d/m/Y" }}</small>
+            </div>
+        </div>
+        
+        ${observaciones ? `<hr><strong>Observaciones:</strong><br><small class="text-muted">${observaciones}</small>` : ''}
+    `;
+    
+    document.getElementById('previewContent').innerHTML = previewContent;
+    new bootstrap.Modal(document.getElementById('previewModal')).show();
+}
+
+function confirmDecision() {
+    document.getElementById('approvalForm').submit();
+}
+</script>
+{% endblock %}

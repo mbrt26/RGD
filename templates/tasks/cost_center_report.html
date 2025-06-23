@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Reporte por Centro de Costos" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-chart-bar text-primary"></i> {% trans "Reporte de Tareas por Centro de Costos" %}</h1>
+        <div>
+            <a href="{% url 'tasks:dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> {% trans "Volver al Dashboard" %}
+            </a>
+        </div>
+    </div>
+
+    <!-- Resumen general -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ total_tasks }}</h4>
+                            <p class="mb-0">{% trans "Total de Tareas" %}</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-tasks fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ total_cost_centers }}</h4>
+                            <p class="mb-0">{% trans "Centros de Costos" %}</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-building fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ cost_centers|length }}</h4>
+                            <p class="mb-0">{% trans "Centros Activos" %}</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-chart-pie fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de centros de costos -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-table"></i> {% trans "Detalle por Centro de Costos" %}</h5>
+        </div>
+        <div class="card-body">
+            {% if cost_centers %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>{% trans "Centro de Costos" %}</th>
+                            <th class="text-center">{% trans "Total" %}</th>
+                            <th class="text-center">{% trans "Pendientes" %}</th>
+                            <th class="text-center">{% trans "En Progreso" %}</th>
+                            <th class="text-center">{% trans "Completadas" %}</th>
+                            <th class="text-center">{% trans "Vencidas" %}</th>
+                            <th class="text-center">{% trans "Alta Prioridad" %}</th>
+                            <th class="text-center">{% trans "% Completado" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for center in cost_centers %}
+                        <tr>
+                            <td>
+                                <strong>{{ center.name }}</strong>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary">{{ center.total }}</span>
+                            </td>
+                            <td class="text-center">
+                                {% if center.pending > 0 %}
+                                <span class="badge bg-warning">{{ center.pending }}</span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if center.in_progress > 0 %}
+                                <span class="badge bg-info">{{ center.in_progress }}</span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if center.completed > 0 %}
+                                <span class="badge bg-success">{{ center.completed }}</span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if center.overdue > 0 %}
+                                <span class="badge bg-danger">{{ center.overdue }}</span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if center.high_priority > 0 %}
+                                <span class="badge bg-warning">{{ center.high_priority }}</span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if center.total > 0 %}
+                                    {% widthratio center.completed center.total 100 as completion_rate %}
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar 
+                                            {% if completion_rate >= 80 %}bg-success
+                                            {% elif completion_rate >= 60 %}bg-info
+                                            {% elif completion_rate >= 40 %}bg-warning
+                                            {% else %}bg-danger{% endif %}" 
+                                            role="progressbar" 
+                                            style="width: {{ completion_rate }}%"
+                                            aria-valuenow="{{ completion_rate }}" 
+                                            aria-valuemin="0" 
+                                            aria-valuemax="100">
+                                            {{ completion_rate }}%
+                                        </div>
+                                    </div>
+                                {% else %}
+                                <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                {% trans "No hay tareas registradas con centros de costos." %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Gráfico visual -->
+    {% if cost_centers %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> {% trans "Distribución Visual" %}</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="costCenterChart" width="400" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Acciones -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-cogs"></i> {% trans "Acciones Disponibles" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{% url 'tasks:task_list' %}" class="btn btn-outline-primary btn-block">
+                                <i class="fas fa-list"></i> {% trans "Ver Todas las Tareas" %}
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'tasks:task_list' %}?centro_costos=" class="btn btn-outline-info btn-block">
+                                <i class="fas fa-filter"></i> {% trans "Filtrar por Centro" %}
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'tasks:task_create' %}" class="btn btn-outline-success btn-block">
+                                <i class="fas fa-plus"></i> {% trans "Nueva Tarea" %}
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <button onclick="window.print()" class="btn btn-outline-secondary btn-block">
+                                <i class="fas fa-print"></i> {% trans "Imprimir Reporte" %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.btn-block {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.progress {
+    min-width: 100px;
+}
+
+@media print {
+    .btn, .card-header h5 i {
+        display: none !important;
+    }
+    
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{% if cost_centers %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('costCenterChart').getContext('2d');
+    
+    const data = {
+        labels: [
+            {% for center in cost_centers %}
+            '{{ center.name|addslashes }}'{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        datasets: [{
+            label: '{% trans "Total de Tareas" %}',
+            data: [
+                {% for center in cost_centers %}
+                {{ center.total }}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            backgroundColor: [
+                '#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1',
+                '#fd7e14', '#20c997', '#6c757d', '#e83e8c', '#17a2b8'
+            ],
+            borderColor: '#fff',
+            borderWidth: 2
+        }]
+    };
+
+    const config = {
+        type: 'doughnut',
+        data: data,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    new Chart(ctx, config);
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -71,4 +71,7 @@ urlpatterns = [
     path('leads/<int:pk>/editar/', login_required(views.LeadUpdateView.as_view()), name='lead_update'),
     path('leads/<int:pk>/eliminar/', login_required(views.LeadDeleteView.as_view()), name='lead_delete'),
     path('leads/<int:pk>/convertir/', login_required(views.LeadConvertView.as_view()), name='lead_convert'),
+    
+    # Configuración
+    path('configuracion/ofertas/', login_required(views.ConfiguracionOfertaView.as_view()), name='configuracion_oferta'),
 ]

@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Rol - {{ object.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-warning"></i>
+                        <strong>¡Atención!</strong> Esta acción no se puede deshacer.
+                    </div>
+                    
+                    <p>¿Estás seguro de que quieres eliminar el rol <strong>{{ object.name }}</strong>?</p>
+                    
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6>Información del rol:</h6>
+                            <ul class="mb-0">
+                                <li><strong>Nombre:</strong> {{ object.name }}</li>
+                                <li><strong>Descripción:</strong> {{ object.description|default:"No especificada" }}</li>
+                                <li><strong>Usuarios asignados:</strong> {{ object.users.count }}</li>
+                                <li><strong>Permisos configurados:</strong> {{ object.permissions.count }}</li>
+                                <li><strong>Fecha de creación:</strong> {{ object.created_at|date:"d/m/Y H:i" }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    {% if object.users.exists %}
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Advertencia:</strong> Este rol tiene {{ object.users.count }} usuario(s) asignado(s). 
+                        Al eliminar el rol, estos usuarios quedarán sin rol asignado.
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post" class="mt-3">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'users:role_detail' object.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Sí, eliminar rol
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

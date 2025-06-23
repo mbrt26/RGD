@@ -1,0 +1,470 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Dashboard de Tareas" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-tasks text-primary"></i> {% trans "Dashboard de Tareas" %}</h1>
+        {% if can_create %}
+        <div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#quickTaskModal">
+                <i class="fas fa-plus"></i> {% trans "Tarea Rápida" %}
+            </button>
+            <a href="{% url 'tasks:task_create' %}" class="btn btn-success">
+                <i class="fas fa-plus-circle"></i> {% trans "Nueva Tarea" %}
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Estadísticas principales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ total_tasks }}</h4>
+                            <p class="mb-0">{% trans "Total Tareas" %}</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-tasks fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ pending_tasks }}</h4>
+                            <p class="mb-0">{% trans "Pendientes" %}</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ in_progress_tasks }}</h4>
+                            <p class="mb-0">{% trans "En Progreso" %}</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-spinner fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ completed_tasks }}</h4>
+                            <p class="mb-0">{% trans "Completadas" %}</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertas importantes -->
+    {% if overdue_tasks > 0 or urgent_tasks > 0 %}
+    <div class="row mb-4">
+        {% if overdue_tasks > 0 %}
+        <div class="col-md-6">
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>{% trans "Tareas Vencidas" %}:</strong> {{ overdue_tasks }}
+                <a href="{% url 'tasks:task_list' %}?overdue_only=true" class="alert-link">{% trans "Ver tareas vencidas" %}</a>
+            </div>
+        </div>
+        {% endif %}
+        {% if urgent_tasks > 0 %}
+        <div class="col-md-6">
+            <div class="alert alert-warning">
+                <i class="fas fa-fire"></i>
+                <strong>{% trans "Tareas Urgentes" %}:</strong> {{ urgent_tasks }}
+                <a href="{% url 'tasks:task_list' %}?priority=urgent" class="alert-link">{% trans "Ver tareas urgentes" %}</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Sección principal con dos columnas -->
+    <div class="row">
+        <!-- Columna izquierda -->
+        <div class="col-lg-8">
+            <!-- Mis tareas -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-user"></i> {% trans "Mis Tareas" %}</h5>
+                    <div>
+                        <span class="badge bg-warning">{% trans "Pendientes" %}: {{ my_pending }}</span>
+                        <span class="badge bg-info">{% trans "En Progreso" %}: {{ my_in_progress }}</span>
+                        {% if my_overdue > 0 %}
+                        <span class="badge bg-danger">{% trans "Vencidas" %}: {{ my_overdue }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_tasks %}
+                    <h6>{% trans "Próximas a vencer (7 días)" %}</h6>
+                    <div class="list-group list-group-flush">
+                        {% for task in upcoming_tasks %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <a href="{% url 'tasks:task_detail' task.pk %}" class="text-decoration-none">
+                                    <strong>{{ task.title }}</strong>
+                                </a>
+                                <br>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar"></i> {{ task.due_date|date:"d/m/Y H:i" }}
+                                    {% if task.category %}
+                                    | <span class="badge" style="background-color: {{ task.category.color }}">{{ task.category.name }}</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div>
+                                <span class="badge bg-{{ task.priority|yesno:'danger,warning,info,secondary' }}">
+                                    {{ task.get_priority_display }}
+                                </span>
+                                <span class="badge bg-{{ task.status|yesno:'warning,info,success,secondary,secondary' }}">
+                                    {{ task.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">{% trans "No tienes tareas próximas a vencer." %}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actividad reciente -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> {% trans "Actividad Reciente" %}</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_activity %}
+                    <div class="timeline">
+                        {% for activity in recent_activity %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker">
+                                <i class="fas fa-circle text-primary"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">
+                                    <a href="{% url 'tasks:task_detail' activity.task.pk %}">{{ activity.task.title }}</a>
+                                </h6>
+                                <p class="mb-1">{{ activity.description }}</p>
+                                <small class="text-muted">
+                                    {{ activity.user.get_full_name }} - {{ activity.created_at|timesince }} {% trans "atrás" %}
+                                </small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">{% trans "No hay actividad reciente." %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna derecha -->
+        <div class="col-lg-4">
+            <!-- Tareas por centro de costos -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-building"></i> {% trans "Tareas por Centro de Costos" %}</h5>
+                </div>
+                <div class="card-body">
+                    {% if tasks_by_centro_costos %}
+                    {% for item in tasks_by_centro_costos %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <span class="badge bg-info">
+                                {{ item.centro_costos_display|default:"Sin centro de costos" }}
+                            </span>
+                        </div>
+                        <span class="badge bg-secondary">{{ item.count }}</span>
+                    </div>
+                    {% endfor %}
+                    <div class="mt-3">
+                        <a href="{% url 'tasks:cost_center_report' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-chart-bar"></i> {% trans "Ver Reporte Completo" %}
+                        </a>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">{% trans "No hay datos de centros de costos." %}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tareas por módulo -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-th-large"></i> {% trans "Tareas por Módulo" %}</h5>
+                </div>
+                <div class="card-body">
+                    {% if tasks_by_module %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge bg-primary">{% trans "Proyectos" %}</span>
+                        <span class="badge bg-secondary">{{ tasks_by_module.proyectos }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge bg-success">{% trans "Servicios" %}</span>
+                        <span class="badge bg-secondary">{{ tasks_by_module.servicios }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge bg-warning">{% trans "Mantenimiento" %}</span>
+                        <span class="badge bg-secondary">{{ tasks_by_module.mantenimiento }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge bg-secondary">{% trans "General" %}</span>
+                        <span class="badge bg-secondary">{{ tasks_by_module.general }}</span>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">{% trans "No hay datos de módulos." %}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tareas por categoría -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> {% trans "Tareas por Categoría" %}</h5>
+                </div>
+                <div class="card-body">
+                    {% if tasks_by_category %}
+                    {% for category in tasks_by_category %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <span class="badge" style="background-color: {{ category.category__color }}">
+                                {{ category.category__name|default:"Sin categoría" }}
+                            </span>
+                        </div>
+                        <span class="badge bg-secondary">{{ category.count }}</span>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">{% trans "No hay datos de categorías." %}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tareas recientes -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clock"></i> {% trans "Tareas Recientes" %}</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_tasks %}
+                    <div class="list-group list-group-flush">
+                        {% for task in recent_tasks %}
+                        <div class="list-group-item p-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <a href="{% url 'tasks:task_detail' task.pk %}" class="text-decoration-none">
+                                        <strong>{{ task.title|truncatechars:30 }}</strong>
+                                    </a>
+                                    <br>
+                                    <small class="text-muted">
+                                        {{ task.created_at|date:"d/m/Y" }}
+                                        {% if task.assigned_to %}
+                                        | {{ task.assigned_to.get_full_name }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <span class="badge bg-{{ task.status|yesno:'warning,info,success,secondary,secondary' }}">
+                                    {{ task.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">{% trans "No hay tareas recientes." %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones rápidas -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-bolt"></i> {% trans "Acciones Rápidas" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{% url 'tasks:task_list' %}" class="btn btn-outline-primary btn-block">
+                                <i class="fas fa-list"></i> {% trans "Ver Todas las Tareas" %}
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'tasks:task_list' %}?my_tasks_only=true" class="btn btn-outline-info btn-block">
+                                <i class="fas fa-user-tasks"></i> {% trans "Mis Tareas" %}
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'tasks:cost_center_report' %}" class="btn btn-outline-success btn-block">
+                                <i class="fas fa-chart-bar"></i> {% trans "Reporte Centros de Costos" %}
+                            </a>
+                        </div>
+                        {% if can_manage %}
+                        <div class="col-md-3">
+                            <a href="{% url 'tasks:category_list' %}" class="btn btn-outline-warning btn-block">
+                                <i class="fas fa-tags"></i> {% trans "Gestionar Categorías" %}
+                            </a>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-3">
+                            <a href="{% url 'tasks:task_list' %}?overdue_only=true" class="btn btn-outline-danger btn-block">
+                                <i class="fas fa-exclamation-triangle"></i> {% trans "Tareas Vencidas" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para tarea rápida -->
+{% if can_create %}
+<div class="modal fade" id="quickTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% trans "Crear Tarea Rápida" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="quickTaskForm" method="post" action="{% url 'tasks:task_quick_create' %}">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_title" class="form-label">{% trans "Título" %}</label>
+                        <input type="text" class="form-control" id="id_title" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_assigned_to" class="form-label">{% trans "Asignado a" %}</label>
+                        <select class="form-control" id="id_assigned_to" name="assigned_to" required>
+                            <option value="{{ user.id }}">{{ user.get_full_name }}</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="id_priority" class="form-label">{% trans "Prioridad" %}</label>
+                            <select class="form-control" id="id_priority" name="priority">
+                                <option value="medium">{% trans "Media" %}</option>
+                                <option value="low">{% trans "Baja" %}</option>
+                                <option value="high">{% trans "Alta" %}</option>
+                                <option value="urgent">{% trans "Urgente" %}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_due_date" class="form-label">{% trans "Vencimiento" %}</label>
+                            <input type="datetime-local" class="form-control" id="id_due_date" name="due_date">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancelar" %}</button>
+                    <button type="submit" class="btn btn-primary">{% trans "Crear Tarea" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -22px;
+    top: 0;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 5px;
+    border-left: 3px solid #007bff;
+}
+
+.btn-block {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Manejo del formulario de tarea rápida
+    $('#quickTaskForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        $.ajax({
+            url: $(this).attr('action'),
+            method: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                if (response.success) {
+                    $('#quickTaskModal').modal('hide');
+                    location.reload();
+                } else {
+                    alert('Error: ' + JSON.stringify(response.errors));
+                }
+            },
+            error: function() {
+                alert('Error al crear la tarea. Inténtalo de nuevo.');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

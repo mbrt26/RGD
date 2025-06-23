@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Detalle de Prórroga - {{ prorroga.proyecto.nombre_proyecto }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .prorroga-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-left: 4px solid #007bff;
+    }
+    .status-card {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+    }
+    .timeline-item {
+        border-left: 3px solid #dee2e6;
+        padding-left: 1rem;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 0.5rem;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #007bff;
+    }
+    .timeline-item.approved::before {
+        background: #28a745;
+    }
+    .timeline-item.rejected::before {
+        background: #dc3545;
+    }
+    .documento-card {
+        transition: transform 0.2s;
+    }
+    .documento-card:hover {
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="prorroga-header p-4 rounded mb-4">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h2 class="mb-2">
+                    <i class="fas fa-clock me-2"></i>Prórroga de Proyecto
+                </h2>
+                <h4 class="text-primary mb-1">{{ prorroga.proyecto.nombre_proyecto }}</h4>
+                <p class="text-muted mb-0">
+                    <i class="fas fa-project-diagram me-1"></i>
+                    Código: {{ prorroga.proyecto.codigo_proyecto|default:"Sin código" }}
+                </p>
+            </div>
+            <div class="text-end">
+                <span class="badge fs-6 {% if prorroga.estado == 'solicitada' %}bg-warning text-dark{% elif prorroga.estado == 'aprobada' %}bg-success{% elif prorroga.estado == 'rechazada' %}bg-danger{% else %}bg-secondary{% endif %}">
+                    {{ prorroga.get_estado_display }}
+                </span>
+                <div class="mt-2">
+                    <span class="badge bg-secondary">{{ prorroga.get_tipo_prorroga_display }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información Principal -->
+        <div class="col-lg-8">
+            <!-- Detalles de la Prórroga -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Detalles de la Prórroga
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Fecha de Solicitud</label>
+                            <div class="fw-bold">
+                                <i class="fas fa-calendar me-1 text-primary"></i>
+                                {{ prorroga.fecha_solicitud|date:"d/m/Y H:i" }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Solicitada por</label>
+                            <div class="fw-bold">
+                                <i class="fas fa-user me-1 text-primary"></i>
+                                {{ prorroga.solicitada_por|default:"Sistema" }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Fecha Fin Original</label>
+                            <div class="fw-bold">
+                                <i class="fas fa-calendar-alt me-1 text-warning"></i>
+                                {{ prorroga.fecha_fin_original|date:"d/m/Y" }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Nueva Fecha Fin Propuesta</label>
+                            <div class="fw-bold">
+                                <i class="fas fa-calendar-plus me-1 text-success"></i>
+                                {{ prorroga.fecha_fin_propuesta|date:"d/m/Y" }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Días de Extensión</label>
+                            <div class="fw-bold">
+                                <i class="fas fa-clock me-1 text-info"></i>
+                                {{ prorroga.dias_extension }} días
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Tipo de Prórroga</label>
+                            <div class="fw-bold">
+                                <i class="fas fa-tag me-1 text-secondary"></i>
+                                {{ prorroga.get_tipo_prorroga_display }}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if prorroga.justificacion %}
+                    <hr class="my-3">
+                    <div>
+                        <label class="form-label text-muted small">Justificación</label>
+                        <div class="border rounded p-3 bg-light">
+                            <i class="fas fa-quote-left text-muted me-2"></i>
+                            {{ prorroga.justificacion|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Estado de Aprobación -->
+            {% if prorroga.estado != 'solicitada' %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-{% if prorroga.estado == 'aprobada' %}check-circle text-success{% else %}times-circle text-danger{% endif %} me-2"></i>
+                        Estado de Aprobación
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% if prorroga.aprobada_por %}
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">
+                                {% if prorroga.estado == 'aprobada' %}Aprobada{% else %}Rechazada{% endif %} por
+                            </label>
+                            <div class="fw-bold">
+                                <i class="fas fa-user-check me-1"></i>
+                                {{ prorroga.aprobada_por }}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if prorroga.fecha_aprobacion %}
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Fecha de Decisión</label>
+                            <div class="fw-bold">
+                                <i class="fas fa-calendar me-1"></i>
+                                {{ prorroga.fecha_aprobacion|date:"d/m/Y H:i" }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if prorroga.observaciones_aprobacion %}
+                    <hr class="my-3">
+                    <div>
+                        <label class="form-label text-muted small">Observaciones</label>
+                        <div class="border rounded p-3 {% if prorroga.estado == 'aprobada' %}bg-light-success{% else %}bg-light-danger{% endif %}">
+                            {{ prorroga.observaciones_aprobacion|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Documentos de Soporte -->
+            {% if prorroga.documentos_soporte %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-paperclip me-2"></i>Documentos de Soporte
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for documento in prorroga.documentos_soporte.all %}
+                        <div class="col-md-6">
+                            <div class="card documento-card">
+                                <div class="card-body p-3">
+                                    <h6 class="card-title mb-2">
+                                        <i class="fas fa-file me-1"></i>
+                                        {{ documento.nombre|default:"Documento" }}
+                                    </h6>
+                                    <p class="card-text small text-muted mb-2">
+                                        Subido: {{ documento.fecha_subida|date:"d/m/Y H:i" }}
+                                    </p>
+                                    <a href="{{ documento.archivo.url }}" 
+                                       class="btn btn-sm btn-outline-primary" 
+                                       target="_blank">
+                                        <i class="fas fa-download me-1"></i>Descargar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-lg-4">
+            <!-- Acciones -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cogs me-2"></i>Acciones
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'proyectos:proyecto_detail' prorroga.proyecto.pk %}" 
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-project-diagram me-2"></i>Ver Proyecto
+                        </a>
+                        
+                        {% if prorroga.estado == 'solicitada' %}
+                        <a href="{% url 'proyectos:prorroga_approve' prorroga.pk %}" 
+                           class="btn btn-success">
+                            <i class="fas fa-check me-2"></i>Procesar Prórroga
+                        </a>
+                        <button type="button" 
+                                class="btn btn-outline-success" 
+                                onclick="quickApprove({{ prorroga.pk }})">
+                            <i class="fas fa-bolt me-2"></i>Aprobación Rápida
+                        </button>
+                        {% endif %}
+                        
+                        <a href="{% url 'proyectos:prorroga_list' %}" 
+                           class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Volver al Listado
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información del Proyecto -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-project-diagram me-2"></i>Información del Proyecto
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-6 small">Código:</dt>
+                        <dd class="col-6 small">{{ prorroga.proyecto.codigo_proyecto|default:"N/A" }}</dd>
+                        
+                        <dt class="col-6 small">Estado:</dt>
+                        <dd class="col-6 small">
+                            <span class="badge bg-info">{{ prorroga.proyecto.get_estado_display }}</span>
+                        </dd>
+                        
+                        <dt class="col-6 small">Director:</dt>
+                        <dd class="col-6 small">{{ prorroga.proyecto.director.nombre|default:"N/A" }}</dd>
+                        
+                        <dt class="col-6 small">Ingeniero:</dt>
+                        <dd class="col-6 small">{{ prorroga.proyecto.ingeniero.nombre|default:"N/A" }}</dd>
+                        
+                        <dt class="col-6 small">Avance:</dt>
+                        <dd class="col-6 small">{{ prorroga.proyecto.avance|default:0 }}%</dd>
+                        
+                        <dt class="col-6 small">Fecha Inicio:</dt>
+                        <dd class="col-6 small">{{ prorroga.proyecto.fecha_inicio|date:"d/m/Y"|default:"N/A" }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Formulario de Aprobación Rápida -->
+            {% if prorroga.estado == 'solicitada' and form_aprobacion %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-gavel me-2"></i>Decisión Rápida
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'proyectos:prorroga_approve' prorroga.pk %}">
+                        {% csrf_token %}
+                        {{ form_aprobacion.as_p }}
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="decision" value="aprobada" class="btn btn-success">
+                                <i class="fas fa-check me-2"></i>Aprobar
+                            </button>
+                            <button type="submit" name="decision" value="rechazada" class="btn btn-danger">
+                                <i class="fas fa-times me-2"></i>Rechazar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function quickApprove(prorrogaId) {
+    if (confirm('¿Está seguro de que desea aprobar esta prórroga?')) {
+        fetch(`/proyectos/prorrogas/${prorrogaId}/quick-approve/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error de conexión: ' + error);
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,12 +1,69 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 User = get_user_model()
 
 def fecha_actual():
     """Retorna la fecha actual sin hora"""
     return timezone.now().date()
+
+class ConfiguracionOferta(models.Model):
+    """
+    Modelo singleton para configurar el sistema de numeración de ofertas.
+    """
+    siguiente_numero = models.PositiveIntegerField(
+        'Siguiente Número de Oferta',
+        default=1,
+        help_text='El próximo número que se asignará a una nueva oferta'
+    )
+    creado_en = models.DateTimeField('Creado en', default=timezone.now)
+    actualizado_en = models.DateTimeField('Actualizado en', auto_now=True)
+    actualizado_por = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        verbose_name='Actualizado por'
+    )
+
+    class Meta:
+        verbose_name = 'Configuración de Oferta'
+        verbose_name_plural = 'Configuración de Ofertas'
+
+    def __str__(self):
+        return f"Siguiente número de oferta: {self.siguiente_numero:04d}"
+
+    def clean(self):
+        if self.siguiente_numero < 1:
+            raise ValidationError("El siguiente número debe ser mayor a 0")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        # Asegurar que solo exista una instancia (patrón singleton)
+        if not self.pk and ConfiguracionOferta.objects.exists():
+            raise ValidationError("Solo puede existir una configuración de oferta")
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def obtener_configuracion(cls):
+        """
+        Obtiene o crea la configuración de oferta (singleton).
+        """
+        config, created = cls.objects.get_or_create(defaults={'siguiente_numero': 1})
+        return config
+
+    @classmethod
+    def obtener_siguiente_numero(cls):
+        """
+        Obtiene el siguiente número de oferta y lo incrementa automáticamente.
+        """
+        config = cls.obtener_configuracion()
+        numero_actual = config.siguiente_numero
+        config.siguiente_numero += 1
+        config.save()
+        return numero_actual
 
 class Cliente(models.Model):
     nombre = models.CharField('Nombre', max_length=200)
@@ -174,16 +231,9 @@ class Trato(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.numero_oferta:
-            # Obtener el último número de oferta
-            ultimo_trato = Trato.objects.order_by('-numero_oferta').first()
-            if ultimo_trato and ultimo_trato.numero_oferta:
-                try:
-                    ultimo_numero = int(ultimo_trato.numero_oferta)
-                    self.numero_oferta = str(ultimo_numero + 1).zfill(4)
-                except ValueError:
-                    self.numero_oferta = '0001'
-            else:
-                self.numero_oferta = '0001'
+            # Usar la configuración centralizada para obtener el siguiente número
+            numero = ConfiguracionOferta.obtener_siguiente_numero()
+            self.numero_oferta = str(numero).zfill(4)
         
         # Si es un nuevo trato, establecer la fecha de cierre por defecto a 30 días después
         if not self.pk and not self.fecha_cierre:

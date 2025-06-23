@@ -18,6 +18,128 @@
         </div>
     </div>
     <div class="card-body">
+        <!-- Filtros y Búsqueda -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <form method="get" class="row g-3" id="filterForm">
+                    <!-- Búsqueda por texto -->
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">Búsqueda</label>
+                        <input type="text" 
+                               name="search" 
+                               id="search"
+                               class="form-control" 
+                               placeholder="Buscar en descripción, actividad..."
+                               value="{{ search_query }}">
+                    </div>
+                    
+                    <!-- Filtro por proyecto -->
+                    <div class="col-md-2">
+                        <label for="{{ filter_form.proyecto.id_for_label }}" class="form-label">Proyecto</label>
+                        {{ filter_form.proyecto }}
+                    </div>
+                    
+                    <!-- Filtro por estado -->
+                    <div class="col-md-2">
+                        <label for="{{ filter_form.estado.id_for_label }}" class="form-label">Estado</label>
+                        {{ filter_form.estado }}
+                    </div>
+                    
+                    <!-- Filtro por validación -->
+                    <div class="col-md-2">
+                        <label for="{{ filter_form.estado_validacion.id_for_label }}" class="form-label">Validación</label>
+                        {{ filter_form.estado_validacion }}
+                    </div>
+                    
+                    <!-- Filtro por urgencia -->
+                    <div class="col-md-2">
+                        <label for="{{ filter_form.urgencia.id_for_label }}" class="form-label">Urgencia</label>
+                        {{ filter_form.urgencia }}
+                    </div>
+                    
+                    <!-- Botón de filtrar -->
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-1">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        <a href="{% url 'proyectos:bitacora_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Filtros adicionales (colapsables) -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="accordion" id="advancedFilters">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingAdvanced">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced">
+                                <i class="fas fa-filter me-2"></i>Filtros Avanzados
+                            </button>
+                        </h2>
+                        <div id="collapseAdvanced" class="accordion-collapse collapse" data-bs-parent="#advancedFilters">
+                            <div class="accordion-body">
+                                <form method="get" class="row g-3">
+                                    <!-- Preservar búsqueda básica -->
+                                    <input type="hidden" name="search" value="{{ search_query }}">
+                                    <input type="hidden" name="proyecto" value="{{ filter_form.proyecto.value|default:'' }}">
+                                    <input type="hidden" name="estado" value="{{ filter_form.estado.value|default:'' }}">
+                                    <input type="hidden" name="estado_validacion" value="{{ filter_form.estado_validacion.value|default:'' }}">
+                                    <input type="hidden" name="urgencia" value="{{ filter_form.urgencia.value|default:'' }}">
+                                    
+                                    <!-- Filtro por responsable -->
+                                    <div class="col-md-3">
+                                        <label for="{{ filter_form.responsable.id_for_label }}" class="form-label">Responsable</label>
+                                        {{ filter_form.responsable }}
+                                    </div>
+                                    
+                                    <!-- Filtro por fecha desde -->
+                                    <div class="col-md-3">
+                                        <label for="{{ filter_form.fecha_desde.id_for_label }}" class="form-label">Fecha Desde</label>
+                                        {{ filter_form.fecha_desde }}
+                                    </div>
+                                    
+                                    <!-- Filtro por fecha hasta -->
+                                    <div class="col-md-3">
+                                        <label for="{{ filter_form.fecha_hasta.id_for_label }}" class="form-label">Fecha Hasta</label>
+                                        {{ filter_form.fecha_hasta }}
+                                    </div>
+                                    
+                                    <!-- Botón aplicar filtros avanzados -->
+                                    <div class="col-md-3 d-flex align-items-end">
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="fas fa-filter me-1"></i>Aplicar Filtros
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Información de resultados -->
+        {% if total_bitacoras %}
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-info py-2">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Mostrando {{ total_bitacoras }} entrada{{ total_bitacoras|pluralize }} de bitácora
+                    {% if search_query %}
+                        con la búsqueda "<strong>{{ search_query }}</strong>"
+                    {% endif %}
+                    {% if proyecto_filtro %}
+                        para el proyecto "<strong>{{ proyecto_filtro.nombre_proyecto }}</strong>"
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
         <div class="table-responsive">
             <table class="table table-hover align-middle">
                 {% block table_header %}
@@ -105,10 +227,16 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center">
+                        <td colspan="8" class="text-center">
                             <div class="text-muted">
                                 <i class="fas fa-clipboard-list fa-3x mb-3"></i>
-                                <p class="mb-0">No hay entradas en la bitácora</p>
+                                <p class="mb-0">
+                                    {% if search_query or filter_form.proyecto.value or filter_form.estado.value %}
+                                        No se encontraron entradas que coincidan con los filtros aplicados
+                                    {% else %}
+                                        No hay entradas en la bitácora
+                                    {% endif %}
+                                </p>
                             </div>
                         </td>
                     </tr>
@@ -129,6 +257,51 @@
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
+        
+        // Auto-submit del formulario de filtros con debounce
+        const searchInput = document.getElementById('search');
+        const filterSelects = document.querySelectorAll('#filterForm select');
+        let timeoutId;
+        
+        // Función para hacer submit con debounce
+        function debounceSubmit() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(function() {
+                document.getElementById('filterForm').submit();
+            }, 500);
+        }
+        
+        // Evento para búsqueda por texto
+        if (searchInput) {
+            searchInput.addEventListener('input', debounceSubmit);
+        }
+        
+        // Evento para cambios en selects
+        filterSelects.forEach(function(select) {
+            select.addEventListener('change', function() {
+                document.getElementById('filterForm').submit();
+            });
+        });
+        
+        // Expandir filtros avanzados si tienen valores
+        const advancedFields = ['{{ filter_form.responsable.id_for_label }}', 
+                               '{{ filter_form.fecha_desde.id_for_label }}', 
+                               '{{ filter_form.fecha_hasta.id_for_label }}'];
+        
+        let hasAdvancedFilters = false;
+        advancedFields.forEach(function(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (field && field.value) {
+                hasAdvancedFilters = true;
+            }
+        });
+        
+        if (hasAdvancedFilters) {
+            const advancedCollapse = document.getElementById('collapseAdvanced');
+            if (advancedCollapse) {
+                new bootstrap.Collapse(advancedCollapse, { show: true });
+            }
+        }
     });
 </script>
 {% endblock %}

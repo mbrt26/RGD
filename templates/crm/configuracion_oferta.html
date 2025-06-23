@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Configuración de Ofertas - CRM{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-cogs text-primary me-2"></i>
+                        Configuración de Ofertas
+                    </h1>
+                    <p class="text-muted mb-0">Gestiona la numeración automática de ofertas</p>
+                </div>
+                <div>
+                    <a href="{% url 'crm:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Volver al Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas Actuales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="card-title mb-1">Siguiente Número</h6>
+                            <h3 class="mb-0">#{{ siguiente_formato }}</h3>
+                        </div>
+                        <div class="fs-2 opacity-75">
+                            <i class="fas fa-hashtag"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="card-title mb-1">Último Número Usado</h6>
+                            <h3 class="mb-0">#{{ ultimo_numero }}</h3>
+                        </div>
+                        <div class="fs-2 opacity-75">
+                            <i class="fas fa-list-ol"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="card-title mb-1">Total de Ofertas</h6>
+                            <h3 class="mb-0">{{ total_ofertas }}</h3>
+                        </div>
+                        <div class="fs-2 opacity-75">
+                            <i class="fas fa-file-invoice"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="card-title mb-1">Última Actualización</h6>
+                            <p class="mb-0 small">{{ config.actualizado_en|date:"d/m/Y H:i" }}</p>
+                            <small class="text-muted">
+                                {% if config.actualizado_por %}
+                                    por {{ config.actualizado_por.get_full_name|default:config.actualizado_por.username }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div class="fs-2 opacity-75">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Formulario de Configuración -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-edit me-2"></i>
+                        Actualizar Configuración
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.siguiente_numero|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Formato de Vista Previa</label>
+                                    <div class="form-control bg-light" id="preview-number">
+                                        #<span id="preview-value">{{ siguiente_formato }}</span>
+                                    </div>
+                                    <small class="text-muted">Así se verá el número en el sistema</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Información importante:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>El número configurado será usado para la próxima oferta creada</li>
+                                <li>Los números posteriores se incrementarán automáticamente</li>
+                                <li>Se recomienda usar un número mayor al último usado para evitar conflictos</li>
+                                <li>El formato siempre será de 4 dígitos con ceros a la izquierda (0001, 0002, etc.)</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                Guardar Configuración
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                                <i class="fas fa-undo me-1"></i>
+                                Restaurar Valor Actual
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Panel de Ayuda -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-question-circle me-2"></i>
+                        Ayuda y Casos de Uso
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">¿Cuándo cambiar este número?</h6>
+                    <ul class="small">
+                        <li><strong>Migración de datos:</strong> Cuando importas ofertas de otro sistema</li>
+                        <li><strong>Corrección de errores:</strong> Si hubo un problema en la numeración</li>
+                        <li><strong>Reorganización:</strong> Para seguir una nueva secuencia lógica</li>
+                        <li><strong>Año nuevo:</strong> Si quieres reiniciar la numeración anualmente</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-3">Ejemplos de uso:</h6>
+                    <ul class="small">
+                        <li><strong>Para continuar desde 200:</strong> Configura el número como 200</li>
+                        <li><strong>Para reiniciar:</strong> Configura el número como 1</li>
+                        <li><strong>Para saltear números:</strong> Configura un número mayor al actual</li>
+                    </ul>
+
+                    <div class="alert alert-warning alert-sm mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Precaución:</strong> Cambiar a un número menor al último usado puede causar conflictos de numeración.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accesos Rápidos -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-link me-2"></i>
+                        Accesos Rápidos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'crm:trato_list' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-list me-1"></i>
+                            Ver Todas las Ofertas
+                        </a>
+                        <a href="{% url 'crm:trato_create' %}" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-plus me-1"></i>
+                            Crear Nueva Oferta
+                        </a>
+                        <a href="/admin/crm/configuracionoferta/" class="btn btn-outline-secondary btn-sm" target="_blank">
+                            <i class="fas fa-cog me-1"></i>
+                            Admin Django
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Actualizar vista previa en tiempo real
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('id_siguiente_numero');
+    const preview = document.getElementById('preview-value');
+    
+    if (input && preview) {
+        input.addEventListener('input', function() {
+            const value = this.value.padStart(4, '0');
+            preview.textContent = value;
+        });
+    }
+});
+
+// Función para resetear el formulario
+function resetForm() {
+    document.getElementById('id_siguiente_numero').value = {{ config.siguiente_numero }};
+    document.getElementById('preview-value').textContent = '{{ siguiente_formato }}';
+}
+
+// Validación del formulario
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+</script>
+{% endblock %}

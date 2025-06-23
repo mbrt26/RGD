@@ -1,0 +1,174 @@
+<!-- Modal para archivo individual -->
+<div class="modal fade" id="attachmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'tasks:add_attachment' task.pk %}" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-paperclip"></i> {% trans "Agregar Archivo" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {% csrf_token %}
+                    {% load crispy_forms_tags %}
+                    {% crispy attachment_form %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancelar" %}</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> {% trans "Subir Archivo" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para múltiples archivos -->
+<div class="modal fade" id="multipleAttachmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="{% url 'tasks:add_multiple_attachments' task.pk %}" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-files"></i> {% trans "Agregar Múltiples Archivos" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {% csrf_token %}
+                    {% load crispy_forms_tags %}
+                    {% crispy multiple_attachment_form %}
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>{% trans "Consejos:" %}</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>{% trans "Puedes seleccionar hasta 10 archivos a la vez" %}</li>
+                            <li>{% trans "Máximo 50MB por archivo" %}</li>
+                            <li>{% trans "Formatos soportados: PDF, Office, imágenes, videos, audio, archivos comprimidos" %}</li>
+                            <li>{% trans "Mantén presionado Ctrl (Cmd en Mac) para seleccionar múltiples archivos" %}</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancelar" %}</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> {% trans "Subir Archivos" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para imagen individual -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="{% url 'tasks:add_image' task.pk %}" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-image"></i> {% trans "Agregar Imagen" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {% csrf_token %}
+                    {% load crispy_forms_tags %}
+                    {% crispy image_form %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancelar" %}</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> {% trans "Subir Imagen" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para múltiples imágenes -->
+<div class="modal fade" id="multipleImageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="{% url 'tasks:add_multiple_images' task.pk %}" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-images"></i> {% trans "Agregar Múltiples Imágenes" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {% csrf_token %}
+                    {% load crispy_forms_tags %}
+                    {% crispy multiple_image_form %}
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>{% trans "Consejos:" %}</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>{% trans "Puedes seleccionar hasta 20 imágenes a la vez" %}</li>
+                            <li>{% trans "Máximo 20MB por imagen" %}</li>
+                            <li>{% trans "Formatos soportados: JPG, PNG, GIF, WebP, BMP" %}</li>
+                            <li>{% trans "Si usas un prefijo de título, se numerarán automáticamente" %}</li>
+                            <li>{% trans "La primera imagen se marcará como principal si no hay ninguna" %}</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancelar" %}</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> {% trans "Subir Imágenes" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para crear grupo -->
+<div class="modal fade" id="groupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'tasks:create_attachment_group' task.pk %}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-folder"></i> {% trans "Crear Grupo de Archivos" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {% csrf_token %}
+                    {% load crispy_forms_tags %}
+                    {% crispy group_form %}
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        {% trans "Los grupos te ayudan a organizar archivos relacionados. Una vez creado, podrás asignar archivos a este grupo." %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancelar" %}</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> {% trans "Crear Grupo" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para vista previa de imagen -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imagePreviewTitle">{% trans "Vista Previa de Imagen" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="imagePreviewImg" src="" class="img-fluid" alt="Preview">
+                <div id="imagePreviewInfo" class="mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cerrar" %}</button>
+                <a id="imagePreviewDownload" href="" download class="btn btn-primary">
+                    <i class="fas fa-download"></i> {% trans "Descargar" %}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

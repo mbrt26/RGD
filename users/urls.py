@@ -5,9 +5,28 @@ from . import views
 app_name = 'users'
 
 urlpatterns = [
+    # Authentication URLs
     path('login/', views.CustomLoginView.as_view(), name='login'),
     path('logout/', views.CustomLogoutView.as_view(), name='logout'),
     path('signup/', views.SignUpView.as_view(), name='signup'),
+    
+    # Dashboard
+    path('dashboard/', views.users_dashboard, name='dashboard'),
+    
+    # User management URLs
+    path('users/', views.UserListView.as_view(), name='user_list'),
+    path('users/create/', views.UserCreateView.as_view(), name='user_create'),
+    path('users/<int:pk>/', views.UserDetailView.as_view(), name='user_detail'),
+    path('users/<int:pk>/edit/', views.UserUpdateView.as_view(), name='user_edit'),
+    path('users/<int:pk>/delete/', views.UserDeleteView.as_view(), name='user_delete'),
+    
+    # Role management URLs
+    path('roles/', views.RoleListView.as_view(), name='role_list'),
+    path('roles/create/', views.RoleCreateView.as_view(), name='role_create'),
+    path('roles/<int:pk>/', views.RoleDetailView.as_view(), name='role_detail'),
+    path('roles/<int:pk>/edit/', views.RoleUpdateView.as_view(), name='role_edit'),
+    path('roles/<int:pk>/delete/', views.RoleDeleteView.as_view(), name='role_delete'),
+    path('roles/<int:pk>/permissions/', views.role_permissions_view, name='role_permissions'),
     
     # Password reset URLs
     path('password_reset/', 

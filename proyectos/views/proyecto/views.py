@@ -284,6 +284,27 @@ class ProyectoDetailView(LoginRequiredMixin, DetailView):
             estado__in=['pendiente', 'en_proceso']
         )
         
+        # Obtener prórrogas del proyecto
+        prorrogas = proyecto.prorrogas.all().order_by('-fecha_solicitud')
+        context['prorrogas'] = prorrogas
+        context['total_prorrogas'] = prorrogas.count()
+        context['prorrogas_pendientes'] = prorrogas.filter(estado='solicitada').count()
+        context['prorrogas_aprobadas'] = prorrogas.filter(estado='aprobada').count()
+        context['prorrogas_rechazadas'] = prorrogas.filter(estado='rechazada').count()
+        
+        # Calcular total de días de extensión aprobados
+        dias_extension_total = sum([
+            p.dias_extension for p in prorrogas.filter(estado='aprobada')
+        ])
+        context['dias_extension_total'] = dias_extension_total
+        
+        # Obtener la última prórroga aprobada para mostrar la fecha fin actual
+        ultima_prorroga_aprobada = prorrogas.filter(estado='aprobada').first()
+        if ultima_prorroga_aprobada:
+            context['fecha_fin_actual'] = ultima_prorroga_aprobada.fecha_fin_propuesta
+        else:
+            context['fecha_fin_actual'] = proyecto.fecha_fin
+        
         return context
 
 

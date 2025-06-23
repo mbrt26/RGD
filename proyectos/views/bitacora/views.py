@@ -7,8 +7,9 @@ from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.db.models import Q
 from django.db import transaction
+from django.utils import timezone
 from proyectos.models import Bitacora, Proyecto, Actividad, Colaborador, BitacoraArchivo
-from proyectos.forms.bitacora_forms import BitacoraForm
+from proyectos.forms.bitacora_forms import BitacoraForm, FiltroBitacorasForm
 
 @require_http_methods(["GET"])
 def get_actividades_por_proyecto(request, proyecto_id):
@@ -29,13 +30,55 @@ class BitacoraListView(LoginRequiredMixin, ListView):
     ordering = ['-fecha_registro']
     title = 'Bitácora de Actividades'
     add_url = 'proyectos:bitacora_create'
+    paginate_by = 20
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        proyecto_id = self.request.GET.get('proyecto_id')
         
-        if proyecto_id:
-            queryset = queryset.filter(proyecto_id=proyecto_id)
+        # Crear el formulario de filtros con los datos GET
+        form = FiltroBitacorasForm(self.request.GET)
+        
+        if form.is_valid():
+            # Filtro por proyecto
+            if form.cleaned_data.get('proyecto'):
+                queryset = queryset.filter(proyecto=form.cleaned_data['proyecto'])
+            
+            # Filtro por estado
+            if form.cleaned_data.get('estado'):
+                queryset = queryset.filter(estado=form.cleaned_data['estado'])
+            
+            # Filtro por estado de validación
+            if form.cleaned_data.get('estado_validacion'):
+                queryset = queryset.filter(estado_validacion=form.cleaned_data['estado_validacion'])
+            
+            # Filtro por responsable
+            if form.cleaned_data.get('responsable'):
+                queryset = queryset.filter(responsable=form.cleaned_data['responsable'])
+            
+            # Filtro por urgencia
+            urgencia = form.cleaned_data.get('urgencia')
+            if urgencia == 'urgente':
+                queryset = queryset.filter(fecha_ejecucion_real__isnull=True, fecha_planificada__lt=timezone.now().date())
+            elif urgencia == 'normal':
+                queryset = queryset.filter(Q(fecha_ejecucion_real__isnull=False) | Q(fecha_planificada__gte=timezone.now().date()))
+            
+            # Filtro por rango de fechas
+            if form.cleaned_data.get('fecha_desde'):
+                queryset = queryset.filter(fecha_planificada__gte=form.cleaned_data['fecha_desde'])
+            
+            if form.cleaned_data.get('fecha_hasta'):
+                queryset = queryset.filter(fecha_planificada__lte=form.cleaned_data['fecha_hasta'])
+        
+        # Filtro de búsqueda por texto
+        search_query = self.request.GET.get('search', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(descripcion__icontains=search_query) |
+                Q(subactividad__icontains=search_query) |
+                Q(observaciones__icontains=search_query) |
+                Q(proyecto__nombre_proyecto__icontains=search_query) |
+                Q(actividad__actividad__icontains=search_query)
+            )
             
         return queryset
 
@@ -44,8 +87,16 @@ class BitacoraListView(LoginRequiredMixin, ListView):
         context['title'] = self.title
         context['view'] = {'add_url': self.add_url}
         
-        # Agregar información del proyecto si se está filtrando
-        proyecto_id = self.request.GET.get('proyecto_id')
+        # Agregar el formulario de filtros al contexto
+        form = FiltroBitacorasForm(self.request.GET)
+        context['filter_form'] = form
+        context['search_query'] = self.request.GET.get('search', '')
+        
+        # Contador de resultados
+        context['total_bitacoras'] = self.get_queryset().count()
+        
+        # Información del proyecto si se está filtrando
+        proyecto_id = self.request.GET.get('proyecto')
         if proyecto_id:
             try:
                 proyecto = Proyecto.objects.get(id=proyecto_id)

@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+{% if editing %}
+{% trans "Editar Tarea" %}
+{% else %}
+{% trans "Nueva Tarea" %}
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="fas fa-{% if editing %}edit{% else %}plus{% endif %}"></i>
+            {% if editing %}
+            {% trans "Editar Tarea" %}
+            {% else %}
+            {% trans "Nueva Tarea" %}
+            {% endif %}
+        </h1>
+        <div>
+            <a href="{% url 'tasks:task_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> {% trans "Volver a Lista" %}
+            </a>
+            {% if editing and object %}
+            <a href="{% url 'tasks:task_detail' object.pk %}" class="btn btn-outline-info">
+                <i class="fas fa-eye"></i> {% trans "Ver Tarea" %}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        {% if editing %}
+                        <i class="fas fa-edit"></i> {% trans "Información de la Tarea" %}
+                        {% else %}
+                        <i class="fas fa-plus-circle"></i> {% trans "Datos de la Nueva Tarea" %}
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <h6><i class="fas fa-exclamation-triangle"></i> {% trans "Errores en el formulario:" %}</h6>
+                        {{ form.errors }}
+                    </div>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data" id="taskForm">
+                        {% csrf_token %}
+                        
+                        {% if editing and object %}
+                        <!-- Información actual de la tarea -->
+                        <div class="alert alert-info">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>{% trans "Creada por:" %}</strong> {{ object.created_by.get_full_name }}<br>
+                                    <strong>{% trans "Fecha creación:" %}</strong> {{ object.created_at|date:"d/m/Y H:i" }}
+                                </div>
+                                <div class="col-md-6">
+                                    {% if object.updated_at %}
+                                    <strong>{% trans "Última actualización:" %}</strong> {{ object.updated_at|date:"d/m/Y H:i" }}<br>
+                                    {% endif %}
+                                    {% if object.completed_date %}
+                                    <strong>{% trans "Completada:" %}</strong> {{ object.completed_date|date:"d/m/Y H:i" }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Formulario principal -->
+                        {% crispy form %}
+                        
+                        <!-- Información adicional para edición -->
+                        {% if editing and object %}
+                        <div class="mt-4">
+                            <h6><i class="fas fa-info-circle"></i> {% trans "Información Adicional" %}</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">{% trans "Estado Actual:" %}</label>
+                                        <span class="badge bg-{% if object.status == 'completed' %}success{% elif object.status == 'in_progress' %}info{% elif object.status == 'cancelled' %}secondary{% else %}warning{% endif %} ms-2">
+                                            {{ object.get_status_display }}
+                                        </span>
+                                    </div>
+                                    {% if object.is_overdue %}
+                                    <div class="mb-3">
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-exclamation-triangle"></i> {% trans "Tarea Vencida" %}
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    {% if object.related_object %}
+                                    <div class="mb-3">
+                                        <label class="form-label">{% trans "Objeto Relacionado:" %}</label>
+                                        <div class="form-control-plaintext">{{ object.get_related_object_display }}</div>
+                                    </div>
+                                    {% endif %}
+                                    {% if object.days_until_due %}
+                                    <div class="mb-3">
+                                        <label class="form-label">{% trans "Días hasta vencimiento:" %}</label>
+                                        <span class="badge bg-{% if object.days_until_due <= 1 %}danger{% elif object.days_until_due <= 3 %}warning{% else %}info{% endif %} ms-2">
+                                            {{ object.days_until_due }} {% trans "días" %}
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
+            <!-- Información de ayuda -->
+            {% if not editing %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb"></i> {% trans "Consejos para crear tareas efectivas" %}</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>{% trans "Título de la tarea:" %}</h6>
+                            <ul class="small">
+                                <li>{% trans "Sea específico y claro" %}</li>
+                                <li>{% trans "Use verbos de acción" %}</li>
+                                <li>{% trans "Mantenga entre 5-50 caracteres" %}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>{% trans "Descripción:" %}</h6>
+                            <ul class="small">
+                                <li>{% trans "Incluya detalles específicos" %}</li>
+                                <li>{% trans "Defina criterios de aceptación" %}</li>
+                                <li>{% trans "Mencione recursos necesarios" %}</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6>{% trans "Fechas y tiempo:" %}</h6>
+                            <ul class="small">
+                                <li>{% trans "Establezca fechas realistas" %}</li>
+                                <li>{% trans "Considere dependencias" %}</li>
+                                <li>{% trans "Incluya tiempo para revisión" %}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>{% trans "Prioridad:" %}</h6>
+                            <ul class="small">
+                                <li><strong>{% trans "Urgente:" %}</strong> {% trans "Requiere atención inmediata" %}</li>
+                                <li><strong>{% trans "Alta:" %}</strong> {% trans "Importante para objetivos" %}</li>
+                                <li><strong>{% trans "Media:" %}</strong> {% trans "Progreso normal" %}</li>
+                                <li><strong>{% trans "Baja:" %}</strong> {% trans "Puede esperar" %}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.form-control, .form-select {
+    border-radius: 0.375rem;
+}
+
+.alert {
+    border-radius: 0.5rem;
+}
+
+.badge {
+    font-size: 0.8em;
+}
+
+.form-control-plaintext {
+    padding: 0.375rem 0;
+    margin-bottom: 0;
+    font-size: inherit;
+    line-height: 1.5;
+    color: #212529;
+    background-color: transparent;
+    border: solid transparent;
+    border-width: 1px 0;
+}
+
+.small {
+    font-size: 0.875em;
+}
+
+.crispy-form .form-group {
+    margin-bottom: 1rem;
+}
+
+/* Estilos para campos de fecha/hora */
+input[type="datetime-local"] {
+    background-color: #fff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .col-lg-10 {
+        margin-bottom: 20px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Autocompletar fecha de inicio con la fecha actual si está vacía
+    if (!$('#id_start_date').val()) {
+        var now = new Date();
+        var year = now.getFullYear();
+        var month = String(now.getMonth() + 1).padStart(2, '0');
+        var day = String(now.getDate()).padStart(2, '0');
+        var hours = String(now.getHours()).padStart(2, '0');
+        var minutes = String(now.getMinutes()).padStart(2, '0');
+        
+        $('#id_start_date').val(year + '-' + month + '-' + day + 'T' + hours + ':' + minutes);
+    }
+    
+    // Validación en tiempo real
+    $('#taskForm').on('submit', function(e) {
+        var startDate = new Date($('#id_start_date').val());
+        var dueDate = new Date($('#id_due_date').val());
+        var reminderDate = new Date($('#id_reminder_date').val());
+        
+        // Validar fechas
+        if (startDate && dueDate && startDate > dueDate) {
+            e.preventDefault();
+            alert('{% trans "La fecha de inicio no puede ser posterior a la fecha de vencimiento." %}');
+            return false;
+        }
+        
+        if (reminderDate && dueDate && reminderDate > dueDate) {
+            e.preventDefault();
+            alert('{% trans "La fecha de recordatorio no puede ser posterior a la fecha de vencimiento." %}');
+            return false;
+        }
+        
+        // Validar progreso
+        var progress = parseInt($('#id_progress_percentage').val());
+        if (progress < 0 || progress > 100) {
+            e.preventDefault();
+            alert('{% trans "El porcentaje de progreso debe estar entre 0 y 100." %}');
+            return false;
+        }
+        
+        // Validar horas
+        var estimatedHours = parseFloat($('#id_estimated_hours').val());
+        var actualHours = parseFloat($('#id_actual_hours').val());
+        
+        if (estimatedHours && estimatedHours < 0) {
+            e.preventDefault();
+            alert('{% trans "Las horas estimadas no pueden ser negativas." %}');
+            return false;
+        }
+        
+        if (actualHours && actualHours < 0) {
+            e.preventDefault();
+            alert('{% trans "Las horas reales no pueden ser negativas." %}');
+            return false;
+        }
+    });
+    
+    // Auto-ajustar progreso basado en estado
+    $('#id_status').on('change', function() {
+        var status = $(this).val();
+        var progressField = $('#id_progress_percentage');
+        
+        if (status === 'completed') {
+            progressField.val(100);
+        } else if (status === 'pending' && progressField.val() == 100) {
+            progressField.val(0);
+        } else if (status === 'in_progress' && progressField.val() == 0) {
+            progressField.val(10);
+        }
+    });
+    
+    // Validación de recurrencia
+    $('#id_is_recurring').on('change', function() {
+        var recurrenceField = $('#id_recurrence_pattern');
+        if ($(this).is(':checked')) {
+            recurrenceField.prop('required', true);
+            recurrenceField.closest('.form-group').find('label').addClass('required');
+        } else {
+            recurrenceField.prop('required', false);
+            recurrenceField.val('');
+            recurrenceField.closest('.form-group').find('label').removeClass('required');
+        }
+    });
+    
+    // Configurar fecha de vencimiento por defecto (1 semana desde hoy)
+    if (!$('#id_due_date').val()) {
+        var nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        nextWeek.setHours(17, 0, 0, 0); // 5 PM
+        
+        var year = nextWeek.getFullYear();
+        var month = String(nextWeek.getMonth() + 1).padStart(2, '0');
+        var day = String(nextWeek.getDate()).padStart(2, '0');
+        var hours = String(nextWeek.getHours()).padStart(2, '0');
+        var minutes = String(nextWeek.getMinutes()).padStart(2, '0');
+        
+        $('#id_due_date').val(year + '-' + month + '-' + day + 'T' + hours + ':' + minutes);
+    }
+    
+    // Tooltip para ayuda
+    $('[data-bs-toggle="tooltip"]').tooltip();
+});
+</script>
+{% endblock %}

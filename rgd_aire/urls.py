@@ -47,7 +47,8 @@ urlpatterns = [
     path('proyectos/', include('proyectos.urls')),
     path('servicios/', include('servicios.urls')),
     path('mantenimiento/', include('mantenimiento.urls')),
-    path('insumos/', include('insumos.urls')),
+    path('tasks/', include('tasks.urls')),
+    path('mejora-continua/', include('mejora_continua.urls')),
     
     # API endpoints
     path('proyectos/api/actividades/<int:pk>/', actividad_detail_api, name='actividad_api_detail'),

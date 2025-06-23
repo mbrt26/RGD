@@ -37,6 +37,10 @@ from .views.comite.views import (
     SeguimientoUpdateView, gestionar_participantes_comite, duplicar_comite,
     ajax_buscar_colaboradores
 )
+from .views.prorroga.views import (
+    ProrrogaListView, ProrrogaCreateView, ProrrogaDetailView, ProrrogaAprobacionView,
+    ProrrogaDashboardView, prorroga_quick_approve, proyecto_tiene_prorrogas_pendientes
+)
 
 app_name = 'proyectos'
 
@@ -141,5 +145,16 @@ urlpatterns = [
         path('<int:comite_id>/duplicar/', login_required(duplicar_comite), name='duplicar_comite'),
         path('seguimiento/<int:pk>/editar/', login_required(SeguimientoUpdateView.as_view()), name='seguimiento_update'),
         path('ajax/buscar-colaboradores/', login_required(ajax_buscar_colaboradores), name='ajax_buscar_colaboradores'),
+    ])),
+    
+    # Prórrogas de Proyectos
+    path('prorrogas/', include([
+        path('', login_required(ProrrogaListView.as_view()), name='prorroga_list'),
+        path('dashboard/', login_required(ProrrogaDashboardView.as_view()), name='prorroga_dashboard'),
+        path('proyecto/<int:proyecto_id>/nueva/', login_required(ProrrogaCreateView.as_view()), name='prorroga_create'),
+        path('<int:pk>/', login_required(ProrrogaDetailView.as_view()), name='prorroga_detail'),
+        path('<int:pk>/aprobar/', login_required(ProrrogaAprobacionView.as_view()), name='prorroga_approve'),
+        path('<int:pk>/quick-approve/', login_required(prorroga_quick_approve), name='prorroga_quick_approve'),
+        path('api/proyecto/<int:proyecto_id>/pendientes/', login_required(proyecto_tiene_prorrogas_pendientes), name='proyecto_prorrogas_pendientes'),
     ])),
 ]

@@ -5,8 +5,7 @@ service: rgd-aire
 
 # Configuración del entrypoint simplificado - el usuario admin se crea automáticamente en main.py
 entrypoint: >
-  bash -c "python manage.py migrate --noinput --settings=rgd_aire.settings_appengine \
-           && python manage.py collectstatic --noinput --settings=rgd_aire.settings_appengine \
+  bash -c "python manage.py collectstatic --noinput --settings=rgd_aire.settings_appengine \
            && gunicorn rgd_aire.wsgi:application --bind 0.0.0.0:\$PORT"
 
 # Variables de entorno para RGD AIRE

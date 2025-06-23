@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Categorías de Tareas" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-tags"></i> {% trans "Categorías de Tareas" %}</h1>
+        <div>
+            <a href="{% url 'tasks:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> {% trans "Volver al Dashboard" %}
+            </a>
+            <a href="{% url 'tasks:category_create' %}" class="btn btn-success">
+                <i class="fas fa-plus"></i> {% trans "Nueva Categoría" %}
+            </a>
+        </div>
+    </div>
+
+    <!-- Información general -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ categories.count }}</h4>
+                    <p class="mb-0">{% trans "Total Categorías" %}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ categories|length }}</h4>
+                    <p class="mb-0">{% trans "Activas" %}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6><i class="fas fa-info-circle"></i> {% trans "Información" %}</h6>
+                    <p class="mb-0 small">
+                        {% trans "Las categorías ayudan a organizar las tareas por módulos o tipos. Cada categoría puede tener un color distintivo para facilitar la identificación visual." %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de categorías por módulo -->
+    <div class="row">
+        {% regroup categories by module as module_groups %}
+        {% for module_group in module_groups %}
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cube"></i> 
+                        {% for choice in categories.0.MODULE_CHOICES %}
+                            {% if choice.0 == module_group.grouper %}
+                                {{ choice.1 }}
+                            {% endif %}
+                        {% endfor %}
+                        <span class="badge bg-secondary">{{ module_group.list|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if module_group.list %}
+                    <div class="row">
+                        {% for category in module_group.list %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-start border-3" style="border-left-color: {{ category.color }} !important;">
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">
+                                                <span class="badge" style="background-color: {{ category.color }}; color: white;">
+                                                    {{ category.name }}
+                                                </span>
+                                                {% if not category.is_active %}
+                                                <span class="badge bg-secondary">{% trans "Inactiva" %}</span>
+                                                {% endif %}
+                                            </h6>
+                                            {% if category.description %}
+                                            <p class="small text-muted mb-2">{{ category.description|truncatechars:60 }}</p>
+                                            {% endif %}
+                                            <small class="text-muted">
+                                                <i class="fas fa-tasks"></i> {{ category.task_count }} {% trans "tarea(s)" %}
+                                                <br>
+                                                <i class="fas fa-calendar"></i> {{ category.created_at|date:"d/m/Y" }}
+                                            </small>
+                                        </div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li>
+                                                    <a class="dropdown-item" href="{% url 'tasks:category_edit' category.pk %}">
+                                                        <i class="fas fa-edit"></i> {% trans "Editar" %}
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item" href="{% url 'tasks:task_list' %}?category={{ category.pk }}">
+                                                        <i class="fas fa-list"></i> {% trans "Ver Tareas" %}
+                                                    </a>
+                                                </li>
+                                                {% if category.task_count == 0 %}
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item text-danger" href="{% url 'tasks:category_delete' category.pk %}">
+                                                        <i class="fas fa-trash"></i> {% trans "Eliminar" %}
+                                                    </a>
+                                                </li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">
+                        <i class="fas fa-tag fa-2x mb-2"></i><br>
+                        {% trans "No hay categorías en este módulo." %}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-tags fa-4x text-muted mb-3"></i>
+                    <h5 class="text-muted">{% trans "No hay categorías creadas" %}</h5>
+                    <p class="text-muted">{% trans "Crea tu primera categoría para organizar las tareas." %}</p>
+                    <a href="{% url 'tasks:category_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> {% trans "Crear Primera Categoría" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Estadísticas adicionales -->
+    {% if categories %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-chart-bar"></i> {% trans "Distribución de Tareas por Categoría" %}</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for category in categories %}
+                        {% if category.task_count > 0 %}
+                        <div class="col-md-3 mb-2">
+                            <div class="d-flex align-items-center">
+                                <div class="progress flex-grow-1 me-2" style="height: 20px;">
+                                    <div class="progress-bar" 
+                                         style="width: {% widthratio category.task_count 50 100 %}%; background-color: {{ category.color }};" 
+                                         role="progressbar">
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    {{ category.name }}: {{ category.task_count }}
+                                </small>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Acciones rápidas -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-bolt"></i> {% trans "Acciones Rápidas" %}</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{% url 'tasks:category_create' %}" class="btn btn-outline-success btn-block">
+                                <i class="fas fa-plus"></i> {% trans "Nueva Categoría" %}
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'tasks:task_create' %}" class="btn btn-outline-primary btn-block">
+                                <i class="fas fa-tasks"></i> {% trans "Nueva Tarea" %}
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'tasks:task_list' %}" class="btn btn-outline-info btn-block">
+                                <i class="fas fa-list"></i> {% trans "Ver Todas las Tareas" %}
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'tasks:dashboard' %}" class="btn btn-outline-secondary btn-block">
+                                <i class="fas fa-chart-pie"></i> {% trans "Dashboard" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.btn-block {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.progress {
+    background-color: #e9ecef;
+}
+
+.badge {
+    font-size: 0.8em;
+}
+
+.dropdown-toggle::after {
+    display: none;
+}
+
+.small {
+    font-size: 0.875em;
+}
+
+.border-3 {
+    border-width: 3px !important;
+}
+
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    .btn-sm {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .col-md-6 {
+        margin-bottom: 15px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Confirmación para eliminar categorías
+    $('a[href*="delete"]').on('click', function(e) {
+        if (!confirm('{% trans "¿Estás seguro de que quieres eliminar esta categoría?" %}')) {
+            e.preventDefault();
+        }
+    });
+    
+    // Tooltip para información adicional
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // Búsqueda rápida de categorías
+    function filterCategories(searchText) {
+        $('.card .card-body .row .col-md-6').each(function() {
+            var categoryName = $(this).find('h6').text().toLowerCase();
+            var categoryDesc = $(this).find('p').text().toLowerCase();
+            
+            if (categoryName.includes(searchText.toLowerCase()) || 
+                categoryDesc.includes(searchText.toLowerCase())) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    }
+    
+    // Agregar campo de búsqueda si hay muchas categorías
+    {% if categories.count > 10 %}
+    setTimeout(function() {
+        var searchHtml = '<div class="row mb-3">' +
+                        '<div class="col-md-6">' +
+                        '<input type="text" class="form-control" id="categorySearch" placeholder="{% trans "Buscar categorías..." %}">' +
+                        '</div>' +
+                        '</div>';
+        $('.container-fluid .row').first().after(searchHtml);
+        
+        $('#categorySearch').on('keyup', function() {
+            filterCategories($(this).val());
+        });
+    }, 100);
+    {% endif %}
+});
+</script>
+{% endblock %}

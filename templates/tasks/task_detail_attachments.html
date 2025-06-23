@@ -1,0 +1,387 @@
+<!-- Archivos adjuntos e imágenes -->
+<div class="card mb-4">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">
+                <i class="fas fa-paperclip"></i> {% trans "Archivos e Imágenes" %} 
+                <span class="badge bg-secondary">{{ attachments.count|add:images.count }}</span>
+            </h6>
+            {% if can_attach %}
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-plus"></i> {% trans "Agregar" %}
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#attachmentModal">
+                        <i class="fas fa-file"></i> {% trans "Archivo Individual" %}
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#multipleAttachmentModal">
+                        <i class="fas fa-files"></i> {% trans "Múltiples Archivos" %}
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#imageModal">
+                        <i class="fas fa-image"></i> {% trans "Imagen Individual" %}
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#multipleImageModal">
+                        <i class="fas fa-images"></i> {% trans "Múltiples Imágenes" %}
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#groupModal">
+                        <i class="fas fa-folder"></i> {% trans "Crear Grupo" %}
+                    </a></li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Nav tabs -->
+    <div class="card-header border-bottom-0">
+        <ul class="nav nav-tabs card-header-tabs" id="attachmentTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                    <i class="fas fa-th-large"></i> {% trans "Todos" %} ({{ attachments.count|add:images.count }})
+                </button>
+            </li>
+            {% if images %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="images-tab" data-bs-toggle="tab" data-bs-target="#images-content" type="button" role="tab">
+                    <i class="fas fa-images"></i> {% trans "Imágenes" %} ({{ images.count }})
+                </button>
+            </li>
+            {% endif %}
+            {% if attachments_by_type.documents %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#documents" type="button" role="tab">
+                    <i class="fas fa-file-alt"></i> {% trans "Documentos" %} ({{ attachments_by_type.documents.count }})
+                </button>
+            </li>
+            {% endif %}
+            {% if attachments_by_type.videos %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="videos-tab" data-bs-toggle="tab" data-bs-target="#videos" type="button" role="tab">
+                    <i class="fas fa-video"></i> {% trans "Videos" %} ({{ attachments_by_type.videos.count }})
+                </button>
+            </li>
+            {% endif %}
+            {% if attachment_groups %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="groups-tab" data-bs-toggle="tab" data-bs-target="#groups" type="button" role="tab">
+                    <i class="fas fa-folder"></i> {% trans "Grupos" %} ({{ attachment_groups.count }})
+                </button>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <div class="card-body">
+        <div class="tab-content" id="attachmentTabContent">
+            <!-- Tab: Todos los archivos -->
+            <div class="tab-pane fade show active" id="all" role="tabpanel">
+                {% if images or attachments %}
+                
+                <!-- Imagen principal -->
+                {% if primary_image %}
+                <div class="mb-4">
+                    <h6 class="text-muted mb-2">{% trans "Imagen Principal" %}</h6>
+                    <div class="card border-primary">
+                        <div class="card-body p-2">
+                            <div class="row align-items-center">
+                                <div class="col-3">
+                                    <img src="{{ primary_image.image.url }}" class="img-fluid rounded" alt="{{ primary_image.title }}">
+                                </div>
+                                <div class="col-9">
+                                    <h6 class="mb-1">{{ primary_image.title|default:"Imagen principal" }}</h6>
+                                    {% if primary_image.description %}
+                                    <p class="text-muted small mb-1">{{ primary_image.description|truncatewords:15 }}</p>
+                                    {% endif %}
+                                    <small class="text-muted">
+                                        {{ primary_image.dimensions }} • {{ primary_image.file_size_formatted }}
+                                        <br>{% trans "Por" %} {{ primary_image.uploaded_by.get_full_name }} - {{ primary_image.uploaded_at|date:"d/m/Y" }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Lista combinada de archivos e imágenes -->
+                <div class="row">
+                    {% for image in images %}
+                    {% if not image.is_primary %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="position-relative">
+                                <img src="{{ image.image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="{{ image.title }}">
+                                <div class="position-absolute top-0 end-0 p-2">
+                                    <span class="badge bg-primary">{% trans "Imagen" %}</span>
+                                </div>
+                                {% if can_attach %}
+                                <div class="position-absolute bottom-0 end-0 p-2">
+                                    <div class="btn-group btn-group-sm">
+                                        <form method="post" action="{% url 'tasks:set_primary_image' task.pk image.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-warning btn-sm" title="{% trans 'Marcar como principal' %}">
+                                                <i class="fas fa-star"></i>
+                                            </button>
+                                        </form>
+                                        <form method="post" action="{% url 'tasks:delete_image' task.pk image.pk %}" class="d-inline" onsubmit="return confirm('¿Estás seguro?')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-danger btn-sm" title="{% trans 'Eliminar' %}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="card-body p-2">
+                                <h6 class="card-title mb-1">{{ image.title|default:"Sin título" }}</h6>
+                                {% if image.description %}
+                                <p class="card-text small text-muted mb-1">{{ image.description|truncatewords:10 }}</p>
+                                {% endif %}
+                                <small class="text-muted">
+                                    {{ image.dimensions }} • {{ image.file_size_formatted }}
+                                    {% if image.location %}<br><i class="fas fa-map-marker-alt"></i> {{ image.location }}{% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% for attachment in attachments %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0 me-3">
+                                        <i class="{{ attachment.icon_class }} fa-2x"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="card-title mb-1">
+                                            <a href="{{ attachment.file.url }}" target="_blank" class="text-decoration-none">
+                                                {{ attachment.original_name }}
+                                            </a>
+                                        </h6>
+                                        {% if attachment.description %}
+                                        <p class="card-text small text-muted mb-1">{{ attachment.description }}</p>
+                                        {% endif %}
+                                        <small class="text-muted">
+                                            {{ attachment.file_size_formatted }} • {{ attachment.get_file_type_display }}
+                                            <br>{% trans "Por" %} {{ attachment.uploaded_by.get_full_name }}
+                                            {% if attachment.group %}<br><i class="fas fa-folder"></i> {{ attachment.group.name }}{% endif %}
+                                        </small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ attachment.file.url }}" download class="btn btn-outline-primary btn-sm" title="{% trans 'Descargar' %}">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            {% if can_attach %}
+                                            <form method="post" action="{% url 'tasks:delete_attachment' task.pk attachment.pk %}" class="d-inline" onsubmit="return confirm('¿Estás seguro?')">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" title="{% trans 'Eliminar' %}">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-folder-open fa-3x mb-3"></i>
+                    <h5>{% trans "No hay archivos adjuntos" %}</h5>
+                    <p>{% trans "Los archivos e imágenes que agregues aparecerán aquí." %}</p>
+                    {% if can_attach %}
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#multipleAttachmentModal">
+                        <i class="fas fa-plus"></i> {% trans "Agregar Archivos" %}
+                    </button>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Tab: Solo imágenes -->
+            {% if images %}
+            <div class="tab-pane fade" id="images-content" role="tabpanel">
+                <div class="row">
+                    {% for image in images %}
+                    <div class="col-lg-4 col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="position-relative">
+                                <img src="{{ image.image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="{{ image.title }}">
+                                {% if image.is_primary %}
+                                <div class="position-absolute top-0 start-0 p-2">
+                                    <span class="badge bg-warning"><i class="fas fa-star"></i> {% trans "Principal" %}</span>
+                                </div>
+                                {% endif %}
+                                {% if can_attach %}
+                                <div class="position-absolute bottom-0 end-0 p-2">
+                                    <div class="btn-group btn-group-sm">
+                                        {% if not image.is_primary %}
+                                        <form method="post" action="{% url 'tasks:set_primary_image' task.pk image.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-warning btn-sm" title="{% trans 'Marcar como principal' %}">
+                                                <i class="fas fa-star"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                        <form method="post" action="{% url 'tasks:delete_image' task.pk image.pk %}" class="d-inline" onsubmit="return confirm('¿Estás seguro?')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-danger btn-sm" title="{% trans 'Eliminar' %}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="card-body p-2">
+                                <h6 class="card-title mb-1">{{ image.title|default:"Sin título" }}</h6>
+                                {% if image.description %}
+                                <p class="card-text small mb-1">{{ image.description|truncatewords:15 }}</p>
+                                {% endif %}
+                                <small class="text-muted">
+                                    {{ image.dimensions }} • {{ image.file_size_formatted }}
+                                    {% if image.taken_at %}<br><i class="fas fa-camera"></i> {{ image.taken_at|date:"d/m/Y" }}{% endif %}
+                                    {% if image.location %}<br><i class="fas fa-map-marker-alt"></i> {{ image.location }}{% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Tab: Solo documentos -->
+            {% if attachments_by_type.documents %}
+            <div class="tab-pane fade" id="documents" role="tabpanel">
+                <div class="list-group list-group-flush">
+                    {% for attachment in attachments_by_type.documents %}
+                    <div class="list-group-item">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="{{ attachment.icon_class }} fa-2x"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    <a href="{{ attachment.file.url }}" target="_blank" class="text-decoration-none">
+                                        {{ attachment.original_name }}
+                                    </a>
+                                </h6>
+                                {% if attachment.description %}
+                                <p class="mb-1 text-muted">{{ attachment.description }}</p>
+                                {% endif %}
+                                <small class="text-muted">
+                                    {{ attachment.file_size_formatted }} • {% trans "Por" %} {{ attachment.uploaded_by.get_full_name }} • {{ attachment.uploaded_at|date:"d/m/Y" }}
+                                    {% if attachment.group %}<br><i class="fas fa-folder"></i> {{ attachment.group.name }}{% endif %}
+                                </small>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <a href="{{ attachment.file.url }}" download class="btn btn-outline-primary btn-sm me-1">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                {% if can_attach %}
+                                <form method="post" action="{% url 'tasks:delete_attachment' task.pk attachment.pk %}" class="d-inline" onsubmit="return confirm('¿Estás seguro?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Tab: Videos -->
+            {% if attachments_by_type.videos %}
+            <div class="tab-pane fade" id="videos" role="tabpanel">
+                <div class="row">
+                    {% for attachment in attachments_by_type.videos %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-video text-warning"></i> {{ attachment.original_name }}
+                                </h6>
+                                {% if attachment.description %}
+                                <p class="card-text">{{ attachment.description }}</p>
+                                {% endif %}
+                                <small class="text-muted">
+                                    {{ attachment.file_size_formatted }} • {% trans "Por" %} {{ attachment.uploaded_by.get_full_name }}
+                                </small>
+                                <div class="mt-2">
+                                    <a href="{{ attachment.file.url }}" target="_blank" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-play"></i> {% trans "Reproducir" %}
+                                    </a>
+                                    <a href="{{ attachment.file.url }}" download class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-download"></i> {% trans "Descargar" %}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Tab: Grupos -->
+            {% if attachment_groups %}
+            <div class="tab-pane fade" id="groups" role="tabpanel">
+                {% for group in attachment_groups %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-folder"></i> {{ group.name }}
+                            <span class="badge bg-secondary">{{ group.attachment_count }}</span>
+                            <small class="text-muted">({{ group.total_size_formatted }})</small>
+                        </h6>
+                        {% if group.description %}
+                        <small class="text-muted">{{ group.description }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        {% for attachment in group.grouped_attachments.all %}
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="{{ attachment.icon_class }} me-2"></i>
+                            <div class="flex-grow-1">
+                                <a href="{{ attachment.file.url }}" target="_blank" class="text-decoration-none">
+                                    {{ attachment.original_name }}
+                                </a>
+                                <small class="text-muted d-block">{{ attachment.file_size_formatted }}</small>
+                            </div>
+                            <a href="{{ attachment.file.url }}" download class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted">{% trans "Este grupo no tiene archivos." %}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modales para subir archivos -->
+{% if can_attach %}
+{% include 'tasks/modals/attachment_modals.html' %}
+{% endif %}

@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if object %}Editar Solicitud{% else %}Nueva Solicitud{% endif %} - Mejora Continua
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-{% if object %}edit{% else %}plus{% endif %} me-2"></i>
+                    {% if object %}
+                        Editar Solicitud - {{ object.numero_solicitud }}
+                    {% else %}
+                        Nueva Solicitud de Mejora
+                    {% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="solicitud-form">
+                    {% csrf_token %}
+                    {% crispy form %}
+                </form>
+            </div>
+        </div>
+
+        <!-- Información adicional -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Información Importante
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-lightbulb me-2"></i>Consejos para una buena solicitud:
+                            </h6>
+                            <ul class="mb-0">
+                                <li>Usa un <strong>título descriptivo</strong> que resuma claramente la solicitud</li>
+                                <li>En la <strong>descripción</strong>, explica el problema o mejora de manera detallada</li>
+                                <li>Si es un problema, incluye los <strong>pasos para reproducir</strong> el error</li>
+                                <li>Describe el <strong>impacto en el negocio</strong> para ayudar a priorizar</li>
+                                <li>Si tienes ideas, comparte tu <strong>solución propuesta</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-warning">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Tipos de solicitud:
+                            </h6>
+                            <ul class="mb-0">
+                                <li><strong>Modificación:</strong> Cambios a funcionalidades existentes</li>
+                                <li><strong>Nueva Funcionalidad:</strong> Características completamente nuevas</li>
+                                <li><strong>Problema/Error:</strong> Reportes de bugs o errores del sistema</li>
+                                <li><strong>Mejora de Rendimiento:</strong> Optimizaciones de velocidad o eficiencia</li>
+                                <li><strong>Otro:</strong> Cualquier otra mejora no categorizada</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-success">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-paperclip me-2"></i>Archivos adjuntos:
+                    </h6>
+                    <ul class="mb-0">
+                        <li><strong>Imágenes:</strong> JPG, JPEG, PNG, GIF, BMP, WebP, SVG</li>
+                        <li><strong>Documentos:</strong> PDF, DOC, DOCX, XLS, XLSX, TXT</li>
+                        <li><strong>Multimedia:</strong> MP4, AVI, MOV, MP3, WAV, FLAC</li>
+                        <li><strong>Comprimidos:</strong> ZIP, RAR</li>
+                        <li><strong>Tamaño máximo:</strong> 10MB por archivo</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <a href="{% url 'mejora_continua:solicitud_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Volver a la Lista
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// JavaScript para vista previa de archivos en formulario de creación
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('archivos-adjuntos');
+    const previewContainer = document.getElementById('archivos-preview');
+    
+    if (fileInput && previewContainer) {
+        fileInput.addEventListener('change', function(e) {
+            const files = e.target.files;
+            previewContainer.innerHTML = '';
+            
+            if (files.length === 0) {
+                return;
+            }
+            
+            // Título de la vista previa
+            const previewTitle = document.createElement('h6');
+            previewTitle.textContent = `Archivos seleccionados (${files.length}):`;
+            previewTitle.className = 'mb-3 text-primary';
+            previewContainer.appendChild(previewTitle);
+            
+            // Contenedor de archivos
+            const filesContainer = document.createElement('div');
+            filesContainer.className = 'row g-2';
+            
+            Array.from(files).forEach((file, index) => {
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'col-12 col-md-6';
+                
+                const fileCard = document.createElement('div');
+                fileCard.className = 'border rounded p-2 d-flex align-items-center bg-white';
+                
+                // Icono o imagen del archivo
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.className = 'rounded me-2';
+                    img.style.width = '40px';
+                    img.style.height = '40px';
+                    img.style.objectFit = 'cover';
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                    
+                    fileCard.appendChild(img);
+                } else {
+                    const icon = document.createElement('i');
+                    icon.className = getFileIcon(file.type, file.name) + ' me-2 text-primary fa-2x';
+                    fileCard.appendChild(icon);
+                }
+                
+                // Información del archivo
+                const fileInfo = document.createElement('div');
+                fileInfo.className = 'flex-grow-1';
+                fileInfo.innerHTML = `
+                    <div class="fw-bold text-truncate" style="max-width: 200px;" title="${file.name}">${file.name}</div>
+                    <small class="text-muted">${formatFileSize(file.size)} - ${getFileTypeLabel(file.type, file.name)}</small>
+                `;
+                
+                fileCard.appendChild(fileInfo);
+                fileDiv.appendChild(fileCard);
+                filesContainer.appendChild(fileDiv);
+            });
+            
+            previewContainer.appendChild(filesContainer);
+        });
+    }
+    
+    // Funciones auxiliares
+    function getFileIcon(type, name) {
+        if (type.startsWith('image/')) return 'fas fa-image';
+        if (type.startsWith('video/')) return 'fas fa-video';
+        if (type.startsWith('audio/')) return 'fas fa-music';
+        if (type.includes('pdf')) return 'fas fa-file-pdf';
+        if (type.includes('word') || name.endsWith('.doc') || name.endsWith('.docx')) return 'fas fa-file-word';
+        if (type.includes('excel') || name.endsWith('.xls') || name.endsWith('.xlsx')) return 'fas fa-file-excel';
+        if (type.includes('zip') || type.includes('rar')) return 'fas fa-file-archive';
+        return 'fas fa-file';
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    function getFileTypeLabel(type, name) {
+        if (type.startsWith('image/')) return 'Imagen';
+        if (type.startsWith('video/')) return 'Video';
+        if (type.startsWith('audio/')) return 'Audio';
+        if (type.includes('pdf')) return 'PDF';
+        if (type.includes('word') || name.endsWith('.doc') || name.endsWith('.docx')) return 'Word';
+        if (type.includes('excel') || name.endsWith('.xls') || name.endsWith('.xlsx')) return 'Excel';
+        if (type.includes('zip') || type.includes('rar')) return 'Archivo comprimido';
+        return 'Documento';
+    }
+    
+    // Validación de formulario
+    const form = document.getElementById('solicitud-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = form.querySelector('input[type="submit"]');
+            if (submitBtn) {
+                submitBtn.value = 'Creando solicitud...';
+                submitBtn.disabled = true;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

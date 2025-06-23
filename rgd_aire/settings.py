@@ -48,7 +48,8 @@ INSTALLED_APPS = [
     'users',
     'servicios',
     'mantenimiento',
-    'insumos',
+    'tasks',
+    'mejora_continua',
 ]
 
 MIDDLEWARE = [

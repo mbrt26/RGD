@@ -15,7 +15,8 @@ import pandas as pd
 import io
 from .models import (
     Cliente, Contacto, Cotizacion, TareaVenta, Trato, 
-    RepresentanteVentas, DocumentoCliente, VersionCotizacion, Lead
+    RepresentanteVentas, DocumentoCliente, VersionCotizacion, Lead,
+    ConfiguracionOferta
 )
 from .forms import (
     CotizacionForm, VersionCotizacionForm, CotizacionConVersionForm
@@ -2120,3 +2121,87 @@ class LeadConvertView(LoginRequiredMixin, TemplateView):
         
         messages.error(request, 'Tipo de conversión no válido.')
         return redirect('crm:lead_detail', pk=lead.pk)
+
+
+class ConfiguracionOfertaForm(forms.Form):
+    siguiente_numero = forms.IntegerField(
+        label='Siguiente Número de Oferta',
+        min_value=1,
+        help_text='El próximo número que se asignará a una nueva oferta',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: 200'
+        })
+    )
+
+
+class ConfiguracionOfertaView(LoginRequiredMixin, FormView):
+    template_name = 'crm/configuracion_oferta.html'
+    form_class = ConfiguracionOfertaForm
+    success_url = reverse_lazy('crm:configuracion_oferta')
+
+    def dispatch(self, request, *args, **kwargs):
+        # Solo permitir acceso a superusuarios o usuarios con permisos específicos
+        if not request.user.is_superuser:
+            messages.error(request, 'No tienes permisos para acceder a esta configuración.')
+            return redirect('crm:dashboard')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_initial(self):
+        """Cargar el valor actual de la configuración"""
+        config = ConfiguracionOferta.obtener_configuracion()
+        return {'siguiente_numero': config.siguiente_numero}
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        config = ConfiguracionOferta.obtener_configuracion()
+        
+        # Obtener estadísticas útiles
+        ultimo_trato = Trato.objects.exclude(numero_oferta='').order_by('-numero_oferta').first()
+        total_ofertas = Trato.objects.exclude(numero_oferta='').count()
+        
+        context.update({
+            'config': config,
+            'ultimo_numero': ultimo_trato.numero_oferta if ultimo_trato else 'Ninguna',
+            'total_ofertas': total_ofertas,
+            'siguiente_formato': f"{config.siguiente_numero:04d}",
+        })
+        return context
+
+    def form_valid(self, form):
+        """Guardar la nueva configuración"""
+        nuevo_numero = form.cleaned_data['siguiente_numero']
+        
+        try:
+            # Obtener la configuración existente
+            config = ConfiguracionOferta.obtener_configuracion()
+            
+            # Validar que el nuevo número no sea menor al último usado
+            ultimo_trato = Trato.objects.exclude(numero_oferta='').order_by('-numero_oferta').first()
+            if ultimo_trato and ultimo_trato.numero_oferta:
+                try:
+                    ultimo_numero = int(ultimo_trato.numero_oferta)
+                    if nuevo_numero <= ultimo_numero:
+                        messages.warning(
+                            self.request, 
+                            f'Advertencia: El número configurado ({nuevo_numero:04d}) es menor o igual '
+                            f'al último número usado ({ultimo_numero:04d}). Esto podría causar conflictos.'
+                        )
+                except ValueError:
+                    pass  # Si no se puede convertir, continuar
+            
+            # Actualizar la configuración
+            config.siguiente_numero = nuevo_numero
+            config.actualizado_por = self.request.user
+            config.save()
+            
+            messages.success(
+                self.request, 
+                f'Configuración actualizada exitosamente. '
+                f'Las próximas ofertas comenzarán desde #{nuevo_numero:04d}'
+            )
+            
+        except Exception as e:
+            messages.error(self.request, f'Error al actualizar la configuración: {str(e)}')
+        
+        return super().form_valid(form)

@@ -14,10 +14,20 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- Header con logo -->
+    <header class="bg-white border-bottom py-3">
+        <div class="container-fluid text-center">
+            <img src="{% static 'images/logo-rgd.png' %}" alt="RGD AIRE Logo" class="logo-header">
+            <h4 class="text-primary mt-2 mb-0">RGD AIRE - Sistema de Gestión</h4>
+        </div>
+    </header>
+
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'home' %}">RGD AIRE</a>
+            <a class="navbar-brand" href="{% url 'home' %}">
+                RGD AIRE
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -104,6 +114,14 @@
                             <li><a class="dropdown-item" href="{% url 'proyectos:comite_create' %}">
                                 <i class="fas fa-plus me-2"></i>Nuevo Comité
                             </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Prórrogas</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'proyectos:prorroga_list' %}">
+                                <i class="fas fa-clock me-2"></i>Gestión de Prórrogas
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'proyectos:prorroga_dashboard' %}">
+                                <i class="fas fa-chart-bar me-2"></i>Dashboard de Prórrogas
+                            </a></li>
                         </ul>
                     </li>
                     
@@ -182,44 +200,78 @@
                         </ul>
                     </li>
                     
-                    <!-- Menú desplegable Insumos -->
+                    
+                    <!-- Menú desplegable Gestor de Tareas -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="insumosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-boxes me-1"></i>Insumos
+                        <a class="nav-link dropdown-toggle" href="#" id="tasksDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-tasks me-1"></i>Tareas
                         </a>
-                        <ul class="dropdown-menu" aria-labelledby="insumosDropdown">
-                            <li><a class="dropdown-item" href="{% url 'insumos:dashboard' %}">
-                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard Insumos
+                        <ul class="dropdown-menu" aria-labelledby="tasksDropdown">
+                            <li><a class="dropdown-item" href="{% url 'tasks:dashboard' %}">
+                                <i class="fas fa-chart-pie me-2"></i>Dashboard de Tareas
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">Catálogo</h6></li>
-                            <li><a class="dropdown-item" href="{% url 'insumos:producto_list' %}">
-                                <i class="fas fa-list me-2"></i>Productos
+                            <li><h6 class="dropdown-header">Gestión de Tareas</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'tasks:task_list' %}">
+                                <i class="fas fa-list me-2"></i>Todas las Tareas
                             </a></li>
-                            <li><a class="dropdown-item" href="{% url 'insumos:kit_list' %}">
-                                <i class="fas fa-toolbox me-2"></i>Kits de Mantenimiento
+                            <li><a class="dropdown-item" href="{% url 'tasks:task_list' %}?my_tasks_only=true">
+                                <i class="fas fa-user-check me-2"></i>Mis Tareas
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'tasks:task_list' %}?overdue_only=true">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Tareas Vencidas
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'tasks:task_list' %}?priority=urgent">
+                                <i class="fas fa-fire me-2"></i>Tareas Urgentes
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">Comercial</h6></li>
-                            <li><a class="dropdown-item" href="{% url 'insumos:cotizacion_list' %}">
-                                <i class="fas fa-file-invoice me-2"></i>Cotizaciones
-                            </a></li>
-                            <li><a class="dropdown-item" href="{% url 'insumos:pedido_list' %}">
-                                <i class="fas fa-shopping-cart me-2"></i>Pedidos
-                            </a></li>
-                            <li><a class="dropdown-item" href="{% url 'insumos:recomendacion_list' %}">
-                                <i class="fas fa-lightbulb me-2"></i>Recomendaciones
+                            <li><h6 class="dropdown-header">Configuración</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'tasks:category_list' %}">
+                                <i class="fas fa-tags me-2"></i>Categorías
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><h6 class="dropdown-header">Acciones Rápidas</h6></li>
-                            <li><a class="dropdown-item" href="{% url 'insumos:cotizacion_create' %}">
-                                <i class="fas fa-plus me-2"></i>Nueva Cotización
+                            <li><a class="dropdown-item" href="{% url 'tasks:task_create' %}">
+                                <i class="fas fa-plus me-2"></i>Nueva Tarea
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'tasks:category_create' %}">
+                                <i class="fas fa-tag me-2"></i>Nueva Categoría
                             </a></li>
                         </ul>
                     </li>
+                    
                 </ul>
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
+                        <!-- Mejora Continua -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="mejoraContinuaDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-lightbulb me-1"></i>Mejora Continua
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="mejoraContinuaDropdown">
+                                <li><a class="dropdown-item" href="{% url 'mejora_continua:dashboard' %}">
+                                    <i class="fas fa-chart-line me-2"></i>Dashboard
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Solicitudes</h6></li>
+                                <li><a class="dropdown-item" href="{% url 'mejora_continua:solicitud_list' %}">
+                                    <i class="fas fa-list me-2"></i>Todas las Solicitudes
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'mejora_continua:mis_solicitudes' %}">
+                                    <i class="fas fa-user me-2"></i>Mis Solicitudes
+                                </a></li>
+                                {% if user.is_staff %}
+                                <li><a class="dropdown-item" href="{% url 'mejora_continua:solicitudes_asignadas' %}">
+                                    <i class="fas fa-user-cog me-2"></i>Asignadas a Mí
+                                </a></li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Acciones Rápidas</h6></li>
+                                <li><a class="dropdown-item" href="{% url 'mejora_continua:solicitud_create' %}">
+                                    <i class="fas fa-plus me-2"></i>Nueva Solicitud
+                                </a></li>
+                            </ul>
+                        </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-user-circle me-1"></i>{{ user.username }}
@@ -228,9 +280,26 @@
                                 <li><a class="dropdown-item" href="#">
                                     <i class="fas fa-id-card me-2"></i>Mi Perfil
                                 </a></li>
-                                <li><a class="dropdown-item" href="#">
-                                    <i class="fas fa-cog me-2"></i>Configuración
+                                {% if user.is_superuser %}
+                                <li><h6 class="dropdown-header">Gestión de Usuarios</h6></li>
+                                <li><a class="dropdown-item" href="{% url 'users:dashboard' %}">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard de Usuarios
                                 </a></li>
+                                <li><a class="dropdown-item" href="{% url 'users:user_list' %}">
+                                    <i class="fas fa-users me-2"></i>Lista de Usuarios
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'users:role_list' %}">
+                                    <i class="fas fa-user-tag me-2"></i>Lista de Roles
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Configuración del Sistema</h6></li>
+                                <li><a class="dropdown-item" href="{% url 'crm:configuracion_oferta' %}">
+                                    <i class="fas fa-hashtag me-2"></i>Configuración de Ofertas
+                                </a></li>
+                                <li><a class="dropdown-item" href="/admin/">
+                                    <i class="fas fa-cog me-2"></i>Administración
+                                </a></li>
+                                {% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{% url 'logout' %}">
                                     <i class="fas fa-sign-out-alt me-2"></i>Cerrar sesión

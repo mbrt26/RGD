@@ -1,0 +1,554 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+
+{% block title %}{{ solicitud.numero_solicitud }} - Mejora Continua{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Información principal -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-clipboard-list me-2"></i>{{ solicitud.numero_solicitud }}
+                </h4>
+                <div>
+                    <span class="badge bg-{{ solicitud.get_estado_color }} me-2">{{ solicitud.get_estado_display }}</span>
+                    <span class="badge bg-{{ solicitud.get_prioridad_color }}">{{ solicitud.get_prioridad_display }}</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <h5>{{ solicitud.titulo }}</h5>
+                <p class="text-muted">{{ solicitud.descripcion|linebreaks }}</p>
+
+                {% if solicitud.pasos_reproducir %}
+                    <h6 class="mt-4">
+                        <i class="fas fa-list-ol me-2"></i>Pasos para Reproducir
+                    </h6>
+                    <p class="text-muted">{{ solicitud.pasos_reproducir|linebreaks }}</p>
+                {% endif %}
+
+                {% if solicitud.impacto_negocio %}
+                    <h6 class="mt-4">
+                        <i class="fas fa-chart-line me-2"></i>Impacto en el Negocio
+                    </h6>
+                    <p class="text-muted">{{ solicitud.impacto_negocio|linebreaks }}</p>
+                {% endif %}
+
+                {% if solicitud.solucion_propuesta %}
+                    <h6 class="mt-4">
+                        <i class="fas fa-lightbulb me-2"></i>Solución Propuesta
+                    </h6>
+                    <p class="text-muted">{{ solicitud.solucion_propuesta|linebreaks }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Comentarios -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-comments me-2"></i>Comentarios ({{ solicitud.comentarios.count }})
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if solicitud.comentarios.all %}
+                    {% for comentario in solicitud.comentarios.all %}
+                        <div class="border-bottom mb-3 pb-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ comentario.autor.get_full_name_display }}</strong>
+                                    {% if comentario.es_interno %}
+                                        <span class="badge bg-warning ms-2">Interno</span>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">{{ comentario.fecha_comentario|naturaltime }}</small>
+                            </div>
+                            <p class="mt-2 mb-0">{{ comentario.comentario|linebreaks }}</p>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0">No hay comentarios aún.</p>
+                {% endif %}
+
+                <!-- Formulario para agregar comentario -->
+                <div class="mt-4">
+                    <h6>Agregar Comentario</h6>
+                    <form method="post" action="{% url 'mejora_continua:comentario_create' solicitud.pk %}">
+                        {% csrf_token %}
+                        {% crispy comentario_form %}
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Galería de imágenes -->
+        {% if adjuntos_imagenes %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-images me-2"></i>Galería de Imágenes ({{ adjuntos_imagenes.count }})
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for imagen in adjuntos_imagenes %}
+                        <div class="col-6 col-md-4 col-lg-3">
+                            <div class="position-relative">
+                                <img src="{{ imagen.archivo.url }}" 
+                                     class="img-fluid rounded shadow-sm cursor-pointer" 
+                                     alt="{{ imagen.descripcion|default:imagen.nombre_original }}"
+                                     data-bs-toggle="modal" 
+                                     data-bs-target="#imageModal"
+                                     data-image-url="{{ imagen.archivo.url }}"
+                                     data-image-title="{{ imagen.nombre_original }}"
+                                     data-image-description="{{ imagen.descripcion }}"
+                                     style="height: 120px; object-fit: cover; width: 100%; cursor: pointer;">
+                                
+                                <!-- Botón eliminar (solo para quien subió el archivo o staff) -->
+                                {% if user.is_staff or imagen.subido_por == user %}
+                                <button type="button" 
+                                        class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1"
+                                        onclick="eliminarAdjunto({{ imagen.pk }}, '{{ imagen.nombre_original|escapejs }}')"
+                                        style="opacity: 0.8;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                {% endif %}
+                                
+                                <div class="position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-75 text-white p-1">
+                                    <small class="d-block text-truncate">{{ imagen.nombre_original }}</small>
+                                    <small class="text-muted">{{ imagen.obtener_tamaño_legible }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Archivos adjuntos (documentos, videos, audio) -->
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-paperclip me-2"></i>Archivos Adjuntos ({{ solicitud.adjuntos.count }})
+                </h6>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#upload-section">
+                        <i class="fas fa-plus me-1"></i>Subir Archivos
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if adjuntos_documentos %}
+                    <div class="list-group list-group-flush">
+                        {% for adjunto in adjuntos_documentos %}
+                            <div class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <i class="{{ adjunto.obtener_icono }} me-2 text-primary"></i>
+                                        <a href="{{ adjunto.archivo.url }}" target="_blank" class="text-decoration-none fw-bold">
+                                            {{ adjunto.nombre_original }}
+                                        </a>
+                                        <span class="badge bg-{{ adjunto.tipo_archivo|default:'secondary' }} ms-2">
+                                            {{ adjunto.get_tipo_archivo_display }}
+                                        </span>
+                                    </div>
+                                    {% if adjunto.descripcion %}
+                                        <p class="mb-1 text-muted">{{ adjunto.descripcion }}</p>
+                                    {% endif %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>{{ adjunto.subido_por.get_full_name_display }}
+                                        <i class="fas fa-calendar ms-2 me-1"></i>{{ adjunto.fecha_subida|date:"d/m/Y H:i" }}
+                                        <i class="fas fa-file-download ms-2 me-1"></i>{{ adjunto.obtener_tamaño_legible }}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    {% if user.is_staff or adjunto.subido_por == user %}
+                                    <button type="button" 
+                                            class="btn btn-outline-danger btn-sm"
+                                            onclick="eliminarAdjunto({{ adjunto.pk }}, '{{ adjunto.nombre_original|escapejs }}')"
+                                            title="Eliminar archivo">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if not solicitud.adjuntos.all %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-paperclip fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No hay archivos adjuntos aún.</p>
+                    </div>
+                {% endif %}
+
+                <!-- Sección de subida de archivos (colapsable) -->
+                <div class="collapse mt-4" id="upload-section">
+                    <div class="border-top pt-4">
+                        <ul class="nav nav-tabs" id="uploadTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="single-tab" data-bs-toggle="tab" data-bs-target="#single-upload" type="button" role="tab">
+                                    <i class="fas fa-file me-1"></i>Archivo Individual
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="multiple-tab" data-bs-toggle="tab" data-bs-target="#multiple-upload" type="button" role="tab">
+                                    <i class="fas fa-upload me-1"></i>Subida Múltiple
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content" id="uploadTabsContent">
+                            <!-- Subida individual -->
+                            <div class="tab-pane fade show active" id="single-upload" role="tabpanel">
+                                <div class="pt-3">
+                                    <form method="post" action="{% url 'mejora_continua:adjunto_create' solicitud.pk %}" enctype="multipart/form-data">
+                                        {% csrf_token %}
+                                        {% crispy adjunto_form %}
+                                    </form>
+                                </div>
+                            </div>
+                            
+                            <!-- Subida múltiple (próximamente) -->
+                            <div class="tab-pane fade" id="multiple-upload" role="tabpanel">
+                                <div class="pt-3">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>Próximamente:</strong> Funcionalidad de subida múltiple de archivos.
+                                        <br>Por ahora, puedes subir archivos uno por uno usando la pestaña "Archivo Individual".
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para visualizar imágenes -->
+        <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="imageModalLabel">Vista de Imagen</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <img id="modal-image" src="" class="img-fluid" alt="">
+                        <p id="modal-description" class="text-muted mt-2"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel lateral -->
+    <div class="col-md-4">
+        <!-- Información general -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Información General
+                </h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless">
+                    <tr>
+                        <td><strong>Número:</strong></td>
+                        <td>{{ solicitud.numero_solicitud }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Estado:</strong></td>
+                        <td>
+                            <span class="badge bg-{{ solicitud.get_estado_color }}">
+                                {{ solicitud.get_estado_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Prioridad:</strong></td>
+                        <td>
+                            <span class="badge bg-{{ solicitud.get_prioridad_color }}">
+                                {{ solicitud.get_prioridad_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tipo:</strong></td>
+                        <td>{{ solicitud.get_tipo_solicitud_display }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Módulo:</strong></td>
+                        <td>{{ solicitud.get_modulo_afectado_display }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Solicitante:</strong></td>
+                        <td>{{ solicitud.solicitante.get_full_name_display }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Fecha:</strong></td>
+                        <td>{{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    {% if solicitud.asignado_a %}
+                    <tr>
+                        <td><strong>Asignado a:</strong></td>
+                        <td>{{ solicitud.asignado_a.get_full_name_display }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if solicitud.fecha_estimada_completado %}
+                    <tr>
+                        <td><strong>Fecha Est.:</strong></td>
+                        <td>{{ solicitud.fecha_estimada_completado|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if solicitud.fecha_completado %}
+                    <tr>
+                        <td><strong>Completado:</strong></td>
+                        <td>{{ solicitud.fecha_completado|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+
+        <!-- Gestión (solo para staff) -->
+        {% if user.is_staff and update_form %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>Gestión
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'mejora_continua:solicitud_update' solicitud.pk %}">
+                    {% csrf_token %}
+                    {% crispy update_form %}
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Acciones -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-tools me-2"></i>Acciones
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'mejora_continua:solicitud_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Volver a la Lista
+                    </a>
+                    {% if user.is_staff %}
+                        <a href="{% url 'mejora_continua:solicitud_update' solicitud.pk %}" class="btn btn-outline-warning">
+                            <i class="fas fa-edit me-1"></i>Editar Solicitud
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// JavaScript para funcionalidad de archivos adjuntos
+
+// Modal de imagen
+document.addEventListener('DOMContentLoaded', function() {
+    const imageModal = document.getElementById('imageModal');
+    if (imageModal) {
+        imageModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const imageUrl = button.getAttribute('data-image-url');
+            const imageTitle = button.getAttribute('data-image-title');
+            const imageDescription = button.getAttribute('data-image-description');
+            
+            const modalImage = document.getElementById('modal-image');
+            const modalTitle = document.getElementById('imageModalLabel');
+            const modalDescription = document.getElementById('modal-description');
+            
+            modalImage.src = imageUrl;
+            modalTitle.textContent = imageTitle;
+            modalDescription.textContent = imageDescription || 'Sin descripción';
+        });
+    }
+});
+
+// Función para eliminar adjunto
+function eliminarAdjunto(adjuntoId, nombreArchivo) {
+    if (confirm(`¿Estás seguro de que quieres eliminar el archivo "${nombreArchivo}"?`)) {
+        // Crear formulario oculto para enviar DELETE request
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/mejora-continua/adjuntos/${adjuntoId}/eliminar/`;
+        
+        // Agregar CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Drag and Drop functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('multiple-file-input');
+    const filePreview = document.getElementById('file-preview');
+    const uploadProgress = document.getElementById('upload-progress');
+    
+    if (uploadArea && fileInput) {
+        // Drag and drop events
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#007bff';
+            uploadArea.style.backgroundColor = '#e3f2fd';
+        });
+        
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#dee2e6';
+            uploadArea.style.backgroundColor = '#f8f9fa';
+        });
+        
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#dee2e6';
+            uploadArea.style.backgroundColor = '#f8f9fa';
+            
+            const files = e.dataTransfer.files;
+            fileInput.files = files;
+            previewFiles(files);
+        });
+        
+        // Click to select files
+        uploadArea.addEventListener('click', function() {
+            fileInput.click();
+        });
+        
+        // File input change
+        fileInput.addEventListener('change', function() {
+            previewFiles(this.files);
+        });
+    }
+    
+    // File preview function
+    function previewFiles(files) {
+        if (!filePreview) return;
+        
+        filePreview.innerHTML = '';
+        
+        if (files.length === 0) {
+            return;
+        }
+        
+        const previewTitle = document.createElement('h6');
+        previewTitle.textContent = `Archivos seleccionados (${files.length}):`;
+        previewTitle.className = 'mt-3 mb-2';
+        filePreview.appendChild(previewTitle);
+        
+        Array.from(files).forEach((file, index) => {
+            const fileDiv = document.createElement('div');
+            fileDiv.className = 'border rounded p-2 mb-2 d-flex align-items-center';
+            
+            // Icono según tipo de archivo
+            const icon = document.createElement('i');
+            icon.className = getFileIcon(file.type, file.name) + ' me-2 text-primary';
+            
+            // Información del archivo
+            const fileInfo = document.createElement('div');
+            fileInfo.className = 'flex-grow-1';
+            fileInfo.innerHTML = `
+                <div class="fw-bold">${file.name}</div>
+                <small class="text-muted">${formatFileSize(file.size)} - ${file.type || 'Tipo desconocido'}</small>
+            `;
+            
+            // Preview de imagen si es posible
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.className = 'rounded me-2';
+                img.style.width = '40px';
+                img.style.height = '40px';
+                img.style.objectFit = 'cover';
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+                
+                fileDiv.appendChild(img);
+            } else {
+                fileDiv.appendChild(icon);
+            }
+            
+            fileDiv.appendChild(fileInfo);
+            filePreview.appendChild(fileDiv);
+        });
+    }
+    
+    // Get file icon based on type
+    function getFileIcon(type, name) {
+        if (type.startsWith('image/')) return 'fas fa-image';
+        if (type.startsWith('video/')) return 'fas fa-video';
+        if (type.startsWith('audio/')) return 'fas fa-music';
+        if (type.includes('pdf')) return 'fas fa-file-pdf';
+        if (type.includes('word') || name.endsWith('.doc') || name.endsWith('.docx')) return 'fas fa-file-word';
+        if (type.includes('excel') || name.endsWith('.xls') || name.endsWith('.xlsx')) return 'fas fa-file-excel';
+        if (type.includes('zip') || type.includes('rar')) return 'fas fa-file-archive';
+        return 'fas fa-file';
+    }
+    
+    // Format file size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Form submission with progress
+    const multipleUploadForm = document.getElementById('multiple-upload-form');
+    if (multipleUploadForm) {
+        multipleUploadForm.addEventListener('submit', function(e) {
+            const files = fileInput.files;
+            if (files.length === 0) {
+                e.preventDefault();
+                alert('Por favor selecciona al menos un archivo.');
+                return;
+            }
+            
+            // Show progress bar
+            if (uploadProgress) {
+                uploadProgress.style.display = 'block';
+                const progressBar = uploadProgress.querySelector('.progress-bar');
+                
+                // Simulate progress (in a real implementation, you'd use XMLHttpRequest or fetch)
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 10;
+                    progressBar.style.width = progress + '%';
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                    }
+                }, 200);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-left: 4px solid #007bff;
+    }
+    .proyecto-info {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+    }
+    .prorroga-card {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+    .prorroga-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0,123,255,0.15);
+    }
+    .fecha-calculator {
+        background: #e3f2fd;
+        border: 1px solid #bbdefb;
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="form-header p-4 rounded mb-4">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h2 class="mb-2">
+                    <i class="fas fa-clock me-2"></i>{{ title }}
+                </h2>
+                <p class="text-muted mb-0">Solicitud de extensión de tiempo para proyecto</p>
+            </div>
+            <a href="{% url 'proyectos:proyecto_detail' proyecto.pk %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver al Proyecto
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Formulario Principal -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Datos de la Prórroga
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="prorrogaForm">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <!-- Tipo de prórroga -->
+                            <div class="col-md-6">
+                                <label for="{{ form.tipo_prorroga.id_for_label }}" class="form-label">
+                                    <i class="fas fa-tag me-1"></i>Tipo de Prórroga <span class="text-danger">*</span>
+                                </label>
+                                {{ form.tipo_prorroga }}
+                                {% if form.tipo_prorroga.errors %}
+                                    <div class="text-danger small mt-1">{{ form.tipo_prorroga.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Días de extensión -->
+                            <div class="col-md-6">
+                                <label for="{{ form.dias_extension.id_for_label }}" class="form-label">
+                                    <i class="fas fa-clock me-1"></i>Días de Extensión <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    {{ form.dias_extension }}
+                                    <span class="input-group-text">días</span>
+                                </div>
+                                {% if form.dias_extension.errors %}
+                                    <div class="text-danger small mt-1">{{ form.dias_extension.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Calculadora de fechas -->
+                            <div class="col-12">
+                                <div class="fecha-calculator p-3">
+                                    <h6 class="mb-3">
+                                        <i class="fas fa-calculator me-2"></i>Calculadora de Fechas
+                                    </h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label small text-muted">Fecha Fin Actual</label>
+                                            <div class="fw-bold">{{ proyecto.fecha_fin|date:"d/m/Y" }}</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small text-muted">Días a Extender</label>
+                                            <div class="fw-bold" id="diasMostrar">0 días</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small text-muted">Nueva Fecha Fin</label>
+                                            <div class="fw-bold text-info" id="nuevaFecha">{{ proyecto.fecha_fin|date:"d/m/Y" }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Justificación -->
+                            <div class="col-12">
+                                <label for="{{ form.justificacion.id_for_label }}" class="form-label">
+                                    <i class="fas fa-comment-alt me-1"></i>Justificación <span class="text-danger">*</span>
+                                </label>
+                                {{ form.justificacion }}
+                                <div class="form-text">
+                                    Explique detalladamente las razones por las cuales se requiere la prórroga
+                                </div>
+                                {% if form.justificacion.errors %}
+                                    <div class="text-danger small mt-1">{{ form.justificacion.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Impacto en el proyecto -->
+                            {% if form.impacto_proyecto %}
+                            <div class="col-12">
+                                <label for="{{ form.impacto_proyecto.id_for_label }}" class="form-label">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Impacto en el Proyecto
+                                </label>
+                                {{ form.impacto_proyecto }}
+                                <div class="form-text">
+                                    Describa cómo afectará esta prórroga al desarrollo del proyecto
+                                </div>
+                                {% if form.impacto_proyecto.errors %}
+                                    <div class="text-danger small mt-1">{{ form.impacto_proyecto.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            <!-- Documentos de soporte -->
+                            {% if form.documentos_soporte %}
+                            <div class="col-12">
+                                <label for="{{ form.documentos_soporte.id_for_label }}" class="form-label">
+                                    <i class="fas fa-paperclip me-1"></i>Documentos de Soporte
+                                </label>
+                                {{ form.documentos_soporte }}
+                                <div class="form-text">
+                                    Adjunte documentos que respalden la solicitud de prórroga (opcional)
+                                </div>
+                                {% if form.documentos_soporte.errors %}
+                                    <div class="text-danger small mt-1">{{ form.documentos_soporte.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Botones de acción -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'proyectos:proyecto_detail' proyecto.pk %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>Solicitar Prórroga
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-lg-4">
+            <!-- Información del Proyecto -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-project-diagram me-2"></i>Información del Proyecto
+                    </h5>
+                </div>
+                <div class="card-body proyecto-info">
+                    <h6 class="text-primary mb-3">{{ proyecto.nombre_proyecto }}</h6>
+                    
+                    <dl class="row small">
+                        <dt class="col-5">Código:</dt>
+                        <dd class="col-7">{{ proyecto.codigo_proyecto|default:"N/A" }}</dd>
+                        
+                        <dt class="col-5">Estado:</dt>
+                        <dd class="col-7">
+                            <span class="badge bg-info">{{ proyecto.get_estado_display }}</span>
+                        </dd>
+                        
+                        <dt class="col-5">Director:</dt>
+                        <dd class="col-7">{{ proyecto.director.nombre|default:"N/A" }}</dd>
+                        
+                        <dt class="col-5">Ingeniero:</dt>
+                        <dd class="col-7">{{ proyecto.ingeniero.nombre|default:"N/A" }}</dd>
+                        
+                        <dt class="col-5">Fecha Inicio:</dt>
+                        <dd class="col-7">{{ proyecto.fecha_inicio|date:"d/m/Y"|default:"N/A" }}</dd>
+                        
+                        <dt class="col-5">Fecha Fin:</dt>
+                        <dd class="col-7">
+                            <span class="text-warning fw-bold">{{ proyecto.fecha_fin|date:"d/m/Y"|default:"N/A" }}</span>
+                        </dd>
+                        
+                        <dt class="col-5">Avance:</dt>
+                        <dd class="col-7">
+                            <div class="progress" style="height: 15px;">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {{ proyecto.avance|default:0 }}%">
+                                    {{ proyecto.avance|default:0 }}%
+                                </div>
+                            </div>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Prórrogas Anteriores -->
+            {% if prorrogas_anteriores %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Prórrogas Anteriores
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for prorroga in prorrogas_anteriores %}
+                    <div class="prorroga-card p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge {% if prorroga.estado == 'aprobada' %}bg-success{% elif prorroga.estado == 'rechazada' %}bg-danger{% else %}bg-warning{% endif %}">
+                                {{ prorroga.get_estado_display }}
+                            </span>
+                            <small class="text-muted">{{ prorroga.fecha_solicitud|date:"d/m/Y" }}</small>
+                        </div>
+                        <div class="small">
+                            <strong>{{ prorroga.dias_extension }} días</strong> - {{ prorroga.get_tipo_prorroga_display }}
+                        </div>
+                        {% if prorroga.justificacion %}
+                        <div class="text-muted small mt-1">
+                            {{ prorroga.justificacion|truncatechars:60 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Ayuda -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-question-circle me-2"></i>Ayuda
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        <p><strong>Tipos de Prórroga:</strong></p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-dot-circle text-info me-1"></i> <strong>Técnica:</strong> Por complejidad del proyecto</li>
+                            <li><i class="fas fa-dot-circle text-warning me-1"></i> <strong>Cliente:</strong> Por requerimientos del cliente</li>
+                            <li><i class="fas fa-dot-circle text-danger me-1"></i> <strong>Externa:</strong> Por factores externos</li>
+                            <li><i class="fas fa-dot-circle text-success me-1"></i> <strong>Recursos:</strong> Por disponibilidad de recursos</li>
+                        </ul>
+                        
+                        <p class="mt-3"><strong>Recomendaciones:</strong></p>
+                        <ul class="small">
+                            <li>Sea específico en la justificación</li>
+                            <li>Incluya documentos que respalden la solicitud</li>
+                            <li>Considere el impacto en otros proyectos</li>
+                            <li>Proponga un plan de mitigación</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const diasInput = document.getElementById('{{ form.dias_extension.id_for_label }}');
+    const diasMostrar = document.getElementById('diasMostrar');
+    const nuevaFecha = document.getElementById('nuevaFecha');
+    
+    // Fecha fin original del proyecto
+    const fechaFinOriginal = new Date('{{ proyecto.fecha_fin|date:"Y-m-d" }}');
+    
+    function actualizarCalculadora() {
+        const dias = parseInt(diasInput.value) || 0;
+        diasMostrar.textContent = dias + ' días';
+        
+        if (dias > 0) {
+            const nuevaFechaCalculada = new Date(fechaFinOriginal);
+            nuevaFechaCalculada.setDate(nuevaFechaCalculada.getDate() + dias);
+            
+            const opciones = { day: '2-digit', month: '2-digit', year: 'numeric' };
+            nuevaFecha.textContent = nuevaFechaCalculada.toLocaleDateString('es-ES', opciones);
+            nuevaFecha.className = 'fw-bold text-success';
+        } else {
+            nuevaFecha.textContent = '{{ proyecto.fecha_fin|date:"d/m/Y" }}';
+            nuevaFecha.className = 'fw-bold text-info';
+        }
+    }
+    
+    // Actualizar calculadora cuando cambie el input
+    diasInput.addEventListener('input', actualizarCalculadora);
+    
+    // Inicializar calculadora
+    actualizarCalculadora();
+    
+    // Validación del formulario
+    document.getElementById('prorrogaForm').addEventListener('submit', function(e) {
+        const dias = parseInt(diasInput.value) || 0;
+        if (dias <= 0) {
+            e.preventDefault();
+            alert('Por favor, ingrese un número válido de días para la extensión.');
+            diasInput.focus();
+        }
+    });
+});
+</script>
+{% endblock %}

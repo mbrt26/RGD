@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ user_obj.get_full_name_display }} - Detalles del Usuario{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-user"></i> Detalles del Usuario</h1>
+                <div>
+                    {% if can_change %}
+                    <a href="{% url 'users:user_edit' user_obj.pk %}" class="btn btn-primary">
+                        <i class="fas fa-edit"></i> Editar
+                    </a>
+                    {% endif %}
+                    {% if can_delete and not user_obj.is_superuser %}
+                    <a href="{% url 'users:user_delete' user_obj.pk %}" class="btn btn-danger"
+                       onclick="return confirm('¿Estás seguro de que quieres eliminar este usuario?')">
+                        <i class="fas fa-trash"></i> Eliminar
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'users:user_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> Información Personal</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Usuario:</strong> {{ user_obj.username }}</p>
+                            <p><strong>Nombre:</strong> {{ user_obj.first_name|default:"-" }}</p>
+                            <p><strong>Apellido:</strong> {{ user_obj.last_name|default:"-" }}</p>
+                            <p><strong>Email:</strong> {{ user_obj.email }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Teléfono:</strong> {{ user_obj.telefono|default:"-" }}</p>
+                            <p><strong>Cargo:</strong> {{ user_obj.cargo|default:"-" }}</p>
+                            <p><strong>Fecha de Creación:</strong> {{ user_obj.created_at|date:"d/m/Y H:i" }}</p>
+                            <p><strong>Última Actualización:</strong> {{ user_obj.updated_at|date:"d/m/Y H:i" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-shield-alt"></i> Estado y Permisos</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Estado:</strong>
+                        {% if user_obj.is_active %}
+                            <span class="badge bg-success">Activo</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactivo</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Rol:</strong>
+                        {% if user_obj.role %}
+                            <span class="badge bg-info">{{ user_obj.role.name }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Sin rol asignado</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Tipo de Usuario:</strong>
+                        {% if user_obj.is_superuser %}
+                            <span class="badge bg-danger">Superusuario</span>
+                        {% elif user_obj.is_staff %}
+                            <span class="badge bg-warning">Staff</span>
+                        {% else %}
+                            <span class="badge bg-info">Usuario Regular</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Último Login:</strong>
+                        {% if user_obj.last_login %}
+                            {{ user_obj.last_login|date:"d/m/Y H:i" }}
+                        {% else %}
+                            <span class="text-muted">Nunca</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if user_obj.role %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-key"></i> Permisos del Rol: {{ user_obj.role.name }}</h5>
+                </div>
+                <div class="card-body">
+                    {% regroup user_obj.role.permissions.all by module as permissions_by_module %}
+                    {% for module_group in permissions_by_module %}
+                    <div class="mb-3">
+                        <h6 class="text-primary">
+                            <i class="fas fa-folder"></i> {{ module_group.grouper|title }}
+                        </h6>
+                        <div class="row">
+                            {% for permission in module_group.list %}
+                            <div class="col-md-3 mb-2">
+                                {% if permission.is_granted %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check"></i> {{ permission.get_action_display }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times"></i> {{ permission.get_action_display }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No hay permisos definidos para este rol.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
