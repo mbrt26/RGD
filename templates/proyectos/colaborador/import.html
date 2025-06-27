@@ -179,19 +179,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-file-import"></i> Importar Colaboradores';
                 progressIndicator.style.display = 'none';
+                cleanupBeforeUnload(); // Limpiar el listener también
                 alert('La importación está tomando más tiempo del esperado. Si no ve resultados, verifique que el archivo sea válido e intente nuevamente.');
             }
         }, 30000); // 30 segundos timeout
     });
 
-    // Prevenir navegación durante el procesamiento
-    window.addEventListener('beforeunload', function(event) {
+    // Función para manejar la navegación durante el procesamiento
+    function beforeUnloadHandler(event) {
         if (isSubmitting) {
             event.preventDefault();
             event.returnValue = 'Hay una importación en progreso. ¿Está seguro de que desea salir?';
             return event.returnValue;
         }
-    });
+    }
+    
+    // Función para limpiar el listener
+    function cleanupBeforeUnload() {
+        window.removeEventListener('beforeunload', beforeUnloadHandler);
+    }
+    
+    // Agregar el listener
+    window.addEventListener('beforeunload', beforeUnloadHandler);
+    
+    // Limpiar cuando la página se descarga
+    window.addEventListener('pagehide', cleanupBeforeUnload);
+    
+    // También limpiar después del timeout
+    setTimeout(function() {
+        if (!isSubmitting) {
+            cleanupBeforeUnload();
+        }
+    }, 35000); // Limpiar después del timeout principal
 });
 </script>
 {% endblock %}
