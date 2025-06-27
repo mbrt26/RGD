@@ -146,6 +146,7 @@ class SolicitudMejoraCreateView(LoginRequiredMixin, CreateView):
         # Guardar la solicitud primero
         form.instance.solicitante = self.request.user
         solicitud = form.save()
+        self.object = solicitud  # Establecer self.object para get_success_url
         
         # Procesar archivos adjuntos si los hay
         archivos = self.request.FILES.getlist('archivos')
