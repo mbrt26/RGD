@@ -3,7 +3,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy, reverse
 from django.http import JsonResponse, HttpResponse
 from django.db.models import Q, Count, Case, When, IntegerField, F, Value
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, Extract
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
@@ -64,7 +64,7 @@ class ActividadListView(LoginRequiredMixin, ListView):
         return queryset.annotate(
             dias_restantes=Case(
                 When(fin__lt=timezone.now().date(), then=Value(0)),
-                default=F('fin') - timezone.now().date(),
+                default=Extract(F('fin') - timezone.now().date(), 'days'),
                 output_field=IntegerField()
             ),
             total_horas=Coalesce(Count('bitacoras'), 0)
