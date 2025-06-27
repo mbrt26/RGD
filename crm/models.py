@@ -234,6 +234,12 @@ class Trato(models.Model):
             # Usar la configuración centralizada para obtener el siguiente número
             numero = ConfiguracionOferta.obtener_siguiente_numero()
             self.numero_oferta = str(numero).zfill(4)
+        else:
+            # Validate manual offer number doesn't conflict with existing ones
+            existing_trato = Trato.objects.filter(numero_oferta=self.numero_oferta).exclude(pk=self.pk).first()
+            if existing_trato:
+                from django.core.exceptions import ValidationError
+                raise ValidationError(f'El número de oferta {self.numero_oferta} ya existe. Use un número diferente o deje el campo vacío para asignar automáticamente.')
         
         # Si es un nuevo trato, establecer la fecha de cierre por defecto a 30 días después
         if not self.pk and not self.fecha_cierre:

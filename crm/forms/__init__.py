@@ -1,5 +1,6 @@
 from .cotizacion_forms import CotizacionForm, VersionCotizacionForm, CotizacionConVersionForm
 from .import_forms import ClienteImportForm, TratoImportForm
+from .trato_forms import TratoForm
 
 __all__ = [
     'CotizacionForm',
@@ -7,4 +8,5 @@ __all__ = [
     'CotizacionConVersionForm',
     'ClienteImportForm',
     'TratoImportForm',
+    'TratoForm',
 ]

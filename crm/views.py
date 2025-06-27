@@ -19,7 +19,7 @@ from .models import (
     ConfiguracionOferta
 )
 from .forms import (
-    CotizacionForm, VersionCotizacionForm, CotizacionConVersionForm
+    CotizacionForm, VersionCotizacionForm, CotizacionConVersionForm, TratoForm
 )
 from .forms.import_forms import ClienteImportForm, TratoImportForm, ContactoImportForm
 
@@ -1012,28 +1012,9 @@ class TratoListView(LoginRequiredMixin, ListView):
 
 class TratoCreateView(LoginRequiredMixin, CreateView):
     model = Trato
+    form_class = TratoForm
     template_name = 'crm/trato/form.html'
-    fields = ['nombre', 'cliente', 'contacto', 'correo', 'telefono', 'descripcion', 
-              'valor', 'probabilidad', 'estado', 'fuente', 'fecha_creacion', 'fecha_cierre', 'fecha_envio_cotizacion', 'dias_prometidos', 'responsable', 'notas',
-              'centro_costos', 'nombre_proyecto', 'orden_contrato', 'tipo_negociacion']
     success_url = reverse_lazy('crm:trato_list')
-    
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        form.fields['fecha_creacion'].widget = forms.DateInput(
-            attrs={'type': 'date'},
-            format='%Y-%m-%d'
-        )
-        form.fields['fecha_creacion'].input_formats = ['%Y-%m-%d']
-        form.fields['fecha_cierre'].widget = forms.DateInput(
-            attrs={'type': 'date'}, 
-            format='%Y-%m-%d'
-        )
-        form.fields['fecha_envio_cotizacion'].widget = forms.DateInput(
-            attrs={'type': 'date'}, 
-            format='%Y-%m-%d'
-        )
-        return form
     
     def form_valid(self, form):
         try:
@@ -1053,13 +1034,19 @@ class TratoCreateView(LoginRequiredMixin, CreateView):
             return response
             
         except ValidationError as e:
-            # Capturar el error de validación del signal y mostrarlo al usuario
-            form.add_error('centro_costos', str(e))
-            messages.error(
-                self.request, 
-                'No se puede crear el trato como "Ganado" sin especificar el Centro de Costos. '
-                'Este campo es obligatorio para crear el proyecto automáticamente.'
-            )
+            # Check if the error is about duplicate offer number
+            error_message = str(e)
+            if 'número de oferta' in error_message and 'ya existe' in error_message:
+                form.add_error('numero_oferta', error_message)
+                messages.error(self.request, error_message)
+            else:
+                # Handle other validation errors (like centro_costos)
+                form.add_error('centro_costos', str(e))
+                messages.error(
+                    self.request, 
+                    'No se puede crear el trato como "Ganado" sin especificar el Centro de Costos. '
+                    'Este campo es obligatorio para crear el proyecto automáticamente.'
+                )
             return self.form_invalid(form)
         except Exception as e:
             # Manejar otros errores inesperados
@@ -1152,28 +1139,9 @@ class TratoDetailView(LoginRequiredMixin, DetailView):
 
 class TratoUpdateView(LoginRequiredMixin, UpdateView):
     model = Trato
+    form_class = TratoForm
     template_name = 'crm/trato/form.html'
-    fields = ['nombre', 'cliente', 'contacto', 'correo', 'telefono', 'descripcion', 
-              'valor', 'probabilidad', 'estado', 'fuente', 'fecha_creacion', 'fecha_cierre', 'fecha_envio_cotizacion', 'dias_prometidos', 'responsable', 'notas',
-              'centro_costos', 'nombre_proyecto', 'orden_contrato', 'tipo_negociacion']
     success_url = reverse_lazy('crm:trato_list')
-    
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        form.fields['fecha_creacion'].widget = forms.DateInput(
-            attrs={'type': 'date'},
-            format='%Y-%m-%d'
-        )
-        form.fields['fecha_creacion'].input_formats = ['%Y-%m-%d']
-        form.fields['fecha_cierre'].widget = forms.DateInput(
-            attrs={'type': 'date'}, 
-            format='%Y-%m-%d'
-        )
-        form.fields['fecha_envio_cotizacion'].widget = forms.DateInput(
-            attrs={'type': 'date'}, 
-            format='%Y-%m-%d'
-        )
-        return form
     
     def form_valid(self, form):
         try:
@@ -1192,13 +1160,19 @@ class TratoUpdateView(LoginRequiredMixin, UpdateView):
             return response
             
         except ValidationError as e:
-            # Capturar el error de validación del signal y mostrarlo al usuario
-            form.add_error('centro_costos', str(e))
-            messages.error(
-                self.request, 
-                'No se puede marcar el trato como "Ganado" sin especificar el Centro de Costos. '
-                'Este campo es obligatorio para crear el proyecto automáticamente.'
-            )
+            # Check if the error is about duplicate offer number
+            error_message = str(e)
+            if 'número de oferta' in error_message and 'ya existe' in error_message:
+                form.add_error('numero_oferta', error_message)
+                messages.error(self.request, error_message)
+            else:
+                # Handle other validation errors (like centro_costos)
+                form.add_error('centro_costos', str(e))
+                messages.error(
+                    self.request, 
+                    'No se puede marcar el trato como "Ganado" sin especificar el Centro de Costos. '
+                    'Este campo es obligatorio para crear el proyecto automáticamente.'
+                )
             return self.form_invalid(form)
         except Exception as e:
             # Manejar otros errores inesperados
@@ -1237,6 +1211,7 @@ class TratoImportView(LoginRequiredMixin, FormView):
             
             # Limpiar datos: reemplazar NaN con valores por defecto
             df = df.fillna({
+                'numero_oferta': '',
                 'correo': '',
                 'telefono': '',
                 'descripcion': '',
@@ -1275,25 +1250,34 @@ class TratoImportView(LoginRequiredMixin, FormView):
                             return default
                         return str(value).strip()
 
-                    Trato.objects.create(
-                        nombre=clean_text_field(row['nombre']),
-                        cliente=cliente,
-                        correo=clean_text_field(row.get('correo', '')),
-                        telefono=clean_text_field(row.get('telefono', '')),
-                        descripcion=clean_text_field(row.get('descripcion', '')),
-                        valor=clean_numeric_field(row['valor'], 0),
-                        probabilidad=clean_numeric_field(row.get('probabilidad', 50), 50),
-                        estado=clean_text_field(row['estado'], 'revision_tecnica'),
-                        fuente=clean_text_field(row.get('fuente', 'visita'), 'visita'),
-                        fecha_cierre=row['fecha_cierre'],
-                        responsable=self.request.user,
-                        notas=clean_text_field(row.get('notas', '')),
-                        centro_costos=clean_text_field(row.get('centro_costos', '')),
-                        nombre_proyecto=clean_text_field(row.get('nombre_proyecto', '')),
-                        orden_contrato=clean_text_field(row.get('orden_contrato', '')),
-                        dias_prometidos=clean_numeric_field(row.get('dias_prometidos', 0), 0),
-                        tipo_negociacion=clean_text_field(row.get('tipo_negociacion', 'contrato'), 'contrato')
-                    )
+                    # Handle numero_oferta - leave empty for automatic assignment or use provided value
+                    numero_oferta = clean_text_field(row.get('numero_oferta', ''))
+                    
+                    trato_data = {
+                        'nombre': clean_text_field(row['nombre']),
+                        'cliente': cliente,
+                        'correo': clean_text_field(row.get('correo', '')),
+                        'telefono': clean_text_field(row.get('telefono', '')),
+                        'descripcion': clean_text_field(row.get('descripcion', '')),
+                        'valor': clean_numeric_field(row['valor'], 0),
+                        'probabilidad': clean_numeric_field(row.get('probabilidad', 50), 50),
+                        'estado': clean_text_field(row['estado'], 'revision_tecnica'),
+                        'fuente': clean_text_field(row.get('fuente', 'visita'), 'visita'),
+                        'fecha_cierre': row['fecha_cierre'],
+                        'responsable': self.request.user,
+                        'notas': clean_text_field(row.get('notas', '')),
+                        'centro_costos': clean_text_field(row.get('centro_costos', '')),
+                        'nombre_proyecto': clean_text_field(row.get('nombre_proyecto', '')),
+                        'orden_contrato': clean_text_field(row.get('orden_contrato', '')),
+                        'dias_prometidos': clean_numeric_field(row.get('dias_prometidos', 0), 0),
+                        'tipo_negociacion': clean_text_field(row.get('tipo_negociacion', 'contrato'), 'contrato')
+                    }
+                    
+                    # Only add numero_oferta if it's provided (not empty)
+                    if numero_oferta:
+                        trato_data['numero_oferta'] = numero_oferta
+                    
+                    Trato.objects.create(**trato_data)
                     tratos_creados += 1
                 except Exception as e:
                     messages.warning(self.request, f'Error al importar trato {row.get("nombre", "desconocido")}: {str(e)}')
@@ -1644,6 +1628,7 @@ class TratoPlantillaExcelView(LoginRequiredMixin, TemplateView):
     def get(self, request, *args, **kwargs):
         # Crear un DataFrame con las columnas y datos de ejemplo
         datos_ejemplo = {
+            'numero_oferta': ['0100', ''],  # Ejemplo: uno con número manual, otro automático
             'nombre': ['Proyecto Implementación ERP', 'Desarrollo App Móvil'],
             'cliente': ['Ejemplo Empresa ABC', 'Cliente Muestra XYZ'],
             'valor': [150000, 85000],
@@ -1687,8 +1672,9 @@ class TratoPlantillaExcelView(LoginRequiredMixin, TemplateView):
                 
             # Agregar una segunda hoja con información sobre los valores válidos
             info_data = {
-                'Campo': ['estado', 'fuente', 'tipo_negociacion'],
+                'Campo': ['numero_oferta', 'estado', 'fuente', 'tipo_negociacion'],
                 'Valores_Válidos': [
+                    'OPCIONAL: Número de oferta manual (ej: 0100, 0201). Deje vacío para asignar automáticamente.',
                     'revision_tecnica, elaboracion_oferta, envio_negociacion, formalizacion, ganado, perdido, sin_informacion',
                     'visita, informe_tecnico, email, telefono, whatsapp, otro',
                     'contrato, control, diseno, filtros, mantenimiento, servicios'

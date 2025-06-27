@@ -85,6 +85,23 @@
                 <h5>Información Básica</h5>
                 <div class="row">
                     <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="id_numero_oferta" class="form-label"># Oferta</label>
+                            <input type="text" 
+                                   name="numero_oferta" 
+                                   id="id_numero_oferta" 
+                                   class="form-control" 
+                                   placeholder="Deje vacío para asignar automáticamente"
+                                   value="{{ form.numero_oferta.value|default:'' }}">
+                            <div class="form-text">Deje vacío para asignar automáticamente</div>
+                            {% if form.numero_oferta.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.numero_oferta.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
                         {{ form.nombre|as_crispy_field }}
                         {{ form.cliente|as_crispy_field }}
                         {{ form.contacto|as_crispy_field }}
