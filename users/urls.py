@@ -20,7 +20,7 @@ urlpatterns = [
     path('users/<int:pk>/edit/', views.UserUpdateView.as_view(), name='user_edit'),
     path('users/<int:pk>/delete/', views.UserDeleteView.as_view(), name='user_delete'),
     path('users/import/template/', views.users_import_template, name='users_import_template'),
-    path('users/import/', views.users_import_excel, name='users_import_excel'),
+    path('users/import/', views.UserImportView.as_view(), name='users_import_excel'),
     
     # Role management URLs
     path('roles/', views.RoleListView.as_view(), name='role_list'),

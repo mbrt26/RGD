@@ -344,9 +344,12 @@
                     <a href="{% url 'mejora_continua:solicitud_list' %}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-1"></i>Volver a la Lista
                     </a>
-                    {% if user.is_staff %}
+                    {% if user.is_staff or solicitud.solicitante == user %}
                         <a href="{% url 'mejora_continua:solicitud_update' solicitud.pk %}" class="btn btn-outline-warning">
                             <i class="fas fa-edit me-1"></i>Editar Solicitud
+                        </a>
+                        <a href="{% url 'mejora_continua:solicitud_delete' solicitud.pk %}" class="btn btn-outline-danger">
+                            <i class="fas fa-trash-alt me-1"></i>Eliminar Solicitud
                         </a>
                     {% endif %}
                 </div>

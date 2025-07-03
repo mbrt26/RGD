@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Eliminar Solicitud - Mejora Continua{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-trash-alt me-2"></i>
+                        Confirmar Eliminación
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>¡Atención!</strong> Esta acción no se puede deshacer.
+                    </div>
+                    
+                    <h5>¿Estás seguro de que deseas eliminar esta solicitud?</h5>
+                    
+                    <div class="bg-light p-3 rounded mt-3 mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Número:</strong> {{ object.numero_solicitud }}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Estado:</strong> 
+                                <span class="badge badge-{% if object.estado == 'abierta' %}warning{% elif object.estado == 'en_progreso' %}info{% elif object.estado == 'cerrada' %}success{% else %}secondary{% endif %}">
+                                    {{ object.get_estado_display }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <strong>Título:</strong> {{ object.titulo }}
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <strong>Solicitante:</strong> {{ object.solicitante.get_full_name|default:object.solicitante.username }}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Fecha:</strong> {{ object.fecha_creacion|date:"d/m/Y H:i" }}
+                            </div>
+                        </div>
+                        {% if object.adjuntos.exists %}
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <strong>Archivos adjuntos:</strong> {{ object.adjuntos.count }} archivo{{ object.adjuntos.count|pluralize:",s" }}
+                                <small class="text-muted">(también se eliminarán)</small>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if object.comentarios.exists %}
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <strong>Comentarios:</strong> {{ object.comentarios.count }} comentario{{ object.comentarios.count|pluralize:",s" }}
+                                <small class="text-muted">(también se eliminarán)</small>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <p class="text-muted">
+                        Al eliminar esta solicitud también se eliminarán permanentemente:
+                    </p>
+                    <ul class="text-muted">
+                        <li>Todos los comentarios asociados</li>
+                        <li>Todos los archivos adjuntos</li>
+                        <li>Todo el historial de cambios</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash-alt me-1"></i>
+                            Sí, eliminar solicitud
+                        </button>
+                    </form>
+                    <a href="{% url 'mejora_continua:solicitud_detail' object.pk %}" class="btn btn-secondary ms-2">
+                        <i class="fas fa-times me-1"></i>
+                        Cancelar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

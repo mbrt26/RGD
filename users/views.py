@@ -361,87 +361,232 @@ def users_import_template(request):
     
     return response
 
-@login_required
-def users_import_excel(request):
-    """Importa usuarios desde archivo Excel."""
-    if not user_has_users_permission(request.user, 'import'):
-        messages.error(request, _('No tienes permisos para realizar esta acción.'))
-        return redirect('users:user_list')
+from django.views.generic import FormView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from .forms.import_forms import UserImportForm
+import logging
+
+logger = logging.getLogger(__name__)
+
+class UserImportView(LoginRequiredMixin, FormView):
+    """Vista para importar usuarios desde archivo Excel."""
+    template_name = 'users/user_import.html'
+    form_class = UserImportForm
+    success_url = reverse_lazy('users:user_list')
     
-    if request.method == 'POST' and request.FILES.get('excel_file'):
+    def dispatch(self, request, *args, **kwargs):
+        if not user_has_users_permission(request.user, 'import'):
+            messages.error(request, 'No tienes permisos para realizar esta acción.')
+            return redirect('users:user_list')
+        return super().dispatch(request, *args, **kwargs)
+    
+    def form_valid(self, form):
         try:
-            excel_file = request.FILES['excel_file']
+            archivo_excel = form.cleaned_data['archivo_excel']
             
-            # Leer archivo Excel
-            df = pd.read_excel(excel_file)
+            # Inicializar estadísticas de importación
+            import_stats = {
+                'created': 0,
+                'errors': 0,
+                'skipped': 0,
+                'total_rows': 0,
+                'error_details': []
+            }
+            
+            logger.info("Iniciando importación de usuarios desde Excel")
+            
+            # Leer archivo Excel con manejo de errores
+            try:
+                df = pd.read_excel(archivo_excel, engine='openpyxl')
+                logger.info(f"Archivo Excel leído exitosamente: {len(df)} filas")
+            except Exception as excel_error:
+                logger.error(f"Error al leer archivo Excel: {str(excel_error)}")
+                messages.error(self.request, f'Error al leer archivo Excel: {str(excel_error)}')
+                return self.form_invalid(form)
+            
+            # Verificar que el archivo no esté vacío
+            if df.empty:
+                messages.error(self.request, 'El archivo Excel está vacío.')
+                return self.form_invalid(form)
             
             # Validar columnas requeridas
             required_columns = ['username', 'email', 'first_name', 'last_name']
             missing_columns = [col for col in required_columns if col not in df.columns]
             
             if missing_columns:
-                messages.error(request, _(f'Faltan las siguientes columnas: {", ".join(missing_columns)}'))
-                return redirect('users:user_list')
+                error_msg = f'Faltan las siguientes columnas requeridas: {", ".join(missing_columns)}'
+                logger.error(error_msg)
+                messages.error(self.request, error_msg)
+                return self.form_invalid(form)
             
-            created_count = 0
-            error_count = 0
-            errors = []
+            # Limitar a 500 filas por proceso para evitar timeouts
+            max_rows = min(len(df), 500)
+            if len(df) > 500:
+                logger.warning(f"Archivo tiene {len(df)} filas. Procesando solo las primeras 500 para evitar timeouts.")
+                messages.warning(self.request, f"Archivo tiene {len(df)} filas. Procesando solo las primeras 500 por seguridad.")
             
-            with transaction.atomic():
-                for index, row in df.iterrows():
-                    try:
-                        # Verificar si el usuario ya existe
-                        if User.objects.filter(username=row['username']).exists():
-                            errors.append(f"Fila {index + 2}: El usuario '{row['username']}' ya existe")
-                            error_count += 1
-                            continue
-                        
-                        if User.objects.filter(email=row['email']).exists():
-                            errors.append(f"Fila {index + 2}: El email '{row['email']}' ya existe")
-                            error_count += 1
-                            continue
-                        
-                        # Buscar rol si se especifica
-                        role = None
-                        if 'role_name' in df.columns and pd.notna(row.get('role_name')):
-                            try:
-                                role = Role.objects.get(name=row['role_name'])
-                            except Role.DoesNotExist:
-                                errors.append(f"Fila {index + 2}: El rol '{row['role_name']}' no existe")
-                        
-                        # Crear usuario
-                        user = User.objects.create_user(
-                            username=row['username'],
-                            email=row['email'],
-                            first_name=row.get('first_name', ''),
-                            last_name=row.get('last_name', ''),
-                            telefono=row.get('telefono', ''),
-                            cargo=row.get('cargo', ''),
-                            role=role,
-                            is_active=row.get('is_active', True),
-                            password=row.get('password', 'temporal123')
-                        )
-                        
-                        created_count += 1
-                        
-                    except Exception as e:
-                        errors.append(f"Fila {index + 2}: Error al crear usuario - {str(e)}")
-                        error_count += 1
+            import_stats['total_rows'] = max_rows
             
-            # Mostrar resultados
-            if created_count > 0:
-                messages.success(request, _(f'Se importaron {created_count} usuarios exitosamente.'))
+            # OPTIMIZACIÓN: Precargar todos los roles y usuarios existentes
+            logger.info("Precargando roles y usuarios existentes para optimización...")
+            try:
+                all_roles = {role.name: role for role in Role.objects.all()}
+                existing_usernames = set(User.objects.values_list('username', flat=True))
+                existing_emails = set(User.objects.values_list('email', flat=True))
+                logger.info(f"Precargados {len(all_roles)} roles, {len(existing_usernames)} usernames, {len(existing_emails)} emails")
+            except Exception as e:
+                logger.error(f"Error precargando datos: {str(e)}")
+                all_roles = {}
+                existing_usernames = set()
+                existing_emails = set()
             
-            if error_count > 0:
-                error_msg = _(f'Se encontraron {error_count} errores:\n') + '\n'.join(errors[:10])
-                if len(errors) > 10:
-                    error_msg += f'\n... y {len(errors) - 10} errores más.'
-                messages.error(request, error_msg)
+            # Helper functions para limpieza de datos
+            def clean_text_field(value, default=''):
+                if pd.isna(value) or value is None:
+                    return default
+                return str(value).strip()
+            
+            def clean_boolean_field(value, default=True):
+                if pd.isna(value) or value is None:
+                    return default
+                if isinstance(value, str):
+                    return value.lower() in ['true', '1', 'yes', 'sí', 'verdadero']
+                return bool(value)
+            
+            # Preparar datos para bulk insert
+            users_to_create = []
+            
+            logger.info(f"Procesando {max_rows} filas para bulk insert...")
+            
+            # Procesar cada fila y preparar objetos User
+            for index, row in df.head(max_rows).iterrows():
+                try:
+                    # Validar campos obligatorios
+                    username = clean_text_field(row['username'])
+                    email = clean_text_field(row['email'])
+                    first_name = clean_text_field(row['first_name'])
+                    last_name = clean_text_field(row['last_name'])
+                    
+                    if not username:
+                        warning_msg = f'Username vacío en fila {index + 2}. Se omitirá este usuario.'
+                        import_stats['skipped'] += 1
+                        import_stats['error_details'].append(warning_msg)
+                        continue
+                    
+                    if not email:
+                        warning_msg = f'Email vacío en fila {index + 2}. Se omitirá este usuario.'
+                        import_stats['skipped'] += 1
+                        import_stats['error_details'].append(warning_msg)
+                        continue
+                    
+                    # Verificar duplicados usando datos precargados
+                    if username in existing_usernames:
+                        warning_msg = f'Username "{username}" ya existe en fila {index + 2}. Se omitirá este usuario.'
+                        import_stats['skipped'] += 1
+                        import_stats['error_details'].append(warning_msg)
+                        continue
+                    
+                    if email in existing_emails:
+                        warning_msg = f'Email "{email}" ya existe en fila {index + 2}. Se omitirá este usuario.'
+                        import_stats['skipped'] += 1
+                        import_stats['error_details'].append(warning_msg)
+                        continue
+                    
+                    # Buscar rol usando diccionario precargado
+                    role = None
+                    role_name = clean_text_field(row.get('role_name', ''))
+                    if role_name:
+                        role = all_roles.get(role_name)
+                        if not role:
+                            warning_msg = f'Rol "{role_name}" no encontrado en fila {index + 2}. Se asignará sin rol.'
+                            import_stats['error_details'].append(warning_msg)
+                    
+                    # Crear objeto User (sin guardarlo aún)
+                    password = clean_text_field(row.get('password', 'temporal123'))
+                    user = User(
+                        username=username,
+                        email=email,
+                        first_name=first_name,
+                        last_name=last_name,
+                        telefono=clean_text_field(row.get('telefono', '')),
+                        cargo=clean_text_field(row.get('cargo', '')),
+                        role=role,
+                        is_active=clean_boolean_field(row.get('is_active', True)),
+                    )
+                    
+                    # Hash de la contraseña
+                    user.set_password(password)
+                    
+                    users_to_create.append(user)
+                    
+                    # Agregar a conjuntos existentes para evitar duplicados en el mismo archivo
+                    existing_usernames.add(username)
+                    existing_emails.add(email)
+                    
+                except Exception as e:
+                    error_msg = f'Error procesando fila {index + 2}: {str(e)}'
+                    import_stats['errors'] += 1
+                    import_stats['error_details'].append(error_msg)
+                    logger.error(error_msg)
+                    continue
+            
+            # Bulk create todos los usuarios preparados
+            if users_to_create:
+                logger.info(f"Creando {len(users_to_create)} usuarios usando bulk_create...")
+                try:
+                    with transaction.atomic():
+                        # Crear en lotes de 100 para mejor performance
+                        batch_size = 100
+                        for i in range(0, len(users_to_create), batch_size):
+                            batch = users_to_create[i:i + batch_size]
+                            created_users = User.objects.bulk_create(batch, batch_size=batch_size)
+                            import_stats['created'] += len(created_users)
+                            logger.info(f"Lote {i//batch_size + 1}: {len(created_users)} usuarios creados")
+                        
+                        logger.info(f"Bulk create completado: {import_stats['created']} usuarios creados")
+                        
+                except Exception as e:
+                    error_msg = f'Error en bulk_create: {str(e)}'
+                    import_stats['errors'] += len(users_to_create)
+                    import_stats['error_details'].append(error_msg)
+                    logger.error(error_msg)
+            else:
+                logger.warning("No hay usuarios válidos para crear")
+            
+            # Log estadísticas finales
+            logger.info(f"Importación completada. Estadísticas: {import_stats}")
+            
+            # Crear mensaje de éxito detallado
+            success_message = f'Importación completada: {import_stats["created"]} usuarios creados'
+            if import_stats['skipped'] > 0:
+                success_message += f', {import_stats["skipped"]} omitidos'
+            if import_stats['errors'] > 0:
+                success_message += f', {import_stats["errors"]} errores'
+            success_message += f' de {import_stats["total_rows"]} filas procesadas.'
+            
+            messages.success(self.request, success_message)
+            
+            # Agregar información detallada de errores si los hay
+            if import_stats['error_details']:
+                error_details = import_stats['error_details'][:10]  # Mostrar solo los primeros 10
+                error_message = 'Detalles de problemas encontrados:\n' + '\n'.join(error_details)
+                if len(import_stats['error_details']) > 10:
+                    error_message += f'\n... y {len(import_stats["error_details"]) - 10} problemas más.'
+                messages.warning(self.request, error_message)
             
         except Exception as e:
-            messages.error(request, _(f'Error al procesar el archivo: {str(e)}'))
-    
-    return redirect('users:user_list')
+            error_msg = f'Error general en la importación: {str(e)}'
+            logger.error(error_msg)
+            messages.error(self.request, error_msg)
+            return self.form_invalid(form)
+        
+        return super().form_valid(form)
+
+# Función legacy para compatibilidad
+@login_required
+def users_import_excel(request):
+    """Función legacy redirigida a la nueva vista basada en clase."""
+    return UserImportView.as_view()(request)
 
 @login_required
 def roles_import_template(request):

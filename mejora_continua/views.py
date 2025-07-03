@@ -309,3 +309,36 @@ class EliminarAdjuntoView(LoginRequiredMixin, DeleteView):
         
         messages.success(request, f'Archivo "{nombre_archivo}" eliminado exitosamente.')
         return redirect('mejora_continua:solicitud_detail', pk=solicitud_pk)
+
+
+class SolicitudMejoraDeleteView(LoginRequiredMixin, DeleteView):
+    """Vista para eliminar una solicitud de mejora."""
+    model = SolicitudMejora
+    template_name = 'mejora_continua/solicitud_confirm_delete.html'
+    success_url = reverse_lazy('mejora_continua:solicitud_list')
+    
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        # Verificar permisos: solo staff o el solicitante pueden eliminar
+        if not request.user.is_staff and self.object.solicitante != request.user:
+            messages.error(request, 'No tienes permisos para eliminar esta solicitud.')
+            return redirect('mejora_continua:solicitud_detail', pk=self.object.pk)
+        return super().dispatch(request, *args, **kwargs)
+    
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        solicitud_titulo = self.object.titulo
+        
+        # Eliminar archivos físicos asociados
+        for adjunto in self.object.adjuntos.all():
+            if adjunto.archivo:
+                try:
+                    adjunto.archivo.delete()
+                except:
+                    pass  # Continúa si no se puede eliminar el archivo físico
+        
+        # Django se encarga del CASCADE para comentarios y adjuntos
+        response = super().delete(request, *args, **kwargs)
+        
+        messages.success(request, f'Solicitud "{solicitud_titulo}" eliminada exitosamente.')
+        return response

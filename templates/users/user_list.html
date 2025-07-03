@@ -23,7 +23,7 @@
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{% url 'users:users_import_template' %}"><i class="fas fa-download"></i> Descargar Plantilla</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#importUsersModal"><i class="fas fa-upload"></i> Subir Archivo</a></li>
+                            <li><a class="dropdown-item" href="{% url 'users:users_import_excel' %}"><i class="fas fa-upload"></i> Importar Usuarios</a></li>
                         </ul>
                     </div>
                     {% endif %}

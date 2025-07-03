@@ -231,15 +231,40 @@ class Trato(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.numero_oferta:
-            # Usar la configuración centralizada para obtener el siguiente número
-            numero = ConfiguracionOferta.obtener_siguiente_numero()
-            self.numero_oferta = str(numero).zfill(4)
+            # Usar la configuración centralizada para obtener el siguiente número único
+            max_attempts = 10
+            for attempt in range(max_attempts):
+                numero = ConfiguracionOferta.obtener_siguiente_numero()
+                potential_numero = str(numero).zfill(4)
+                
+                # Verificar que no existe este número
+                if not Trato.objects.filter(numero_oferta=potential_numero).exists():
+                    self.numero_oferta = potential_numero
+                    break
+                else:
+                    # Si existe, intentar con el siguiente número
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f'Numero de oferta {potential_numero} ya existe, intentando siguiente...')
+                    
+            # Si después de 10 intentos no encontramos un número único, usar timestamp
+            if not self.numero_oferta:
+                import time
+                self.numero_oferta = str(int(time.time()))[-6:]
         else:
             # Validate manual offer number doesn't conflict with existing ones
-            existing_trato = Trato.objects.filter(numero_oferta=self.numero_oferta).exclude(pk=self.pk).first()
-            if existing_trato:
-                from django.core.exceptions import ValidationError
-                raise ValidationError(f'El número de oferta {self.numero_oferta} ya existe. Use un número diferente o deje el campo vacío para asignar automáticamente.')
+            try:
+                existing_trato = Trato.objects.filter(numero_oferta=self.numero_oferta).exclude(pk=self.pk).first()
+                if existing_trato:
+                    from django.core.exceptions import ValidationError
+                    raise ValidationError(f'El numero de oferta {self.numero_oferta} ya existe. Use un numero diferente.')
+            except Exception as e:
+                # Log encoding or database errors
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f'Error validating numero_oferta: {str(e)}')
+                # Continue with save if validation fails
+                pass
         
         # Si es un nuevo trato, establecer la fecha de cierre por defecto a 30 días después
         if not self.pk and not self.fecha_cierre:

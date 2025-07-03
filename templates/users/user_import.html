@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Importar ProyectosCRM{% endblock %}
+{% block title %}Importar Usuarios{% endblock %}
 
 {% block content %}
 <div class="container py-4">
@@ -9,7 +9,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="card-title mb-0">Importar ProyectosCRM desde Excel</h4>
+                    <h4 class="card-title mb-0">Importar Usuarios desde Excel</h4>
                 </div>
                 <div class="card-body">
                     <div class="alert alert-info mb-4">
@@ -18,7 +18,7 @@
                                 <h5 class="mb-2"><i class="fas fa-download me-2"></i>¿Necesitas una plantilla?</h5>
                                 <p class="mb-0">Descarga nuestra plantilla de Excel con ejemplos y el formato correcto para facilitar la importación.</p>
                             </div>
-                            <a href="{% url 'crm:trato_plantilla_excel' %}" class="btn btn-outline-primary">
+                            <a href="{% url 'users:users_import_template' %}" class="btn btn-outline-primary">
                                 <i class="fas fa-file-excel me-1"></i> Descargar Plantilla
                             </a>
                         </div>
@@ -57,44 +57,40 @@
                                 <div class="col-md-6">
                                     <h6>Campos obligatorios:</h6>
                                     <ul>
-                                        <li><strong>nombre:</strong> Nombre del proyecto</li>
-                                        <li><strong>cliente:</strong> Nombre del cliente existente</li>
-                                        <li><strong>valor:</strong> Valor del trato</li>
-                                        <li><strong>estado:</strong> Estado (revision_tecnica, elaboracion_oferta, envio_negociacion, formalizacion, ganado, perdido, sin_informacion)</li>
-                                        <li><strong>fecha_cierre:</strong> Fecha de cierre esperada (formato YYYY-MM-DD)</li>
+                                        <li><strong>username:</strong> Nombre de usuario único</li>
+                                        <li><strong>email:</strong> Dirección de correo electrónico única</li>
+                                        <li><strong>first_name:</strong> Nombre(s)</li>
+                                        <li><strong>last_name:</strong> Apellidos</li>
                                     </ul>
                                 </div>
                                 <div class="col-md-6">
                                     <h6>Campos opcionales:</h6>
                                     <ul>
-                                        <li><strong>correo:</strong> Correo de contacto</li>
-                                        <li><strong>telefono:</strong> Teléfono de contacto</li>
-                                        <li><strong>descripcion:</strong> Descripción del proyecto</li>
-                                        <li><strong>probabilidad:</strong> Probabilidad de cierre (0-100)</li>
-                                        <li><strong>fuente:</strong> Fuente del trato (visita, informe_tecnico, email, telefono, whatsapp, otro)</li>
-                                        <li><strong>notas:</strong> Notas adicionales</li>
-                                        <li><strong>centro_costos:</strong> Centro de costos</li>
-                                        <li><strong>nombre_proyecto:</strong> Nombre del proyecto</li>
-                                        <li><strong>orden_contrato:</strong> Número de orden o contrato</li>
-                                        <li><strong>dias_prometidos:</strong> Días prometidos</li>
-                                        <li><strong>tipo_negociacion:</strong> Tipo de negociación (contrato, control, diseno, filtros, mantenimiento, servicios)</li>
+                                        <li><strong>telefono:</strong> Número de teléfono</li>
+                                        <li><strong>cargo:</strong> Cargo o posición</li>
+                                        <li><strong>role_name:</strong> Nombre del rol (debe existir previamente)</li>
+                                        <li><strong>is_active:</strong> Estado activo (true/false, por defecto: true)</li>
+                                        <li><strong>password:</strong> Contraseña (opcional, se genera automáticamente si no se especifica)</li>
                                     </ul>
                                 </div>
                             </div>
                             <div class="alert alert-warning mt-3">
-                                <strong>Nota importante:</strong> El cliente debe existir previamente en el sistema. La plantilla incluye una hoja con los valores válidos para cada campo.
-                            </div>
-                            <div class="alert alert-info mt-3">
-                                <strong>Nota temporal:</strong> La importación de contactos está temporalmente deshabilitada. Los tratos se crearán sin contacto asignado y podrán ser editados posteriormente.
+                                <strong>Notas importantes:</strong>
+                                <ul class="mb-0">
+                                    <li>Los nombres de usuario y correos electrónicos deben ser únicos</li>
+                                    <li>Si no se especifica contraseña, se asignará "temporal123" por defecto</li>
+                                    <li>Los roles deben existir previamente en el sistema</li>
+                                    <li>Se procesarán hasta 500 filas por importación</li>
+                                </ul>
                             </div>
                         </div>
 
                         <div class="d-flex justify-content-between">
-                            <a href="{% url 'crm:trato_list' %}" class="btn btn-secondary">
+                            <a href="{% url 'users:user_list' %}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> Volver
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-file-import"></i> Importar ProyectosCRM
+                                <i class="fas fa-file-import"></i> Importar Usuarios
                             </button>
                         </div>
                     </form>

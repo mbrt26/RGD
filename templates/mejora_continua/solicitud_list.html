@@ -92,10 +92,14 @@
                                            class="btn btn-outline-primary" title="Ver detalle">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        {% if user.is_staff %}
+                                        {% if user.is_staff or solicitud.solicitante == user %}
                                             <a href="{% url 'mejora_continua:solicitud_update' solicitud.pk %}" 
                                                class="btn btn-outline-warning" title="Editar">
                                                 <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'mejora_continua:solicitud_delete' solicitud.pk %}" 
+                                               class="btn btn-outline-danger" title="Eliminar">
+                                                <i class="fas fa-trash-alt"></i>
                                             </a>
                                         {% endif %}
                                     </div>

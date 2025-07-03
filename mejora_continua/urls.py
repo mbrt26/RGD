@@ -5,6 +5,7 @@ from .views import (
     SolicitudMejoraDetailView,
     SolicitudMejoraCreateView,
     SolicitudMejoraUpdateView,
+    SolicitudMejoraDeleteView,
     ComentarioCreateView,
     AdjuntoCreateView,
     MisSolicitudesView,
@@ -24,6 +25,7 @@ urlpatterns = [
     path('solicitudes/nueva/', SolicitudMejoraCreateView.as_view(), name='solicitud_create'),
     path('solicitudes/<int:pk>/', SolicitudMejoraDetailView.as_view(), name='solicitud_detail'),
     path('solicitudes/<int:pk>/editar/', SolicitudMejoraUpdateView.as_view(), name='solicitud_update'),
+    path('solicitudes/<int:pk>/eliminar/', SolicitudMejoraDeleteView.as_view(), name='solicitud_delete'),
     
     # Comentarios y adjuntos
     path('solicitudes/<int:solicitud_pk>/comentarios/nuevo/', ComentarioCreateView.as_view(), name='comentario_create'),

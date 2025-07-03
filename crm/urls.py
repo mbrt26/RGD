@@ -61,6 +61,7 @@ urlpatterns = [
     path('proyectoscrm/rapido/', login_required(views.TratoQuickCreateView.as_view()), name='trato_quick_create'),
     path('proyectoscrm/importar/', login_required(views.TratoImportView.as_view()), name='trato_import'),
     path('proyectoscrm/plantilla-excel/', login_required(views.TratoPlantillaExcelView.as_view()), name='trato_plantilla_excel'),
+    path('proyectoscrm/eliminar-masivo/', login_required(views.TratoBulkDeleteView.as_view()), name='trato_bulk_delete'),
     path('proyectoscrm/<int:pk>/', login_required(views.TratoDetailView.as_view()), name='trato_detail'),
     path('proyectoscrm/<int:pk>/editar/', login_required(views.TratoUpdateView.as_view()), name='trato_update'),
     

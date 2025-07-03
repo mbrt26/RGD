@@ -1,6 +1,6 @@
 from django import forms
 from django.shortcuts import render
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, TemplateView, FormView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, TemplateView, FormView, View
 from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
@@ -13,6 +13,8 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 import pandas as pd
 import io
+import logging
+from datetime import datetime, timedelta
 from .models import (
     Cliente, Contacto, Cotizacion, TareaVenta, Trato, 
     RepresentanteVentas, DocumentoCliente, VersionCotizacion, Lead,
@@ -983,6 +985,9 @@ class TratoListView(LoginRequiredMixin, ListView):
         context['title'] = self.title
         context['add_url'] = reverse_lazy(self.add_url)
         
+        # Agregar contador de ofertas (usando el queryset filtrado)
+        context['total_ofertas'] = self.get_queryset().count()
+        
         # Agregar opciones para filtros
         context['clientes'] = Cliente.objects.all().order_by('nombre')
         context['responsables'] = get_user_model().objects.filter(
@@ -1009,6 +1014,49 @@ class TratoListView(LoginRequiredMixin, ListView):
         }
         
         return context
+
+class TratoBulkDeleteView(LoginRequiredMixin, View):
+    """Vista para eliminar múltiples tratos de forma masiva"""
+    
+    def post(self, request, *args, **kwargs):
+        selected_ids = request.POST.getlist('selected_ids')
+        
+        if not selected_ids:
+            messages.error(request, 'No se seleccionaron ofertas para eliminar.')
+            return redirect('crm:trato_list')
+        
+        try:
+            # Buscar los tratos que pertenecen al usuario o que el usuario puede ver
+            tratos_to_delete = Trato.objects.filter(id__in=selected_ids)
+            
+            if not tratos_to_delete.exists():
+                messages.error(request, 'No se encontraron ofertas válidas para eliminar.')
+                return redirect('crm:trato_list')
+            
+            # Get info before deletion for logging
+            tratos_info = []
+            for trato in tratos_to_delete:
+                tratos_info.append(f"#{trato.numero_oferta} - {trato.cliente}")
+            
+            deleted_count = tratos_to_delete.count()
+            tratos_to_delete.delete()
+            
+            # Log the bulk deletion
+            logger = logging.getLogger(__name__)
+            logger.info(f"Eliminación masiva de tratos por usuario {request.user.username}. "
+                       f"Cantidad: {deleted_count}. Tratos: {', '.join(tratos_info[:10])}")
+            
+            messages.success(
+                request, 
+                f'Se eliminaron exitosamente {deleted_count} oferta{"s" if deleted_count != 1 else ""}.'
+            )
+            
+        except Exception as e:
+            messages.error(request, f'Error al eliminar las ofertas: {str(e)}')
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error en eliminación masiva de tratos: {str(e)}")
+        
+        return redirect('crm:trato_list')
 
 class TratoCreateView(LoginRequiredMixin, CreateView):
     model = Trato
@@ -1197,16 +1245,64 @@ class TratoImportView(LoginRequiredMixin, FormView):
     success_url = reverse_lazy('crm:trato_list')
     
     def form_valid(self, form):
+        logger = logging.getLogger(__name__)
+        
+        # Initialize import statistics
+        import_stats = {
+            'total_rows': 0,
+            'created': 0,
+            'skipped': 0,
+            'errors': 0,
+            'error_details': []
+        }
+        
         try:
             archivo_excel = form.cleaned_data['archivo_excel']
+            logger.info(f"Iniciando procesamiento de archivo: {archivo_excel.name}")
             
-            # Leer el archivo Excel
-            df = pd.read_excel(archivo_excel)
+            # Leer el archivo Excel con manejo de errores mejorado
+            try:
+                # Intentar con openpyxl primero
+                df = pd.read_excel(archivo_excel, engine='openpyxl')
+                import_stats['total_rows'] = len(df)
+                logger.info(f"Archivo Excel leído exitosamente con openpyxl. Filas: {import_stats['total_rows']}")
+            except Exception as excel_error:
+                logger.warning(f"Error con openpyxl: {str(excel_error)}")
+                try:
+                    # Fallback a xlrd para archivos .xls antiguos
+                    # Reset file pointer
+                    archivo_excel.seek(0)
+                    df = pd.read_excel(archivo_excel, engine=None)
+                    import_stats['total_rows'] = len(df)
+                    logger.info(f"Archivo Excel leído exitosamente con engine por defecto. Filas: {import_stats['total_rows']}")
+                except Exception as final_error:
+                    error_msg = f"Error al leer archivo Excel (intentado con múltiples engines): {str(final_error)}"
+                    logger.error(error_msg)
+                    messages.error(self.request, f"Error al leer archivo Excel. Asegúrese de que sea un archivo .xlsx válido. Error: {str(final_error)}")
+                    return self.form_invalid(form)
+            
+            # Validar que el archivo no esté vacío
+            if df.empty or len(df) == 0:
+                error_msg = "El archivo Excel está vacío o no contiene datos válidos."
+                logger.error(error_msg)
+                messages.error(self.request, error_msg)
+                return self.form_invalid(form)
+            
+            logger.info(f"Iniciando importación de tratos. Usuario: {self.request.user.username}, Archivo: {archivo_excel.name}, Total filas: {import_stats['total_rows']}")
             
             # Validar las columnas requeridas
             required_columns = ['nombre', 'cliente', 'valor', 'estado', 'fecha_cierre']
-            if not all(col in df.columns for col in required_columns):
-                messages.error(self.request, 'El archivo Excel debe contener las columnas: ' + ', '.join(required_columns))
+            df_columns = [col.lower().strip() for col in df.columns]
+            missing_columns = []
+            
+            for req_col in required_columns:
+                if req_col.lower() not in df_columns:
+                    missing_columns.append(req_col)
+            
+            if missing_columns:
+                error_msg = f'El archivo Excel debe contener las columnas: {", ".join(missing_columns)}. Columnas encontradas: {", ".join(df.columns)}'
+                logger.error(f"Error de validación de columnas: {error_msg}")
+                messages.error(self.request, error_msg)
                 return self.form_invalid(form)
             
             # Limpiar datos: reemplazar NaN con valores por defecto
@@ -1222,71 +1318,201 @@ class TratoImportView(LoginRequiredMixin, FormView):
                 'nombre_proyecto': '',
                 'orden_contrato': '',
                 'dias_prometidos': 0,
-                'tipo_negociacion': 'contrato'
+                'tipo_negociacion': 'contrato',
+                'contacto': ''
             })
             
-            # Procesar cada fila
-            tratos_creados = 0
-            for _, row in df.iterrows():
+            # Limitar a 500 filas por proceso para evitar timeouts
+            max_rows = min(len(df), 500)
+            if len(df) > 500:
+                logger.warning(f"Archivo tiene {len(df)} filas. Procesando solo las primeras 500 para evitar timeouts.")
+                messages.warning(self.request, f"Archivo tiene {len(df)} filas. Procesando solo las primeras 500 por seguridad.")
+            
+            # BULK IMPORT OPTIMIZATION - Preload all clients once at the beginning
+            logger.info("Preloading clients for bulk import optimization...")
+            all_clientes = {cliente.nombre: cliente for cliente in Cliente.objects.all()}
+            # Also create a case-insensitive lookup dictionary for fallback
+            all_clientes_lower = {nombre.lower(): cliente for nombre, cliente in all_clientes.items()}
+            logger.info(f"Preloaded {len(all_clientes)} clients for import")
+            
+            # Process all rows and prepare Trato objects (without saving)
+            tratos_to_create = []
+            batch_size = 50  # Process in batches to avoid memory issues
+            
+            # Helper functions for data cleaning (same as original)
+            def clean_numeric_field(value, default=0):
+                if pd.isna(value) or value is None or value == '':
+                    return default
                 try:
-                    # Buscar o crear el cliente
-                    cliente = Cliente.objects.filter(nombre=row['cliente']).first()
-                    if not cliente:
-                        messages.warning(self.request, f'Cliente no encontrado: {row["cliente"]}. Se omitirá este trato.')
+                    return int(float(value))
+                except (ValueError, TypeError):
+                    return default
+
+            def clean_text_field(value, default=''):
+                if pd.isna(value) or value is None:
+                    return default
+                return str(value).strip()
+
+            def clean_date_field(value):
+                if pd.isna(value) or value is None or value == '':
+                    return None
+                try:
+                    if hasattr(value, 'date'):
+                        return value.date()
+                    if isinstance(value, str):
+                        date_formats = ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y-%m-%d %H:%M:%S']
+                        for fmt in date_formats:
+                            try:
+                                return datetime.strptime(value.strip(), fmt).date()
+                            except ValueError:
+                                continue
+                    return None
+                except Exception:
+                    return None
+            
+            # Process each row and prepare objects for bulk creation
+            for index, row in df.head(max_rows).iterrows():
+                try:
+                    logger.debug(f"Processing row {index + 1} for bulk creation")
+                    
+                    # Find client using preloaded data
+                    cliente_nombre = str(row['cliente']).strip() if pd.notna(row['cliente']) else ''
+                    if not cliente_nombre:
+                        warning_msg = f'Nombre de cliente vacío en fila {index + 1}. Se omitirá este trato.'
+                        import_stats['skipped'] += 1
+                        import_stats['error_details'].append(warning_msg)
                         continue
-
-                    # Función helper para limpiar campos numéricos
-                    def clean_numeric_field(value, default=0):
-                        if pd.isna(value) or value is None or value == '':
-                            return default
-                        try:
-                            return int(float(value))
-                        except (ValueError, TypeError):
-                            return default
-
-                    # Función helper para limpiar campos de texto
-                    def clean_text_field(value, default=''):
-                        if pd.isna(value) or value is None:
-                            return default
-                        return str(value).strip()
-
-                    # Handle numero_oferta - leave empty for automatic assignment or use provided value
+                    
+                    # Clean client name to avoid encoding issues
+                    cliente_nombre = cliente_nombre.encode('utf-8', errors='ignore').decode('utf-8')
+                    
+                    # Find client using preloaded dictionary (much faster than DB queries)
+                    cliente = all_clientes.get(cliente_nombre)
+                    if not cliente:
+                        # Try case-insensitive lookup as fallback
+                        cliente = all_clientes_lower.get(cliente_nombre.lower())
+                    
+                    if not cliente:
+                        warning_msg = f'Cliente no encontrado: "{cliente_nombre}". Se omitirá este trato.'
+                        import_stats['skipped'] += 1
+                        import_stats['error_details'].append(f"Fila {index + 1}: {warning_msg}")
+                        continue
+                    
+                    # Validate required fields
+                    nombre = clean_text_field(row['nombre'])
+                    if not nombre:
+                        error_msg = f'Fila {index + 1}: El campo "nombre" es requerido'
+                        import_stats['errors'] += 1
+                        import_stats['error_details'].append(error_msg)
+                        continue
+                    
+                    # Handle fecha_cierre
+                    fecha_cierre = clean_date_field(row.get('fecha_cierre'))
+                    if not fecha_cierre:
+                        fecha_cierre = (timezone.now() + timedelta(days=30)).date()
+                    
+                    # Handle numero_oferta
                     numero_oferta = clean_text_field(row.get('numero_oferta', ''))
                     
-                    trato_data = {
-                        'nombre': clean_text_field(row['nombre']),
-                        'cliente': cliente,
-                        'correo': clean_text_field(row.get('correo', '')),
-                        'telefono': clean_text_field(row.get('telefono', '')),
-                        'descripcion': clean_text_field(row.get('descripcion', '')),
-                        'valor': clean_numeric_field(row['valor'], 0),
-                        'probabilidad': clean_numeric_field(row.get('probabilidad', 50), 50),
-                        'estado': clean_text_field(row['estado'], 'revision_tecnica'),
-                        'fuente': clean_text_field(row.get('fuente', 'visita'), 'visita'),
-                        'fecha_cierre': row['fecha_cierre'],
-                        'responsable': self.request.user,
-                        'notas': clean_text_field(row.get('notas', '')),
-                        'centro_costos': clean_text_field(row.get('centro_costos', '')),
-                        'nombre_proyecto': clean_text_field(row.get('nombre_proyecto', '')),
-                        'orden_contrato': clean_text_field(row.get('orden_contrato', '')),
-                        'dias_prometidos': clean_numeric_field(row.get('dias_prometidos', 0), 0),
-                        'tipo_negociacion': clean_text_field(row.get('tipo_negociacion', 'contrato'), 'contrato')
-                    }
+                    # Handle contacto field - temporarily disabled
+                    contacto = None
                     
-                    # Only add numero_oferta if it's provided (not empty)
+                    # Create Trato object (not saved yet)
+                    trato = Trato(
+                        nombre=nombre,
+                        cliente=cliente,
+                        contacto=contacto,
+                        correo=clean_text_field(row.get('correo', '')),
+                        telefono=clean_text_field(row.get('telefono', '')),
+                        descripcion=clean_text_field(row.get('descripcion', '')),
+                        valor=clean_numeric_field(row['valor'], 0),
+                        probabilidad=clean_numeric_field(row.get('probabilidad', 50), 50),
+                        estado=clean_text_field(row['estado'], 'revision_tecnica'),
+                        fuente=clean_text_field(row.get('fuente', 'visita'), 'visita'),
+                        fecha_cierre=fecha_cierre,
+                        responsable=self.request.user,
+                        notas=clean_text_field(row.get('notas', '')),
+                        centro_costos=clean_text_field(row.get('centro_costos', '')),
+                        nombre_proyecto=clean_text_field(row.get('nombre_proyecto', '')),
+                        orden_contrato=clean_text_field(row.get('orden_contrato', '')),
+                        dias_prometidos=clean_numeric_field(row.get('dias_prometidos', 0), 0),
+                        tipo_negociacion=clean_text_field(row.get('tipo_negociacion', 'contrato'), 'contrato')
+                    )
+                    
+                    # Only add numero_oferta if provided
                     if numero_oferta:
-                        trato_data['numero_oferta'] = numero_oferta
+                        trato.numero_oferta = numero_oferta
                     
-                    Trato.objects.create(**trato_data)
-                    tratos_creados += 1
+                    tratos_to_create.append(trato)
+                    
                 except Exception as e:
-                    messages.warning(self.request, f'Error al importar trato {row.get("nombre", "desconocido")}: {str(e)}')
+                    error_msg = f'Error al procesar trato en fila {index + 1}: {str(e)}'
+                    logger.error(error_msg)
+                    import_stats['errors'] += 1
+                    import_stats['error_details'].append(error_msg)
+                    continue
             
-            messages.success(self.request, f'Se importaron {tratos_creados} tratos exitosamente.')
+            # Bulk create all prepared tratos
+            if tratos_to_create:
+                logger.info(f"Creating {len(tratos_to_create)} tratos using bulk_create...")
+                
+                try:
+                    with transaction.atomic():
+                        # For tratos without numero_oferta, we need individual saves for auto-assignment
+                        tratos_with_numero = [t for t in tratos_to_create if hasattr(t, 'numero_oferta') and t.numero_oferta]
+                        tratos_without_numero = [t for t in tratos_to_create if not (hasattr(t, 'numero_oferta') and t.numero_oferta)]
+                        
+                        # Bulk create tratos with numero_oferta
+                        if tratos_with_numero:
+                            created_count = len(Trato.objects.bulk_create(tratos_with_numero, ignore_conflicts=True))
+                            import_stats['created'] += created_count
+                            logger.info(f"Bulk created {created_count} tratos with numero_oferta")
+                        
+                        # Individual create for tratos needing auto numero_oferta
+                        for trato in tratos_without_numero:
+                            try:
+                                trato.save()
+                                import_stats['created'] += 1
+                            except Exception as e:
+                                error_msg = f'Error creating trato {trato.nombre}: {str(e)}'
+                                logger.error(error_msg)
+                                import_stats['errors'] += 1
+                                import_stats['error_details'].append(error_msg)
+                        
+                        logger.info(f"Bulk creation completed: {import_stats['created']} tratos created total")
+                        
+                except Exception as e:
+                    error_msg = f'Error in bulk creation: {str(e)}'
+                    logger.error(error_msg)
+                    import_stats['errors'] += len(tratos_to_create)
+                    import_stats['error_details'].append(error_msg)
+            else:
+                logger.warning("No valid tratos to create")            # Log final import statistics
+            logger.info(f"Importación completada. Estadísticas: {import_stats}")
+            
+            # Create detailed success message
+            success_message = f'Importación completada: {import_stats["created"]} tratos creados'
+            if import_stats['skipped'] > 0:
+                success_message += f', {import_stats["skipped"]} omitidos'
+            if import_stats['errors'] > 0:
+                success_message += f', {import_stats["errors"]} errores'
+            success_message += f' de {import_stats["total_rows"]} filas procesadas.'
+            
+            messages.success(self.request, success_message)
+            
+            # Add detailed error information if there were any issues
+            if import_stats['error_details']:
+                error_summary = "Detalles de errores:\n" + "\n".join(import_stats['error_details'][:10])  # Show first 10 errors
+                if len(import_stats['error_details']) > 10:
+                    error_summary += f"\n... y {len(import_stats['error_details']) - 10} errores más."
+                messages.info(self.request, error_summary)
+            
             return super().form_valid(form)
             
         except Exception as e:
-            messages.error(self.request, f'Error al procesar el archivo Excel: {str(e)}')
+            error_msg = f'Error al procesar el archivo Excel: {str(e)}'
+            logger.error(f"Error crítico en importación: {error_msg}")
+            messages.error(self.request, error_msg)
             return self.form_invalid(form)
 
 class ContactoListView(LoginRequiredMixin, ListView):
@@ -1631,6 +1857,7 @@ class TratoPlantillaExcelView(LoginRequiredMixin, TemplateView):
             'numero_oferta': ['0100', ''],  # Ejemplo: uno con número manual, otro automático
             'nombre': ['Proyecto Implementación ERP', 'Desarrollo App Móvil'],
             'cliente': ['Ejemplo Empresa ABC', 'Cliente Muestra XYZ'],
+            'contacto': ['Juan Pérez', 'María González'],  # NUEVO CAMPO
             'valor': [150000, 85000],
             'estado': ['revision_tecnica', 'elaboracion_oferta'],
             'fecha_cierre': ['2025-08-15', '2025-07-30'],
@@ -1672,9 +1899,10 @@ class TratoPlantillaExcelView(LoginRequiredMixin, TemplateView):
                 
             # Agregar una segunda hoja con información sobre los valores válidos
             info_data = {
-                'Campo': ['numero_oferta', 'estado', 'fuente', 'tipo_negociacion'],
+                'Campo': ['numero_oferta', 'contacto', 'estado', 'fuente', 'tipo_negociacion'],
                 'Valores_Válidos': [
                     'OPCIONAL: Número de oferta manual (ej: 0100, 0201). Deje vacío para asignar automáticamente.',
+                    'OPCIONAL: Nombre del contacto asociado al trato. Debe existir previamente en el sistema.',
                     'revision_tecnica, elaboracion_oferta, envio_negociacion, formalizacion, ganado, perdido, sin_informacion',
                     'visita, informe_tecnico, email, telefono, whatsapp, otro',
                     'contrato, control, diseno, filtros, mantenimiento, servicios'

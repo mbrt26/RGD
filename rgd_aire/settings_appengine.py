@@ -58,6 +58,8 @@ if os.environ.get('USE_CLOUD_SQL') == 'true':
             'OPTIONS': {
                 'connect_timeout': 60,
                 'application_name': 'rgd_aire_appengine',
+                'client_encoding': 'UTF8',
+                'options': '-c client_encoding=UTF8'
             },
         }
     }
