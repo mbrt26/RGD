@@ -27,7 +27,7 @@
                         {% endif %}
                         <p class="mb-1"><strong>Email:</strong> {{ object.correo }}</p>
                         {% if object.telefono %}
-                        <p class="mb-1"><strong>Teléfono:</strong> {{ object.telefono }}</p>
+                        <p class="mb-1"><strong>Teléfono:</strong> {{ object.telefono|stringformat:"s" }}</p>
                         {% endif %}
                         <p class="mb-0"><strong>Estado:</strong> 
                             <span class="badge {{ object.get_estado_class }}">{{ object.get_estado_display }}</span>

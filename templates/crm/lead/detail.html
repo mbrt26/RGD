@@ -62,7 +62,7 @@
                                 {% if lead.telefono %}
                                 <dt class="col-sm-4">Teléfono:</dt>
                                 <dd class="col-sm-8">
-                                    <a href="tel:{{ lead.telefono }}">{{ lead.telefono }}</a>
+                                    <a href="tel:{{ lead.telefono }}">{{ lead.telefono|stringformat:"s" }}</a>
                                 </dd>
                                 {% endif %}
                                 
@@ -189,7 +189,7 @@
                         </a>
                         
                         {% if lead.telefono %}
-                        <a href="tel:{{ lead.telefono }}" class="btn btn-outline-secondary">
+                        <a href="tel:{{ lead.telefono|stringformat:"s" }}" class="btn btn-outline-secondary">
                             <i class="fas fa-phone me-2"></i>Llamar
                         </a>
                         {% endif %}

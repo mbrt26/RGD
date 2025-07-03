@@ -166,7 +166,7 @@
                             </td>
                             <td>
                                 {% if lead.telefono %}
-                                <a href="tel:{{ lead.telefono }}">{{ lead.telefono }}</a>
+                                <a href="tel:{{ lead.telefono }}">{{ lead.telefono|stringformat:"s" }}</a>
                                 {% else %}
                                 -
                                 {% endif %}

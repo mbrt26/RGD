@@ -13,7 +13,7 @@
     {% for representante in representantes %}
     <tr>
         <td>{{ representante.nombre }}</td>
-        <td>{{ representante.telefono|default:"No especificado" }}</td>
+        <td>{{ representante.telefono|stringformat:"s"|default:"No especificado" }}</td>
         <td>${{ representante.meta_ventas|floatformat:2 }}</td>
         <td>
             <a href="{% url 'crm:representante_detail' representante.id %}" class="btn btn-sm btn-info">

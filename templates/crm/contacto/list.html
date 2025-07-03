@@ -74,7 +74,7 @@
                 -
             {% endif %}
         </td>
-        <td>{{ contacto.telefono|default:'-' }}</td>
+        <td>{{ contacto.telefono|stringformat:"s"|default:'-' }}</td>
         <td>
             <a href="{% url 'crm:contacto_detail' contacto.id %}" class="btn btn-sm btn-info" title="Ver">
                 <i class="fas fa-eye"></i>

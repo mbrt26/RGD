@@ -115,7 +115,7 @@
                                     
                                     {% if lead.telefono %}
                                     <dt class="col-4">Teléfono:</dt>
-                                    <dd class="col-8">{{ lead.telefono }}</dd>
+                                    <dd class="col-8">{{ lead.telefono|stringformat:"s" }}</dd>
                                     {% endif %}
                                 </dl>
                             </div>

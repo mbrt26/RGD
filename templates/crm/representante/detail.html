@@ -31,7 +31,7 @@
                     <dd class="col-sm-8">{{ representante.usuario.username }}</dd>
                     
                     <dt class="col-sm-4">Teléfono</dt>
-                    <dd class="col-sm-8">{{ representante.telefono|default:"No especificado" }}</dd>
+                    <dd class="col-sm-8">{{ representante.telefono|stringformat:"s"|default:"No especificado" }}</dd>
                     
                     <dt class="col-sm-4">Meta de Ventas</dt>
                     <dd class="col-sm-8">${{ representante.meta_ventas|floatformat:2 }}</dd>

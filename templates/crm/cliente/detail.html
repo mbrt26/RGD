@@ -44,7 +44,7 @@
                     </div>
                     <div class="row mt-2">
                         <div class="col-sm-4"><strong>Teléfono:</strong></div>
-                        <div class="col-sm-8">{{ cliente.telefono|default:"No especificado" }}</div>
+                        <div class="col-sm-8">{{ cliente.telefono|stringformat:"s"|default:"No especificado" }}</div>
                     </div>
                     <div class="row mt-2">
                         <div class="col-sm-4"><strong>Dirección:</strong></div>
@@ -129,7 +129,7 @@
                     <div class="contact-item mb-3">
                         <h6>{{ contacto.nombre }} - {{ contacto.cargo }}</h6>
                         <p class="mb-0">
-                            <i class="fas fa-phone"></i> {{ contacto.telefono }}<br>
+                            <i class="fas fa-phone"></i> {{ contacto.telefono|stringformat:"s" }}<br>
                             <i class="fas fa-envelope"></i> {{ contacto.correo }}
                         </p>
                     </div>
