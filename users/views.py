@@ -22,6 +22,8 @@ from .forms import (
 
 def user_has_users_permission(user, action='view'):
     """Verifica si el usuario tiene permisos en el módulo de usuarios."""
+    if not user.is_authenticated:
+        return False
     return user.is_superuser or user.has_module_permission('users', action)
 
 class UserPermissionMixin(UserPassesTestMixin):
