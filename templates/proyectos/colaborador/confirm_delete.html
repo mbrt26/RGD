@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Eliminar Colaborador - Proyectos{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <h5 class="mb-0">Confirmar Eliminación</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                            </div>
+                            <div>
+                                <h6 class="alert-heading">¡Atención!</h6>
+                                <p class="mb-0">
+                                    Esta acción no se puede deshacer. Al eliminar este colaborador, 
+                                    se perderán todos los datos asociados.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6>¿Está seguro de que desea eliminar el siguiente colaborador?</h6>
+                            
+                            <div class="card bg-light mt-3">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <strong>Nombre:</strong><br>
+                                            <span class="text-primary">{{ colaborador.nombre }}</span>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Cargo:</strong><br>
+                                            <span class="badge bg-primary">{{ colaborador.cargo }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if colaborador.email or colaborador.telefono %}
+                                    <div class="row mt-3">
+                                        {% if colaborador.email %}
+                                        <div class="col-md-6">
+                                            <strong>Email:</strong><br>
+                                            <span class="text-muted">
+                                                <i class="far fa-envelope me-1"></i>{{ colaborador.email }}
+                                            </span>
+                                        </div>
+                                        {% endif %}
+                                        {% if colaborador.telefono %}
+                                        <div class="col-md-6">
+                                            <strong>Teléfono:</strong><br>
+                                            <span class="text-muted">
+                                                <i class="fas fa-phone me-1"></i>{{ colaborador.telefono }}
+                                            </span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'proyectos:colaborador_list' %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-1"></i>
+                                    Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-trash me-1"></i>
+                                    Sí, Eliminar Colaborador
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Focus en el botón cancelar para evitar eliminaciones accidentales
+    document.querySelector('.btn-secondary').focus();
+});
+</script>
+{% endblock %}

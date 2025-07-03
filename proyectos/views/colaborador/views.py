@@ -1,8 +1,9 @@
-from django.views.generic import ListView, CreateView, UpdateView, DetailView, FormView, View
+from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView, FormView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.http import HttpResponse
+from django.db.models import Q
 from proyectos.models import Colaborador, Bitacora
 from proyectos.forms.import_forms import ColaboradorImportForm
 import pandas as pd
@@ -15,18 +16,55 @@ class ColaboradorListView(LoginRequiredMixin, ListView):
     model = Colaborador
     template_name = 'proyectos/colaborador/list.html'
     context_object_name = 'colaboradores'
-    paginate_by = 10
+    paginate_by = 15
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Colaboradores'
+        
+        # Add filter parameters to context for maintaining state
+        context['search_query'] = self.request.GET.get('search', '')
+        context['cargo_filter'] = self.request.GET.get('cargo', '')
+        context['has_email_filter'] = self.request.GET.get('has_email', '')
+        context['has_phone_filter'] = self.request.GET.get('has_phone', '')
+        
+        # Get unique cargos for filter dropdown
+        context['unique_cargos'] = Colaborador.objects.values_list('cargo', flat=True).distinct().order_by('cargo')
+        
         return context
     
     def get_queryset(self):
         queryset = super().get_queryset()
-        print(f"DEBUG - Total colaboradores en la base de datos: {queryset.count()}")
-        for c in queryset:
-            print(f"DEBUG - Colaborador ID: {c.id}, Nombre: {c.nombre}")
+        
+        # Search functionality
+        search_query = self.request.GET.get('search')
+        if search_query:
+            queryset = queryset.filter(
+                Q(nombre__icontains=search_query) |
+                Q(cargo__icontains=search_query) |
+                Q(email__icontains=search_query) |
+                Q(telefono__icontains=search_query)
+            )
+        
+        # Filter by cargo
+        cargo_filter = self.request.GET.get('cargo')
+        if cargo_filter:
+            queryset = queryset.filter(cargo__icontains=cargo_filter)
+        
+        # Filter by email presence
+        has_email = self.request.GET.get('has_email')
+        if has_email == 'yes':
+            queryset = queryset.exclude(email='')
+        elif has_email == 'no':
+            queryset = queryset.filter(email='')
+        
+        # Filter by phone presence
+        has_phone = self.request.GET.get('has_phone')
+        if has_phone == 'yes':
+            queryset = queryset.exclude(telefono='')
+        elif has_phone == 'no':
+            queryset = queryset.filter(telefono='')
+        
         return queryset.order_by('nombre')
 
 class ColaboradorCreateView(LoginRequiredMixin, CreateView):
@@ -72,6 +110,18 @@ class ColaboradorUpdateView(LoginRequiredMixin, UpdateView):
     fields = '__all__'
     pk_url_kwarg = 'id'
     success_url = reverse_lazy('proyectos:colaborador_list')
+
+class ColaboradorDeleteView(LoginRequiredMixin, DeleteView):
+    model = Colaborador
+    template_name = 'proyectos/colaborador/confirm_delete.html'
+    context_object_name = 'colaborador'
+    pk_url_kwarg = 'id'
+    success_url = reverse_lazy('proyectos:colaborador_list')
+    
+    def delete(self, request, *args, **kwargs):
+        colaborador = self.get_object()
+        messages.success(request, f'Colaborador "{colaborador.nombre}" eliminado exitosamente.')
+        return super().delete(request, *args, **kwargs)
 
 class ColaboradorImportView(LoginRequiredMixin, FormView):
     template_name = 'proyectos/colaborador/import.html'

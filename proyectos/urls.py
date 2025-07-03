@@ -7,6 +7,7 @@ from .views import (
     ProyectoDashboardView, ColaboradorListView, ColaboradorCreateView, 
     ColaboradorDetailView, ColaboradorUpdateView
 )
+from .views.colaborador.views import ColaboradorDeleteView
 from .views.colaborador.views import ColaboradorImportView, ColaboradorPlantillaExcelView
 from .views.debug_views import debug_template_loading
 from .views.actividad.views import (
@@ -75,6 +76,7 @@ urlpatterns = [
         path('plantilla-excel/', login_required(ColaboradorPlantillaExcelView.as_view()), name='colaborador_plantilla_excel'),
         path('<int:id>/', login_required(ColaboradorDetailView.as_view()), name='colaborador_detail'),
         path('<int:id>/editar/', login_required(ColaboradorUpdateView.as_view()), name='colaborador_update'),
+        path('<int:id>/eliminar/', login_required(ColaboradorDeleteView.as_view()), name='colaborador_delete'),
     ])),
 
     # Actividades
