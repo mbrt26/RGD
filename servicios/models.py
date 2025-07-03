@@ -40,6 +40,7 @@ class SolicitudServicio(models.Model):
     TIPO_SERVICIO_CHOICES = [
         ('inspeccion', 'Visita de Inspección'),
         ('correctivo', 'Mantenimiento Correctivo'),
+        ('visita_servicio', 'Visita de Servicio'),
     ]
     
     PRIORIDAD_CHOICES = [
