@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Row, Column, Submit, Button
 from crispy_forms.bootstrap import FormActions
-from .models import User, Role, Permission
+from ..models import User, Role, Permission
 
 class CustomUserCreationForm(UserCreationForm):
     """Formulario para crear usuarios con campos adicionales."""
