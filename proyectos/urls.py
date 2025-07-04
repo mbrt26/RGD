@@ -35,9 +35,9 @@ from .views.entregable.views import (
 )
 from .views.comite.views import (
     ComiteListView, ComiteCreateView, ComiteDetailView, ComiteUpdateView,
-    ComiteActaView, ComiteExportView, ComiteIniciarView, ComiteFinalizarView,
-    SeguimientoUpdateView, gestionar_participantes_comite, duplicar_comite,
-    ajax_buscar_colaboradores
+    ComiteDeleteView, ComiteActaView, ComiteExportView, ComiteIniciarView, 
+    ComiteFinalizarView, SeguimientoUpdateView, gestionar_participantes_comite, 
+    duplicar_comite, ajax_buscar_colaboradores
 )
 from .views.prorroga.views import (
     ProrrogaListView, ProrrogaCreateView, ProrrogaDetailView, ProrrogaAprobacionView,
@@ -148,6 +148,7 @@ urlpatterns = [
         path('<int:pk>/exportar/', login_required(ComiteExportView.as_view()), name='comite_export'),
         path('<int:pk>/iniciar/', login_required(ComiteIniciarView.as_view()), name='comite_iniciar'),
         path('<int:pk>/finalizar/', login_required(ComiteFinalizarView.as_view()), name='comite_finalizar'),
+        path('<int:pk>/eliminar/', login_required(ComiteDeleteView.as_view()), name='comite_delete'),
         path('<int:comite_id>/participantes/', login_required(gestionar_participantes_comite), name='gestionar_participantes_comite'),
         path('<int:comite_id>/duplicar/', login_required(duplicar_comite), name='duplicar_comite'),
         path('seguimiento/<int:pk>/editar/', login_required(SeguimientoUpdateView.as_view()), name='seguimiento_update'),

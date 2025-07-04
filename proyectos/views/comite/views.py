@@ -590,3 +590,24 @@ class ComiteFinalizarView(LoginRequiredMixin, DetailView):
     def get(self, request, *args, **kwargs):
         # Redirigir GET requests al detalle del comité
         return redirect('proyectos:comite_detail', pk=self.kwargs['pk'])
+
+
+class ComiteDeleteView(LoginRequiredMixin, DetailView):
+    """Vista para eliminar un comité"""
+    model = ComiteProyecto
+    
+    def post(self, request, *args, **kwargs):
+        comite = self.get_object()
+        
+        try:
+            nombre = comite.nombre
+            comite.delete()
+            messages.success(request, f'El comité "{nombre}" ha sido eliminado exitosamente.')
+            return redirect('proyectos:comite_list')
+        except Exception as e:
+            messages.error(request, f'Error al eliminar el comité: {str(e)}')
+            return redirect('proyectos:comite_detail', pk=comite.pk)
+    
+    def get(self, request, *args, **kwargs):
+        # Redirigir GET requests al detalle del comité
+        return redirect('proyectos:comite_detail', pk=self.kwargs['pk'])

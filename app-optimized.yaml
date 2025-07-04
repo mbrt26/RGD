@@ -1,0 +1,82 @@
+runtime: python312
+
+service: rgd-aire
+
+# Entrypoint optimizado con un solo worker
+entrypoint: >
+  bash -c "python manage.py create_admin --settings=rgd_aire.settings_appengine \
+           && gunicorn rgd_aire.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 60 --preload"
+
+env_variables:
+  DJANGO_SETTINGS_MODULE: "rgd_aire.settings_appengine"
+  USE_CLOUD_SQL: "true"
+  DJANGO_SECRET_KEY: "RGD-Aire-2024-SuperSecure-Key-For-Production-9j8h7g6f5d4s3a2"
+  DB_NAME: "rgd_aire_db_new"
+  DB_USER: "rgd_aire_user"
+  DB_PASSWORD: "RGD2024SecureDB!"
+  CLOUD_SQL_CONNECTION_NAME: "appsindunnova:us-central1:rgd-aire-db"
+  GS_BUCKET_NAME: "appsindunnova-rgd-aire-storage"
+  DEFAULT_FROM_EMAIL: "noreply@rgdaire.com"
+  ADMIN_USERNAME: "rgd_admin"
+  ADMIN_EMAIL: "admin@rgdaire.com"
+  ADMIN_PASSWORD: "Catalina18"
+  DISABLE_MEMCACHE: "true"
+
+# Escalado automático optimizado para mínimo costo
+automatic_scaling:
+  min_instances: 0  # NO mantener instancias activas
+  max_instances: 3  # Reducir máximo
+  target_cpu_utilization: 0.85  # Usar más CPU antes de escalar
+  target_throughput_utilization: 0.85
+  min_pending_latency: 100ms  # Tolerar más latencia
+  max_pending_latency: 500ms
+  max_idle_instances: 1  # Máximo 1 instancia inactiva
+  min_idle_instances: 0  # No mantener instancias inactivas
+
+# Recursos reducidos
+resources:
+  cpu: 1
+  memory_gb: 1  # Reducido de 2GB
+  disk_size_gb: 10
+
+handlers:
+  - url: /health/?
+    script: auto
+    secure: always
+
+  - url: /static/admin
+    static_dir: staticfiles/admin
+    secure: always
+    expiration: 30d
+
+  - url: /static
+    static_dir: staticfiles
+    secure: always
+    expiration: 30d
+    http_headers:
+      Cache-Control: "public, max-age=2592000"
+
+  - url: /media
+    static_dir: media
+    secure: always
+    expiration: 7d
+
+  - url: /.*
+    script: auto
+    secure: always
+
+# Health checks menos frecuentes
+readiness_check:
+  path: "/health/"
+  check_interval_sec: 10
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+  app_start_timeout_sec: 300
+
+liveness_check:
+  path: "/health/"
+  check_interval_sec: 60
+  timeout_sec: 4
+  failure_threshold: 4
+  success_threshold: 2

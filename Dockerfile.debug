@@ -1,0 +1,59 @@
+# Dockerfile optimizado para Cloud Run (máximo ahorro) - VERSION DEBUG
+FROM python:3.12-slim
+
+# Variables de entorno
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=8080
+
+# Instalar solo dependencias esenciales
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copiar y instalar dependencias Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiar código
+COPY . .
+
+# DEBUG: Verificar que static/ se copió
+RUN echo "=== Checking /app directory ===" && \
+    ls -la /app/ && \
+    echo "=== Checking if static exists ===" && \
+    ls -la /app/static/ || echo "ERROR: /app/static/ not found!" && \
+    echo "=== Checking static/images ===" && \
+    ls -la /app/static/images/ || echo "ERROR: /app/static/images/ not found!"
+
+# Configurar variables de entorno para el build
+ENV GOOGLE_CLOUD_PROJECT=appsindunnova \
+    DJANGO_SECRET_KEY=temp-build-key \
+    GS_BUCKET_NAME=temp-bucket \
+    DJANGO_SETTINGS_MODULE=rgd_aire.settings_appengine \
+    PYTHONPATH=/app
+
+# Recopilar archivos estáticos
+RUN python manage.py collectstatic --noinput --verbosity 3
+
+# DEBUG: Verificar resultado de collectstatic
+RUN echo "=== After collectstatic ===" && \
+    ls -la /app/staticfiles/ && \
+    echo "=== staticfiles/images ===" && \
+    ls -la /app/staticfiles/images/ || echo "ERROR: No images collected!"
+
+# Crear usuario no-root para seguridad
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Comando
+CMD exec gunicorn rgd_aire.wsgi:application \
+    --bind 0.0.0.0:$PORT \
+    --workers 1 \
+    --threads 4 \
+    --timeout 0 \
+    --access-logfile - \
+    --error-logfile -

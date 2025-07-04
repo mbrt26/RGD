@@ -19,6 +19,9 @@ venv/
 env/
 .venv/
 .env/
+venv_local/
+ENV/
+virtualenv/
 
 # Control de versiones
 .git/
@@ -65,3 +68,10 @@ app.yaml.backup
 migrate.sh
 update_*.py
 *.ds
+
+# Archivos de despliegue no necesarios en Cloud Run
+deploy*.sh
+optimize-cloudsql.sh
+app.yaml
+app-optimized.yaml
+Dockerfile.dev

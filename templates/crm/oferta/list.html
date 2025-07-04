@@ -2,112 +2,197 @@
 
 {% block title %}Lista de Ofertas{% endblock %}
 
-{% block content %}
-<div class="card">
-    <div class="card-header">
-        <div class="row align-items-center">
-            <div class="col">
-                <h3 class="card-title mb-0">Lista de Ofertas</h3>
-            </div>
-            <div class="col-auto">
-                <a href="{% url 'crm:cotizacion_create' %}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Nuevo
-                </a>
-            </div>
-        </div>
+{% block actions %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="btn-group">
+        <a href="{% url 'crm:cotizacion_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> Nueva Oferta
+        </a>
+        <button type="button" class="btn btn-outline-secondary" disabled>
+            <i class="fas fa-filter me-1"></i> Filtros (Activos)
+        </button>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table id="dataTable" class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th># Oferta</th>
-                        <th>Versión</th>
-                        <th>Cliente</th>
-                        <th>Proyecto</th>
-                        <th>Fecha</th>
-                        <th>Valor</th>
-                        <th>Creado por</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for version in version_list %}
-                    <tr>
-                        <td>
-                            {% if version.cotizacion.trato %}
-                                <a href="{% url 'crm:trato_detail' version.cotizacion.trato.id %}">
-                                    #{{ version.cotizacion.trato.numero_oferta }}
-                                </a>
-                            {% else %}
-                                <a href="{% url 'crm:cotizacion_detail' version.cotizacion.id %}">
-                                    COT-{{ version.cotizacion.id }}
-                                </a>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="badge bg-primary">
-                                v{{ version.version }}
-                            </span>
-                        </td>
-                        <td>{{ version.cotizacion.cliente.nombre|default:'N/A' }}</td>
-                        <td>
-                            {% if version.cotizacion.trato and version.cotizacion.trato.nombre %}
-                                {{ version.cotizacion.trato.nombre }}
-                            {% elif version.cotizacion.trato and version.cotizacion.trato.nombre_proyecto %}
-                                {{ version.cotizacion.trato.nombre_proyecto }}
-                            {% else %}
-                                <span class="text-muted">Sin proyecto</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ version.fecha_creacion|date:"d/m/Y H:i" }}</td>
-                        <td>
-                            {% if version.cotizacion.estado == 'borrador' %}
-                                <span class="badge bg-warning text-dark">
-                                    {{ version.cotizacion.get_estado_display|default:'Pendiente' }}
-                                </span>
-                            {% elif version.cotizacion.estado == 'enviada' %}
-                                <span class="badge bg-info">
-                                    {{ version.cotizacion.get_estado_display|default:'Pendiente' }}
-                                </span>
-                            {% elif version.cotizacion.estado == 'aceptada' %}
-                                <span class="badge bg-success">
-                                    {{ version.cotizacion.get_estado_display|default:'Pendiente' }}
-                                </span>
-                            {% elif version.cotizacion.estado == 'rechazada' %}
-                                <span class="badge bg-danger">
-                                    {{ version.cotizacion.get_estado_display|default:'Pendiente' }}
-                                </span>
-                            {% else %}
-                                <span class="badge bg-secondary">
-                                    {{ version.cotizacion.get_estado_display|default:'Pendiente' }}
-                                </span>
-                            {% endif %}
-                        </td>
-                        <td>${{ version.valor|default:'0.00'|floatformat:2 }}</td>
-                        <td>{{ version.creado_por.get_full_name|default:version.creado_por.username|default:'N/A' }}</td>
-                        <td>
-                            <a href="{% url 'crm:cotizacion_detail' version.cotizacion.id %}" class="btn btn-sm btn-info" title="Ver Cotización">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            {% if version.archivo %}
-                            <a href="{{ version.archivo.url }}" class="btn btn-sm btn-success" title="Descargar Archivo" target="_blank">
-                                <i class="fas fa-download"></i>
-                            </a>
-                            {% endif %}
-                            <a href="{% url 'crm:cotizacion_update' version.cotizacion.id %}" class="btn btn-sm btn-primary" title="Editar Cotización">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="8" class="text-center">No hay ofertas registradas.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+</div>
+{% endblock %}
+
+{% block extra_content %}
+<!-- Panel de Filtros -->
+<div class="mb-3" id="filtrosCollapse">
+    <div class="card">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros de Búsqueda</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <!-- Búsqueda general -->
+                <div class="col-md-3">
+                    <label class="form-label">Búsqueda General</label>
+                    <input type="text" name="q" class="form-control" placeholder="# Oferta, Cliente, Proyecto..." value="{{ filtros.q }}">
+                </div>
+                
+                <!-- Cliente -->
+                <div class="col-md-3">
+                    <label class="form-label">Cliente</label>
+                    <select name="cliente" class="form-select">
+                        <option value="">Todos los clientes</option>
+                        {% for cliente in clientes %}
+                        <option value="{{ cliente.id }}" {% if filtros.cliente == cliente.id|stringformat:"s" %}selected{% endif %}>
+                            {{ cliente.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Proyecto CRM -->
+                <div class="col-md-3">
+                    <label class="form-label">Proyecto CRM</label>
+                    <select name="trato" class="form-select">
+                        <option value="">Todos los proyectos</option>
+                        {% for trato in tratos %}
+                        <option value="{{ trato.id }}" {% if filtros.trato == trato.id|stringformat:"s" %}selected{% endif %}>
+                            #{{ trato.numero_oferta }} - {{ trato.nombre|default:trato.descripcion|truncatewords:4 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Estado del Proyecto -->
+                <div class="col-md-3">
+                    <label class="form-label">Estado del Proyecto</label>
+                    <select name="estado_trato" class="form-select">
+                        <option value="">Todos los estados</option>
+                        {% for estado_code, estado_name in estados %}
+                        <option value="{{ estado_code }}" {% if filtros.estado_trato == estado_code %}selected{% endif %}>
+                            {{ estado_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Creado por -->
+                <div class="col-md-3">
+                    <label class="form-label">Creado por</label>
+                    <select name="creado_por" class="form-select">
+                        <option value="">Todos los usuarios</option>
+                        {% for creador in creadores %}
+                        <option value="{{ creador.id }}" {% if filtros.creado_por == creador.id|stringformat:"s" %}selected{% endif %}>
+                            {{ creador.get_full_name|default:creador.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Fecha de creación -->
+                <div class="col-md-3">
+                    <label class="form-label">Fecha de Creación</label>
+                    <div class="input-group">
+                        <input type="date" name="fecha_desde" class="form-control" value="{{ filtros.fecha_desde }}">
+                        <span class="input-group-text">-</span>
+                        <input type="date" name="fecha_hasta" class="form-control" value="{{ filtros.fecha_hasta }}">
+                    </div>
+                </div>
+                
+                <!-- Botones -->
+                <div class="col-12">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i> Filtrar
+                        </button>
+                        <a href="{% url 'crm:cotizacion_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i> Limpiar
+                        </a>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block table_header %}
+    <th># Oferta</th>
+    <th>Versión</th>
+    <th>Cliente</th>
+    <th>Proyecto</th>
+    <th>Fecha</th>
+    <th>Estado</th>
+    <th>Valor</th>
+    <th>Creado por</th>
+    <th>Acciones</th>
+{% endblock %}
+
+{% block table_body %}
+    {% for version in version_list %}
+    <tr>
+        <td>
+            {% if version.cotizacion.trato %}
+                <a href="{% url 'crm:trato_detail' version.cotizacion.trato.id %}">
+                    #{{ version.cotizacion.trato.numero_oferta }}
+                </a>
+            {% else %}
+                <a href="{% url 'crm:cotizacion_detail' version.cotizacion.id %}">
+                    COT-{{ version.cotizacion.id }}
+                </a>
+            {% endif %}
+        </td>
+        <td>
+            <span class="badge bg-primary">
+                v{{ version.version }}
+            </span>
+        </td>
+        <td>{{ version.cotizacion.cliente.nombre|default:'N/A' }}</td>
+        <td>
+            {% if version.cotizacion.trato and version.cotizacion.trato.nombre %}
+                {{ version.cotizacion.trato.nombre }}
+            {% elif version.cotizacion.trato and version.cotizacion.trato.nombre_proyecto %}
+                {{ version.cotizacion.trato.nombre_proyecto }}
+            {% else %}
+                <span class="text-muted">Sin proyecto</span>
+            {% endif %}
+        </td>
+        <td>{{ version.fecha_creacion|date:"d/m/Y H:i" }}</td>
+        <td>
+            {% if version.cotizacion.estado == 'borrador' %}
+                <span class="badge bg-warning text-dark">
+                    {{ version.cotizacion.get_estado_display|default:'Pendiente' }}
+                </span>
+            {% elif version.cotizacion.estado == 'enviada' %}
+                <span class="badge bg-info">
+                    {{ version.cotizacion.get_estado_display|default:'Pendiente' }}
+                </span>
+            {% elif version.cotizacion.estado == 'aceptada' %}
+                <span class="badge bg-success">
+                    {{ version.cotizacion.get_estado_display|default:'Pendiente' }}
+                </span>
+            {% elif version.cotizacion.estado == 'rechazada' %}
+                <span class="badge bg-danger">
+                    {{ version.cotizacion.get_estado_display|default:'Pendiente' }}
+                </span>
+            {% else %}
+                <span class="badge bg-secondary">
+                    {{ version.cotizacion.get_estado_display|default:'Pendiente' }}
+                </span>
+            {% endif %}
+        </td>
+        <td>${{ version.valor|default:'0.00'|floatformat:2 }}</td>
+        <td>{{ version.creado_por.get_full_name|default:version.creado_por.username|default:'N/A' }}</td>
+        <td>
+            <a href="{% url 'crm:cotizacion_detail' version.cotizacion.id %}" class="btn btn-sm btn-info" title="Ver Cotización">
+                <i class="fas fa-eye"></i>
+            </a>
+            {% if version.archivo %}
+            <a href="{{ version.archivo.url }}" class="btn btn-sm btn-success" title="Descargar Archivo" target="_blank">
+                <i class="fas fa-download"></i>
+            </a>
+            {% endif %}
+            <a href="{% url 'crm:cotizacion_update' version.cotizacion.id %}" class="btn btn-sm btn-primary" title="Editar Cotización">
+                <i class="fas fa-edit"></i>
+            </a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="9" class="text-center">No hay ofertas registradas.</td>
+    </tr>
+    {% endfor %}
 {% endblock %}

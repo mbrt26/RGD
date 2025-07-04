@@ -13,6 +13,7 @@ from django.contrib.auth import views as auth_views
 from proyectos.api.views import actividad_detail_api
 from django.http import HttpResponse
 import os
+from .debug_whitenoise import debug_whitenoise
 
 # Health check endpoint para App Engine
 def health_check(request):
@@ -39,6 +40,7 @@ def health_check(request):
 urlpatterns = [
     # Health check para App Engine (debe estar primero)
     path('health/', health_check, name='health_check'),
+    path('debug-whitenoise/', debug_whitenoise, name='debug_whitenoise'),
     
     # URLs principales de la aplicación
     path('', RedirectView.as_view(url='/crm/', permanent=True), name='home'),

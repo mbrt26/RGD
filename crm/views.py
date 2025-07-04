@@ -524,11 +524,59 @@ class CotizacionListView(LoginRequiredMixin, ListView):
     add_url = 'crm:cotizacion_create'
     
     def get_queryset(self):
-        return VersionCotizacion.objects.select_related(
+        queryset = VersionCotizacion.objects.select_related(
             'cotizacion__cliente', 
             'cotizacion__trato',
             'creado_por'
         ).order_by('-fecha_creacion')
+        
+        # Filtro de búsqueda general
+        search_query = self.request.GET.get('q')
+        if search_query:
+            queryset = queryset.filter(
+                Q(numero_version__icontains=search_query) |
+                Q(cotizacion__cliente__nombre__icontains=search_query) |
+                Q(cotizacion__trato__nombre__icontains=search_query) |
+                Q(cotizacion__trato__numero_oferta__icontains=search_query) |
+                Q(descripcion__icontains=search_query)
+            )
+        
+        # Filtro por cliente
+        cliente_id = self.request.GET.get('cliente')
+        if cliente_id:
+            queryset = queryset.filter(cotizacion__cliente_id=cliente_id)
+        
+        # Filtro por proyecto CRM
+        trato_id = self.request.GET.get('trato')
+        if trato_id:
+            queryset = queryset.filter(cotizacion__trato_id=trato_id)
+        
+        # Filtro por estado de proyecto
+        estado_trato = self.request.GET.get('estado_trato')
+        if estado_trato:
+            queryset = queryset.filter(cotizacion__trato__estado=estado_trato)
+        
+        # Filtro por rango de fecha
+        fecha_desde = self.request.GET.get('fecha_desde')
+        if fecha_desde:
+            try:
+                queryset = queryset.filter(fecha_creacion__gte=fecha_desde)
+            except ValueError:
+                pass
+        
+        fecha_hasta = self.request.GET.get('fecha_hasta')
+        if fecha_hasta:
+            try:
+                queryset = queryset.filter(fecha_creacion__lte=fecha_hasta)
+            except ValueError:
+                pass
+        
+        # Filtro por creador
+        creado_por_id = self.request.GET.get('creado_por')
+        if creado_por_id:
+            queryset = queryset.filter(creado_por_id=creado_por_id)
+        
+        return queryset
         
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -536,6 +584,26 @@ class CotizacionListView(LoginRequiredMixin, ListView):
         # Asegurar que add_url esté disponible tanto directamente como dentro de view
         context['view'] = {'add_url': self.add_url}
         context['add_url'] = self.add_url
+        
+        # Agregar datos para filtros
+        context['clientes'] = Cliente.objects.all().order_by('nombre')
+        context['tratos'] = Trato.objects.all().order_by('-numero_oferta')
+        context['estados'] = Trato.ESTADO_CHOICES
+        context['creadores'] = get_user_model().objects.filter(
+            versioncotizacion__isnull=False
+        ).distinct().order_by('first_name', 'last_name')
+        
+        # Mantener filtros seleccionados
+        context['filtros'] = {
+            'q': self.request.GET.get('q', ''),
+            'cliente': self.request.GET.get('cliente', ''),
+            'trato': self.request.GET.get('trato', ''),
+            'estado_trato': self.request.GET.get('estado_trato', ''),
+            'fecha_desde': self.request.GET.get('fecha_desde', ''),
+            'fecha_hasta': self.request.GET.get('fecha_hasta', ''),
+            'creado_por': self.request.GET.get('creado_por', ''),
+        }
+        
         return context
 
 class CotizacionCreateView(LoginRequiredMixin, CreateView):
@@ -1195,13 +1263,24 @@ class TratoUpdateView(LoginRequiredMixin, UpdateView):
         try:
             response = super().form_valid(form)
             
-            # Si se marca como ganado y se crea un proyecto, mostrar mensaje de éxito
-            if form.instance.estado == 'ganado' and hasattr(form.instance, 'proyecto'):
-                messages.success(
-                    self.request, 
-                    f'Trato marcado como ganado exitosamente. '
-                    f'Se ha creado automáticamente el proyecto: {form.instance.proyecto.nombre_proyecto}'
-                )
+            # Si se marca como ganado, mostrar mensaje apropiado
+            if form.instance.estado == 'ganado':
+                # Verificar si se creó un proyecto
+                if hasattr(form.instance, 'proyecto'):
+                    messages.success(
+                        self.request, 
+                        f'Trato marcado como ganado exitosamente. '
+                        f'Se ha creado automáticamente el proyecto: {form.instance.proyecto.nombre_proyecto}'
+                    )
+                # Verificar si se creó una solicitud de servicio
+                elif form.instance.tipo_negociacion in ['control', 'servicios', 'mantenimiento', 'filtros']:
+                    messages.success(
+                        self.request, 
+                        f'Trato marcado como ganado exitosamente. '
+                        f'Se ha creado automáticamente una solicitud de servicio.'
+                    )
+                else:
+                    messages.success(self.request, 'Trato marcado como ganado exitosamente.')
             else:
                 messages.success(self.request, 'Trato actualizado exitosamente.')
             

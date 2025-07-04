@@ -21,6 +21,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar código
 COPY . .
 
+# Verificar que los archivos se copiaron correctamente
+RUN echo "=== Files in /app ===" && ls -la /app/ | head -20
+
 # Configurar variables de entorno para el build
 ENV GOOGLE_CLOUD_PROJECT=appsindunnova \
     DJANGO_SECRET_KEY=temp-build-key \

@@ -52,8 +52,8 @@ def trato_post_save_handler(sender, instance, created, **kwargs):
                 if instance.tipo_negociacion in ['contrato', 'diseno']:
                     crear_proyecto_desde_trato(instance)
                 
-                # Crear solicitud de servicio si el tipo de negociación es 'control' o 'servicios'
-                elif instance.tipo_negociacion in ['control', 'servicios']:
+                # Crear solicitud de servicio si el tipo de negociación es 'control', 'servicios', 'mantenimiento' o 'filtros'
+                elif instance.tipo_negociacion in ['control', 'servicios', 'mantenimiento', 'filtros']:
                     crear_solicitud_servicio_desde_trato(instance)
                     
             except Exception as e:
@@ -244,7 +244,10 @@ def crear_solicitud_servicio_desde_trato(trato):
     # Cotización aprobada (si existe una versión de cotización activa/aprobada para este trato)
     try:
         # Buscar la cotización más reciente del trato
-        cotizacion_activa = trato.versiones_cotizacion.order_by('-fecha_creacion').first()
+        from crm.models import VersionCotizacion
+        cotizacion_activa = VersionCotizacion.objects.filter(
+            cotizacion__trato=trato
+        ).order_by('-fecha_creacion').first()
         if cotizacion_activa:
             datos_solicitud['cotizacion_aprobada'] = cotizacion_activa
     except Exception as e:
@@ -274,7 +277,11 @@ def crear_solicitud_servicio_desde_trato(trato):
     if trato.tipo_negociacion == 'control':
         datos_solicitud['tipo_servicio'] = 'inspeccion'  # Control se mapea a Visita de Inspección
     elif trato.tipo_negociacion == 'servicios':
-        datos_solicitud['tipo_servicio'] = 'correctivo'  # Servicios se mapea a Mantenimiento Correctivo
+        datos_solicitud['tipo_servicio'] = 'visita_servicio'  # Servicios se mapea a Visita de Servicio
+    elif trato.tipo_negociacion == 'mantenimiento':
+        datos_solicitud['tipo_servicio'] = 'correctivo'  # Mantenimiento se mapea a Mantenimiento Correctivo
+    elif trato.tipo_negociacion == 'filtros':
+        datos_solicitud['tipo_servicio'] = 'visita_servicio'  # Filtros se mapea a Visita de Servicio
     else:
         datos_solicitud['tipo_servicio'] = 'correctivo'  # Por defecto
     
