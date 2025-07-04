@@ -18,19 +18,24 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 if not SECRET_KEY:
     raise ValueError("DJANGO_SECRET_KEY debe estar definido en las variables de entorno")
 
-# Hosts permitidos para App Engine
+# Hosts permitidos para App Engine y Cloud Run
 ALLOWED_HOSTS = [
     '.appspot.com',   # Dominio de App Engine
     '.googleapis.com',
     'localhost',
     '127.0.0.1',
-    'rgd-aire-dot-appsindunnova.rj.r.appspot.com',  # URL específica de la aplicación
+    'rgd-aire-dot-appsindunnova.rj.r.appspot.com',  # URL específica de App Engine
+    '.run.app',  # Dominio de Cloud Run
+    'rgd-aire-ovihj2yjrq-uc.a.run.app',  # URL específica de Cloud Run
+    '*',  # Temporalmente para debugging (quitar en producción)
 ]
 
-# Configuración CSRF específica para App Engine
+# Configuración CSRF específica para App Engine y Cloud Run
 CSRF_TRUSTED_ORIGINS = [
     'https://*.appspot.com',
     'https://rgd-aire-dot-appsindunnova.rj.r.appspot.com',
+    'https://*.run.app',
+    'https://rgd-aire-ovihj2yjrq-uc.a.run.app',
 ]
 
 # Configuraciones adicionales de CSRF para App Engine
@@ -76,26 +81,35 @@ else:
         }
     }
 
-# Configuración de Google Cloud Storage
+# Configuración de archivos estáticos con WhiteNoise (más económico para Cloud Run)
+# WhiteNoise sirve archivos estáticos directamente desde el contenedor
+# (WhiteNoise ya está configurado en la lista MIDDLEWARE más abajo)
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+WHITENOISE_AUTOREFRESH = False
+WHITENOISE_COMPRESS_OFFLINE = True
+WHITENOISE_MAX_AGE = 31536000  # 1 año de cache
+
+# URLs y directorios para archivos estáticos
+STATIC_URL = '/static/'
+# Ensure BASE_DIR is a string for os.path.join compatibility
+STATIC_ROOT = os.path.join(str(BASE_DIR), 'staticfiles')
+STATICFILES_DIRS = [os.path.join(str(BASE_DIR), 'static')]
+
+# Configuración de Google Cloud Storage SOLO para archivos de media (uploads)
 GS_BUCKET_NAME = os.environ.get('GS_BUCKET_NAME')
 if not GS_BUCKET_NAME:
     raise ValueError("GS_BUCKET_NAME debe estar definido en las variables de entorno")
 
 # En App Engine, las credenciales de GCS se manejan automáticamente
 DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
-STATICFILES_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
 
 GS_PROJECT_ID = PROJECT_ID
 GS_DEFAULT_ACL = 'publicRead'
 GS_QUERYSTRING_AUTH = False
 GS_FILE_OVERWRITE = False
 
-# URLs para archivos en GCS
-STATIC_URL = f'https://storage.googleapis.com/{GS_BUCKET_NAME}/static/'
+# URL para archivos de media en GCS
 MEDIA_URL = f'https://storage.googleapis.com/{GS_BUCKET_NAME}/media/'
-
-# Configuración de archivos estáticos local (para collectstatic)
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Configuración de seguridad para App Engine
 SECURE_SSL_REDIRECT = True
@@ -194,6 +208,7 @@ USE_TZ = True
 # Middleware optimizado para App Engine
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Debe ir después de SecurityMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
