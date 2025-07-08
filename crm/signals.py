@@ -231,7 +231,7 @@ def crear_solicitud_servicio_desde_trato(trato):
     logger.info(f"[SERVICIO] Iniciando creación de solicitud para Trato {trato.id} - tipo: {trato.tipo_negociacion}")
     
     # 1. Verificar si ya existe una solicitud de servicio para este trato
-    if SolicitudServicio.objects.filter(numero_orden__icontains=str(trato.numero_oferta)).exists():
+    if SolicitudServicio.objects.filter(trato_origen=trato).exists():
         mensaje = f"⚠️ Ya existe una solicitud de servicio asociada al trato #{trato.numero_oferta}. No se creará una nueva solicitud."
         logger.warning(mensaje)
         return False, mensaje, None
@@ -288,9 +288,9 @@ def crear_solicitud_servicio_desde_trato(trato):
         campos_faltantes.append('Dirección del Servicio')
     
     # 3. Configurar datos específicos de la solicitud de servicio
-    # Generar número de orden único
-    timestamp = timezone.now().strftime('%Y%m%d%H%M%S')
-    datos_solicitud['numero_orden'] = f"SRV-{trato.numero_oferta}-{timestamp}"
+    # Generar número de orden único (máximo 20 caracteres)
+    # No asignar numero_orden para que se genere automáticamente en el modelo
+    # datos_solicitud['numero_orden'] se generará automáticamente como FS{año}{numero}
     
     # Determinar tipo de servicio basado en el tipo de negociación
     if trato.tipo_negociacion == 'control':
