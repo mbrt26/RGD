@@ -20,6 +20,8 @@ def trato_pre_save_handler(sender, instance, **kwargs):
     Signal que se ejecuta antes de guardar un Trato.
     Guarda el estado anterior para comparar en post_save y valida campos obligatorios.
     """
+    logger.info(f"[SIGNAL-PRE] pre_save - Trato ID: {instance.id if instance.id else 'NEW'}, estado: {instance.estado}, centro_costos: {instance.centro_costos}")
+    
     # Validar centro de costos si se está marcando como ganado
     if instance.estado == 'ganado' and not instance.centro_costos:
         raise ValidationError(
@@ -62,8 +64,12 @@ def trato_post_save_handler(sender, instance, created, **kwargs):
                 # Crear solicitud de servicio si el tipo de negociación es 'control' o 'servicios'
                 elif instance.tipo_negociacion in ['control', 'servicios']:
                     logger.info(f"[SIGNAL] Creando solicitud de servicio para Trato {instance.id}")
-                    success, message, solicitud = crear_solicitud_servicio_desde_trato(instance)
-                    logger.info(f"[SIGNAL] Resultado servicio - Success: {success}, Message: {message}")
+                    resultado = crear_solicitud_servicio_desde_trato(instance)
+                    if resultado:
+                        success, message, solicitud = resultado
+                        logger.info(f"[SIGNAL] Resultado servicio - Success: {success}, Message: {message}")
+                    else:
+                        logger.error(f"[SIGNAL] crear_solicitud_servicio_desde_trato retornó None para Trato {instance.id}")
                 else:
                     logger.warning(f"[SIGNAL] Tipo de negociación '{instance.tipo_negociacion}' no reconocido para Trato {instance.id}")
                     
