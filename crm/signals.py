@@ -41,23 +41,34 @@ def trato_post_save_handler(sender, instance, created, **kwargs):
     Signal que se ejecuta después de guardar un Trato.
     Crea automáticamente un proyecto cuando un trato cambia a estado 'ganado'.
     """
+    logger.info(f"[SIGNAL] post_save - Trato ID: {instance.id}, created: {created}, estado: {instance.estado}, tipo_negociacion: {instance.tipo_negociacion}")
+    
     # Solo procesar si el trato cambió a 'ganado' y no es una creación nueva
     if not created and instance.estado == 'ganado':
         estado_anterior = getattr(instance, '_estado_anterior', None)
+        logger.info(f"[SIGNAL] Trato {instance.id} - Estado anterior: {estado_anterior}, Estado actual: {instance.estado}")
         
         # Solo procesar si cambió de otro estado a 'ganado'
         if estado_anterior and estado_anterior != 'ganado':
+            logger.info(f"[SIGNAL] Procesando cambio a 'ganado' para Trato {instance.id} con tipo_negociacion: {instance.tipo_negociacion}")
+            
             try:
                 # Crear proyecto si el tipo de negociación es 'contrato' o 'diseno'
                 if instance.tipo_negociacion in ['contrato', 'diseno']:
-                    crear_proyecto_desde_trato(instance)
+                    logger.info(f"[SIGNAL] Creando proyecto para Trato {instance.id}")
+                    success, message, proyecto = crear_proyecto_desde_trato(instance)
+                    logger.info(f"[SIGNAL] Resultado proyecto - Success: {success}, Message: {message}")
                 
-                # Crear solicitud de servicio si el tipo de negociación es 'control', 'servicios', 'mantenimiento' o 'filtros'
-                elif instance.tipo_negociacion in ['control', 'servicios', 'mantenimiento', 'filtros']:
-                    crear_solicitud_servicio_desde_trato(instance)
+                # Crear solicitud de servicio si el tipo de negociación es 'control' o 'servicios'
+                elif instance.tipo_negociacion in ['control', 'servicios']:
+                    logger.info(f"[SIGNAL] Creando solicitud de servicio para Trato {instance.id}")
+                    success, message, solicitud = crear_solicitud_servicio_desde_trato(instance)
+                    logger.info(f"[SIGNAL] Resultado servicio - Success: {success}, Message: {message}")
+                else:
+                    logger.warning(f"[SIGNAL] Tipo de negociación '{instance.tipo_negociacion}' no reconocido para Trato {instance.id}")
                     
             except Exception as e:
-                logger.error(f"Error al crear proyecto/solicitud desde trato {instance.id}: {str(e)}")
+                logger.error(f"[SIGNAL] Error al crear proyecto/solicitud desde trato {instance.id}: {str(e)}", exc_info=True)
 
 def crear_proyecto_desde_trato(trato):
     """
@@ -211,6 +222,8 @@ def crear_solicitud_servicio_desde_trato(trato):
     Returns:
         tuple: (success: bool, message: str, solicitud: SolicitudServicio|None)
     """
+    logger.info(f"[SERVICIO] Iniciando creación de solicitud para Trato {trato.id} - tipo: {trato.tipo_negociacion}")
+    
     # 1. Verificar si ya existe una solicitud de servicio para este trato
     if SolicitudServicio.objects.filter(numero_orden__icontains=str(trato.numero_oferta)).exists():
         mensaje = f"⚠️ Ya existe una solicitud de servicio asociada al trato #{trato.numero_oferta}. No se creará una nueva solicitud."
@@ -244,12 +257,12 @@ def crear_solicitud_servicio_desde_trato(trato):
     # Cotización aprobada (si existe una versión de cotización activa/aprobada para este trato)
     try:
         # Buscar la cotización más reciente del trato
-        from crm.models import VersionCotizacion
-        cotizacion_activa = VersionCotizacion.objects.filter(
-            cotizacion__trato=trato
-        ).order_by('-fecha_creacion').first()
-        if cotizacion_activa:
-            datos_solicitud['cotizacion_aprobada'] = cotizacion_activa
+        cotizacion = trato.cotizaciones.order_by('-fecha_creacion').first()
+        if cotizacion:
+            # Obtener la versión más reciente de la cotización
+            version_activa = cotizacion.versiones.order_by('-version').first()
+            if version_activa:
+                datos_solicitud['cotizacion_aprobada'] = version_activa
     except Exception as e:
         logger.warning(f"No se pudo asignar cotización al servicio para trato {trato.id}: {str(e)}")
     
@@ -277,11 +290,7 @@ def crear_solicitud_servicio_desde_trato(trato):
     if trato.tipo_negociacion == 'control':
         datos_solicitud['tipo_servicio'] = 'inspeccion'  # Control se mapea a Visita de Inspección
     elif trato.tipo_negociacion == 'servicios':
-        datos_solicitud['tipo_servicio'] = 'visita_servicio'  # Servicios se mapea a Visita de Servicio
-    elif trato.tipo_negociacion == 'mantenimiento':
-        datos_solicitud['tipo_servicio'] = 'correctivo'  # Mantenimiento se mapea a Mantenimiento Correctivo
-    elif trato.tipo_negociacion == 'filtros':
-        datos_solicitud['tipo_servicio'] = 'visita_servicio'  # Filtros se mapea a Visita de Servicio
+        datos_solicitud['tipo_servicio'] = 'correctivo'  # Servicios se mapea a Mantenimiento Correctivo
     else:
         datos_solicitud['tipo_servicio'] = 'correctivo'  # Por defecto
     
