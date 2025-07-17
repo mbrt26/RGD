@@ -2498,3 +2498,106 @@ class ConfiguracionOfertaView(LoginRequiredMixin, FormView):
             messages.error(self.request, f'Error al actualizar la configuración: {str(e)}')
         
         return super().form_valid(form)
+
+
+class TratoKanbanView(LoginRequiredMixin, TemplateView):
+    """Vista Kanban para gestionar tratos con drag & drop"""
+    template_name = 'crm/trato/kanban.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Obtener todos los tratos agrupados por estado
+        tratos = Trato.objects.select_related('cliente', 'contacto', 'responsable').all()
+        
+        # Aplicar filtros si existen
+        search = self.request.GET.get('search', '')
+        if search:
+            tratos = tratos.filter(
+                Q(nombre__icontains=search) |
+                Q(cliente__nombre__icontains=search) |
+                Q(numero_oferta__icontains=search) |
+                Q(descripcion__icontains=search)
+            )
+        
+        responsable_id = self.request.GET.get('responsable')
+        if responsable_id:
+            tratos = tratos.filter(responsable_id=responsable_id)
+        
+        tipo_negociacion = self.request.GET.get('tipo_negociacion')
+        if tipo_negociacion:
+            tratos = tratos.filter(tipo_negociacion=tipo_negociacion)
+        
+        # Agrupar tratos por estado
+        estados_tratos = {}
+        for estado_code, estado_name in Trato.ESTADO_CHOICES:
+            estados_tratos[estado_code] = {
+                'nombre': estado_name,
+                'tratos': tratos.filter(estado=estado_code).order_by('-fecha_creacion'),
+                'total_valor': tratos.filter(estado=estado_code).aggregate(
+                    total=Sum('valor'))['total'] or 0,
+                'count': tratos.filter(estado=estado_code).count()
+            }
+        
+        context.update({
+            'estados_tratos': estados_tratos,
+            'total_tratos': tratos.count(),
+            'total_valor': tratos.aggregate(total=Sum('valor'))['total'] or 0,
+            'responsables': get_user_model().objects.filter(tratos__isnull=False).distinct(),
+            'tipos_negociacion': Trato.TIPO_CHOICES,
+            'search_query': search,
+            'responsable_selected': responsable_id,
+            'tipo_selected': tipo_negociacion,
+        })
+        
+        return context
+
+
+class TratoKanbanUpdateView(LoginRequiredMixin, View):
+    """Vista AJAX para actualizar el estado de un trato en el Kanban"""
+    
+    def post(self, request, *args, **kwargs):
+        try:
+            trato_id = request.POST.get('trato_id')
+            nuevo_estado = request.POST.get('nuevo_estado')
+            
+            if not trato_id or not nuevo_estado:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Faltan parámetros requeridos'
+                })
+            
+            # Validar que el estado sea válido
+            estados_validos = [estado[0] for estado in Trato.ESTADO_CHOICES]
+            if nuevo_estado not in estados_validos:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Estado no válido'
+                })
+            
+            # Obtener y actualizar el trato
+            trato = get_object_or_404(Trato, id=trato_id)
+            estado_anterior = trato.estado
+            trato.estado = nuevo_estado
+            
+            # Si se marca como ganado o perdido, establecer fecha de cierre
+            if nuevo_estado in ['ganado', 'perdido', 'cancelado'] and not trato.fecha_cierre:
+                trato.fecha_cierre = timezone.now().date()
+            
+            trato.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Trato #{trato.numero_oferta} movido de "{dict(Trato.ESTADO_CHOICES)[estado_anterior]}" a "{dict(Trato.ESTADO_CHOICES)[nuevo_estado]}"',
+                'trato_id': trato.id,
+                'nuevo_estado': nuevo_estado,
+                'estado_anterior': estado_anterior,
+                'trato_numero': trato.numero_oferta,
+                'trato_nombre': str(trato)
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al actualizar el trato: {str(e)}'
+            })

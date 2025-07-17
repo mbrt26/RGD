@@ -1,0 +1,482 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Kanban de Tratos{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kanban-board {
+        display: flex;
+        overflow-x: auto;
+        padding: 1rem 0;
+        gap: 1rem;
+        min-height: 70vh;
+    }
+    
+    .kanban-column {
+        flex: 0 0 300px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        height: fit-content;
+        min-height: 500px;
+    }
+    
+    .kanban-header {
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        background: #fff;
+        border-radius: 8px 8px 0 0;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .kanban-body {
+        padding: 0.5rem;
+        min-height: 400px;
+    }
+    
+    .kanban-card {
+        background: #fff;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 0.5rem;
+        padding: 0.75rem;
+        cursor: grab;
+        transition: all 0.2s;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .kanban-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        transform: translateY(-1px);
+    }
+    
+    .kanban-card.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+        transform: rotate(5deg);
+    }
+    
+    .kanban-column.drag-over {
+        background: #e3f2fd;
+        border-color: #2196f3;
+    }
+    
+    .card-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .card-title {
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin: 0;
+        color: #495057;
+    }
+    
+    .card-number {
+        font-size: 0.75rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .card-client {
+        font-size: 0.8rem;
+        color: #007bff;
+        margin-bottom: 0.25rem;
+    }
+    
+    .card-value {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #28a745;
+        margin-bottom: 0.25rem;
+    }
+    
+    .card-probability {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+    
+    .card-date {
+        font-size: 0.7rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .card-date.overdue {
+        color: #dc3545;
+        font-weight: 600;
+    }
+    
+    .column-stats {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
+    }
+    
+    .filters-section {
+        background: #fff;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+    }
+    
+    .kanban-actions {
+        margin-bottom: 1rem;
+    }
+    
+    /* Estados específicos */
+    .estado-revision_tecnica .kanban-header { background: #e3f2fd; border-bottom-color: #2196f3; }
+    .estado-elaboracion_oferta .kanban-header { background: #fff3e0; border-bottom-color: #ff9800; }
+    .estado-envio_negociacion .kanban-header { background: #f3e5f5; border-bottom-color: #9c27b0; }
+    .estado-formalizacion .kanban-header { background: #e8f5e8; border-bottom-color: #4caf50; }
+    .estado-ganado .kanban-header { background: #e8f5e8; border-bottom-color: #4caf50; }
+    .estado-perdido .kanban-header { background: #ffebee; border-bottom-color: #f44336; }
+    .estado-sin_informacion .kanban-header { background: #f5f5f5; border-bottom-color: #9e9e9e; }
+    
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-columns me-2"></i>Kanban de Tratos</h2>
+            <p class="text-muted mb-0">
+                <i class="fas fa-info-circle me-1"></i>
+                Arrastra las tarjetas entre columnas para cambiar el estado de los tratos
+            </p>
+        </div>
+        <div class="kanban-actions">
+            <a href="{% url 'crm:trato_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-list me-2"></i>Vista Lista
+            </a>
+            <a href="{% url 'crm:trato_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Nuevo Trato
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-handshake fa-2x mb-2"></i>
+                    <h4 class="mb-0">{{ total_tratos }}</h4>
+                    <small>Total Tratos</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+                    <h4 class="mb-0">${{ total_valor|floatformat:0|intcomma }}</h4>
+                    <small>Valor Total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-trophy fa-2x mb-2"></i>
+                    <h4 class="mb-0">{{ estados_tratos.ganado.count }}</h4>
+                    <small>Ganados</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x mb-2"></i>
+                    <h4 class="mb-0">{{ estados_tratos.envio_negociacion.count }}</h4>
+                    <small>En Negociación</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Buscar</label>
+                <input type="text" name="search" class="form-control" 
+                       placeholder="Buscar por nombre, cliente, oferta..." 
+                       value="{{ search_query }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Responsable</label>
+                <select name="responsable" class="form-select">
+                    <option value="">Todos los responsables</option>
+                    {% for responsable in responsables %}
+                    <option value="{{ responsable.id }}" {% if responsable.id|stringformat:"s" == responsable_selected %}selected{% endif %}>
+                        {{ responsable.get_full_name|default:responsable.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Tipo de Negociación</label>
+                <select name="tipo_negociacion" class="form-select">
+                    <option value="">Todos los tipos</option>
+                    {% for tipo_code, tipo_name in tipos_negociacion %}
+                    <option value="{{ tipo_code }}" {% if tipo_code == tipo_selected %}selected{% endif %}>
+                        {{ tipo_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-1"></i>Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Kanban Board -->
+    <div class="kanban-board">
+        {% for estado_code, estado_data in estados_tratos.items %}
+        <div class="kanban-column estado-{{ estado_code }}" data-estado="{{ estado_code }}">
+            <div class="kanban-header">
+                <h5 class="mb-1">{{ estado_data.nombre }}</h5>
+                <div class="column-stats">
+                    <div><strong>{{ estado_data.count }}</strong> tratos</div>
+                    <div><strong>${{ estado_data.total_valor|floatformat:0|intcomma }}</strong></div>
+                </div>
+            </div>
+            <div class="kanban-body" data-estado="{{ estado_code }}">
+                {% for trato in estado_data.tratos %}
+                <div class="kanban-card" data-trato-id="{{ trato.id }}" draggable="true">
+                    <div class="card-header">
+                        <div class="card-number">#{{ trato.numero_oferta }}</div>
+                        <div>
+                            {% if trato.probabilidad %}
+                            <span class="badge bg-secondary">{{ trato.probabilidad }}%</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="card-title">
+                        {% if trato.nombre %}
+                            {{ trato.nombre|truncatechars:50 }}
+                        {% elif trato.descripcion %}
+                            {{ trato.descripcion|truncatechars:50 }}
+                        {% else %}
+                            {{ trato.cliente.nombre }}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="card-client">
+                        <i class="fas fa-building me-1"></i>{{ trato.cliente.nombre|truncatechars:25 }}
+                    </div>
+                    
+                    {% if trato.valor %}
+                    <div class="card-value">
+                        <i class="fas fa-dollar-sign me-1"></i>${{ trato.valor|floatformat:0|intcomma }}
+                    </div>
+                    {% endif %}
+                    
+                    {% if trato.responsable %}
+                    <div class="card-probability">
+                        <i class="fas fa-user me-1"></i>{{ trato.responsable.get_full_name|default:trato.responsable.username|truncatechars:20 }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="card-date {% if trato.is_fecha_cierre_vencida %}overdue{% endif %}">
+                        <i class="fas fa-calendar me-1"></i>
+                        {% if trato.fecha_cierre %}
+                            Cierre: {{ trato.fecha_cierre }}
+                            {% if trato.is_fecha_cierre_vencida %}
+                                <i class="fas fa-exclamation-triangle ms-1"></i>
+                            {% endif %}
+                        {% else %}
+                            Sin fecha de cierre
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Acciones rápidas -->
+                    <div class="mt-2 d-flex justify-content-end">
+                        <a href="{% url 'crm:trato_detail' trato.pk %}" 
+                           class="btn btn-sm btn-outline-primary me-1" 
+                           title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="{% url 'crm:trato_update' trato.pk %}" 
+                           class="btn btn-sm btn-outline-secondary" 
+                           title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-2x mb-2"></i>
+                    <p class="mb-0">No hay tratos en este estado</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container"></div>
+
+<!-- CSRF Token for AJAX -->
+<input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.getElementById('csrf-token').value;
+    
+    // Inicializar drag & drop en todas las columnas
+    const columns = document.querySelectorAll('.kanban-body');
+    
+    columns.forEach(column => {
+        new Sortable(column, {
+            group: 'kanban',
+            animation: 150,
+            ghostClass: 'kanban-card-ghost',
+            chosenClass: 'kanban-card-chosen',
+            dragClass: 'dragging',
+            
+            onStart: function(evt) {
+                evt.item.classList.add('dragging');
+            },
+            
+            onEnd: function(evt) {
+                evt.item.classList.remove('dragging');
+                
+                // Si cambió de columna, actualizar el estado
+                if (evt.from !== evt.to) {
+                    const tratoId = evt.item.dataset.tratoId;
+                    const nuevoEstado = evt.to.dataset.estado;
+                    
+                    updateTratoEstado(tratoId, nuevoEstado, evt.item);
+                }
+            }
+        });
+    });
+    
+    function updateTratoEstado(tratoId, nuevoEstado, cardElement) {
+        // Mostrar indicador de carga
+        cardElement.style.opacity = '0.6';
+        
+        const formData = new FormData();
+        formData.append('trato_id', tratoId);
+        formData.append('nuevo_estado', nuevoEstado);
+        formData.append('csrfmiddlewaretoken', csrfToken);
+        
+        fetch('{% url "crm:trato_kanban_update" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': csrfToken,
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            cardElement.style.opacity = '1';
+            
+            if (data.success) {
+                showToast('success', data.message);
+                // Actualizar contadores de columnas
+                updateColumnStats();
+            } else {
+                showToast('error', data.message || 'Error al actualizar el trato');
+                // Revertir el movimiento
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            cardElement.style.opacity = '1';
+            showToast('error', 'Error de conexión. Por favor, intenta de nuevo.');
+            // Revertir el movimiento
+            location.reload();
+        });
+    }
+    
+    function updateColumnStats() {
+        // Actualizar contadores en cada columna
+        columns.forEach(column => {
+            const cards = column.querySelectorAll('.kanban-card');
+            const count = cards.length;
+            const statsDiv = column.parentElement.querySelector('.column-stats');
+            
+            if (statsDiv) {
+                const countElement = statsDiv.querySelector('div:first-child strong');
+                if (countElement) {
+                    countElement.textContent = count;
+                }
+            }
+        });
+    }
+    
+    function showToast(type, message) {
+        const toastContainer = document.querySelector('.toast-container');
+        const toastId = 'toast-' + Date.now();
+        
+        const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+        const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+        
+        const toastHTML = `
+            <div id="${toastId}" class="toast ${bgClass} text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-body d-flex align-items-center">
+                    <i class="${icon} me-2"></i>
+                    <span>${message}</span>
+                    <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+        
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 5000
+        });
+        
+        toast.show();
+        
+        // Remover el elemento después de que se oculte
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            toastElement.remove();
+        });
+    }
+});
+</script>
+
+<style>
+.kanban-card-ghost {
+    opacity: 0.4;
+    background: #e3f2fd;
+}
+
+.kanban-card-chosen {
+    background: #fff3e0;
+}
+</style>
+{% endblock %}

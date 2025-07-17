@@ -57,6 +57,8 @@ urlpatterns = [
     
     # ProyectosCRM
     path('proyectoscrm/', login_required(views.TratoListView.as_view()), name='trato_list'),
+    path('proyectoscrm/kanban/', login_required(views.TratoKanbanView.as_view()), name='trato_kanban'),
+    path('proyectoscrm/kanban/update/', login_required(views.TratoKanbanUpdateView.as_view()), name='trato_kanban_update'),
     path('proyectoscrm/nuevo/', login_required(views.TratoCreateView.as_view()), name='trato_create'),
     path('proyectoscrm/rapido/', login_required(views.TratoQuickCreateView.as_view()), name='trato_quick_create'),
     path('proyectoscrm/importar/', login_required(views.TratoImportView.as_view()), name='trato_import'),
