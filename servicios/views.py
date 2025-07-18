@@ -1,8 +1,8 @@
-from django.views.generic import ListView, CreateView, UpdateView, DetailView, TemplateView
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import ListView, CreateView, UpdateView, DetailView, TemplateView, DeleteView
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.db.models import Q, Count, Avg
@@ -240,9 +240,9 @@ class SolicitudServicioCreateView(LoginRequiredMixin, CreateView):
     model = SolicitudServicio
     template_name = 'servicios/solicitud/form.html'
     fields = ['tipo_servicio', 'cliente_crm', 'contacto_crm', 'trato_origen', 'cotizacion_aprobada',
-             'direccion_servicio', 'centro_costo', 'nombre_proyecto', 'fecha_programada', 
-             'duracion_estimada', 'tecnico_asignado', 'director_proyecto', 'ingeniero_residente', 
-             'cronograma', 'observaciones_internas']
+             'direccion_servicio', 'centro_costo', 'nombre_proyecto', 'orden_contrato', 'dias_prometidos',
+             'fecha_contractual', 'fecha_programada', 'duracion_estimada', 'tecnico_asignado', 'director_proyecto', 
+             'ingeniero_residente', 'cronograma', 'observaciones_internas']
     success_url = reverse_lazy('servicios:solicitud_list')
     
     def form_valid(self, form):
@@ -314,9 +314,9 @@ class SolicitudServicioUpdateView(LoginRequiredMixin, UpdateView):
     model = SolicitudServicio
     template_name = 'servicios/solicitud/form.html'
     fields = ['estado', 'tipo_servicio', 'cliente_crm', 'contacto_crm', 'trato_origen', 'cotizacion_aprobada',
-             'direccion_servicio', 'centro_costo', 'nombre_proyecto', 'fecha_programada', 
-             'duracion_estimada', 'tecnico_asignado', 'director_proyecto', 'ingeniero_residente', 
-             'cronograma', 'observaciones_internas']
+             'direccion_servicio', 'centro_costo', 'nombre_proyecto', 'orden_contrato', 'dias_prometidos',
+             'fecha_contractual', 'fecha_programada', 'duracion_estimada', 'tecnico_asignado', 'director_proyecto', 
+             'ingeniero_residente', 'cronograma', 'observaciones_internas']
     success_url = reverse_lazy('servicios:solicitud_list')
     
     def form_valid(self, form):
@@ -846,3 +846,61 @@ def get_solicitud_tipo(request, solicitud_id):
         return JsonResponse({'error': 'Solicitud no encontrada'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
+
+
+class SolicitudServicioDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    """Vista para eliminar una solicitud de servicio con confirmación robusta"""
+    model = SolicitudServicio
+    template_name = 'servicios/solicitud/confirm_delete.html'
+    success_url = reverse_lazy('servicios:solicitud_list')
+    context_object_name = 'solicitud'
+    
+    def test_func(self):
+        """Solo usuarios staff pueden eliminar solicitudes"""
+        return self.request.user.is_staff
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        solicitud = self.get_object()
+        
+        # Obtener información relacionada para mostrar advertencias
+        informes_count = InformeTrabajo.objects.filter(solicitud_servicio=solicitud).count()
+        
+        context.update({
+            'title': f'Eliminar Solicitud: {solicitud.numero_orden}',
+            'informes_count': informes_count,
+            'tiene_datos_relacionados': informes_count > 0,
+        })
+        
+        return context
+    
+    def delete(self, request, *args, **kwargs):
+        """Sobrescribir para agregar mensaje de confirmación"""
+        solicitud = self.get_object()
+        numero_orden = solicitud.numero_orden
+        cliente = solicitud.cliente_crm.nombre if solicitud.cliente_crm else 'Cliente no especificado'
+        
+        # Verificar que el usuario confirmó explícitamente
+        confirmacion = request.POST.get('confirmacion')
+        if confirmacion != 'ELIMINAR':
+            messages.error(
+                request, 
+                'Debe escribir "ELIMINAR" exactamente para confirmar la eliminación.'
+            )
+            return redirect('servicios:solicitud_delete', pk=solicitud.pk)
+        
+        # Mensaje de éxito antes de eliminar
+        messages.success(
+            request,
+            f'Solicitud de servicio "{numero_orden}" del cliente "{cliente}" ha sido eliminada permanentemente.'
+        )
+        
+        return super().delete(request, *args, **kwargs)
+    
+    def handle_no_permission(self):
+        """Mensaje personalizado cuando no tiene permisos"""
+        messages.error(
+            self.request,
+            'No tiene permisos para eliminar solicitudes. Solo los administradores pueden realizar esta acción.'
+        )
+        return redirect('servicios:solicitud_list')

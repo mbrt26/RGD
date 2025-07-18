@@ -18,6 +18,7 @@ urlpatterns = [
     path('solicitudes/nueva/', views.SolicitudServicioCreateView.as_view(), name='solicitud_create'),
     path('solicitudes/<int:pk>/', views.SolicitudServicioDetailView.as_view(), name='solicitud_detail'),
     path('solicitudes/<int:pk>/editar/', views.SolicitudServicioUpdateView.as_view(), name='solicitud_update'),
+    path('solicitudes/<int:pk>/eliminar/', views.SolicitudServicioDeleteView.as_view(), name='solicitud_delete'),
     
     # Informes de Trabajo
     path('informes/', views.InformeTrabajoListView.as_view(), name='informe_list'),

@@ -10,11 +10,12 @@ from django.db.models import Q, Count, Avg
 from decimal import Decimal
 
 from proyectos.models import (
-    ComiteProyecto, ParticipanteComite, SeguimientoProyectoComite,
+    ComiteProyecto, ParticipanteComite, SeguimientoProyectoComite, SeguimientoServicioComite, ElementoExternoComite,
     Proyecto, Colaborador
 )
+from servicios.models import SolicitudServicio
 from proyectos.forms.comite_forms import (
-    ComiteProyectoForm, SeguimientoProyectoComiteForm
+    ComiteProyectoForm, SeguimientoProyectoComiteForm, SeguimientoServicioComiteForm, ElementoExternoComiteForm
 )
 
 
@@ -168,7 +169,30 @@ class ComiteDetailView(LoginRequiredMixin, DetailView):
             'proyecto', 'responsable_reporte'
         ).order_by('orden_presentacion')
         
+        # Seguimientos de servicios ordenados
+        seguimientos_servicios = comite.seguimientos_servicios.select_related(
+            'servicio', 'responsable_reporte'
+        ).order_by('orden_presentacion')
+        
+        # Elementos externos ordenados
+        elementos_externos = comite.elementos_externos.select_related(
+            'responsable_reporte'
+        ).order_by('orden_presentacion')
+        
+        # Servicios activos que no tienen seguimiento en este comité
+        servicios_con_seguimiento = seguimientos_servicios.values_list('servicio_id', flat=True)
+        servicios_activos = SolicitudServicio.objects.filter(
+            estado__in=['pendiente', 'en_ejecucion', 'atrasado']
+        ).exclude(
+            id__in=servicios_con_seguimiento
+        ).select_related(
+            'cliente_crm', 'director_proyecto', 'ingeniero_residente', 'tecnico_asignado'
+        ).order_by('fecha_contractual', 'numero_orden')
+        
         context['seguimientos'] = seguimientos
+        context['seguimientos_servicios'] = seguimientos_servicios
+        context['elementos_externos'] = elementos_externos
+        context['servicios_activos'] = servicios_activos
         
         # Participantes del comité
         participantes = ParticipanteComite.objects.filter(
@@ -177,28 +201,54 @@ class ComiteDetailView(LoginRequiredMixin, DetailView):
         
         context['participantes'] = participantes
         
-        # Estadísticas del comité
+        # Estadísticas del comité (proyectos + servicios + elementos externos)
         total_proyectos = seguimientos.count()
-        proyectos_criticos = seguimientos.filter(estado_seguimiento='rojo').count()
-        proyectos_atencion = seguimientos.filter(estado_seguimiento='amarillo').count()
-        proyectos_normales = seguimientos.filter(estado_seguimiento='verde').count()
+        total_servicios = seguimientos_servicios.count()
+        total_externos = elementos_externos.count()
+        total_items = total_proyectos + total_servicios + total_externos
         
-        if total_proyectos > 0:
-            avance_promedio = seguimientos.aggregate(
-                promedio=Avg('avance_reportado')
-            )['promedio'] or 0
+        proyectos_criticos = seguimientos.filter(estado_seguimiento='rojo').count()
+        servicios_criticos = seguimientos_servicios.filter(estado_seguimiento='rojo').count()
+        externos_criticos = elementos_externos.filter(estado_seguimiento='rojo').count()
+        total_criticos = proyectos_criticos + servicios_criticos + externos_criticos
+        
+        proyectos_atencion = seguimientos.filter(estado_seguimiento='amarillo').count()
+        servicios_atencion = seguimientos_servicios.filter(estado_seguimiento='amarillo').count()
+        externos_atencion = elementos_externos.filter(estado_seguimiento='amarillo').count()
+        total_atencion = proyectos_atencion + servicios_atencion + externos_atencion
+        
+        proyectos_normales = seguimientos.filter(estado_seguimiento='verde').count()
+        servicios_normales = seguimientos_servicios.filter(estado_seguimiento='verde').count()
+        externos_normales = elementos_externos.filter(estado_seguimiento='verde').count()
+        total_normales = proyectos_normales + servicios_normales + externos_normales
+        
+        if total_items > 0:
+            # Calcular avance promedio combinado
+            avance_proyectos = seguimientos.aggregate(promedio=Avg('avance_reportado'))['promedio'] or 0
+            avance_servicios = seguimientos_servicios.aggregate(promedio=Avg('avance_reportado'))['promedio'] or 0
+            avance_externos = elementos_externos.aggregate(promedio=Avg('avance_reportado'))['promedio'] or 0
+            
+            # Calcular promedio ponderado
+            total_avance = (avance_proyectos * total_proyectos + 
+                           avance_servicios * total_servicios + 
+                           avance_externos * total_externos)
+            avance_promedio = total_avance / total_items if total_items > 0 else 0
         else:
             avance_promedio = 0
         
         context['estadisticas_comite'] = {
-            'total_proyectos': total_proyectos,
-            'proyectos_criticos': proyectos_criticos,
-            'proyectos_atencion': proyectos_atencion,
-            'proyectos_normales': proyectos_normales,
+            'total_proyectos': total_items,  # Total combinado
+            'proyectos_criticos': total_criticos,
+            'proyectos_atencion': total_atencion,
+            'proyectos_normales': total_normales,
             'avance_promedio': round(float(avance_promedio), 2),
             'participantes_confirmados': participantes.filter(
                 estado_asistencia='confirmado'
             ).count(),
+            # Estadísticas separadas para información adicional
+            'total_proyectos_solo': total_proyectos,
+            'total_servicios': total_servicios,
+            'total_externos': total_externos,
         }
         
         return context
@@ -264,6 +314,83 @@ class SeguimientoUpdateView(LoginRequiredMixin, UpdateView):
             f'Seguimiento actualizado para {self.object.proyecto.nombre_proyecto}'
         )
         return super().form_valid(form)
+
+
+class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
+    """Vista para actualizar el seguimiento de un servicio en el comité"""
+    model = SeguimientoServicioComite
+    form_class = SeguimientoServicioComiteForm
+    template_name = 'proyectos/comite/seguimiento_servicio_form.html'
+
+    def get_success_url(self):
+        return reverse_lazy('proyectos:comite_detail', kwargs={'pk': self.object.comite.pk})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        seguimiento = self.get_object()
+        context['title'] = f'Actualizar Seguimiento Servicio - {seguimiento.servicio.numero_orden}'
+        context['comite'] = seguimiento.comite
+        context['servicio'] = seguimiento.servicio
+        context['colaboradores'] = Colaborador.objects.all().order_by('nombre')
+        
+        return context
+
+    def form_valid(self, form):
+        form.instance.actualizado_por = self.request.user
+        messages.success(
+            self.request,
+            f'Seguimiento actualizado para servicio {self.object.servicio.numero_orden}'
+        )
+        return super().form_valid(form)
+
+
+def agregar_servicio_seguimiento(request, comite_id):
+    """Vista AJAX para agregar un servicio al seguimiento del comité"""
+    if request.method == 'POST':
+        import json
+        
+        try:
+            comite = get_object_or_404(ComiteProyecto, pk=comite_id)
+            data = json.loads(request.body)
+            servicio_id = data.get('servicio_id')
+            
+            if not servicio_id:
+                return JsonResponse({'success': False, 'message': 'ID de servicio requerido'})
+            
+            servicio = get_object_or_404(SolicitudServicio, pk=servicio_id)
+            
+            # Verificar si ya existe seguimiento para este servicio
+            if SeguimientoServicioComite.objects.filter(comite=comite, servicio=servicio).exists():
+                return JsonResponse({'success': False, 'message': 'El servicio ya tiene seguimiento en este comité'})
+            
+            # Obtener el siguiente número de orden
+            from django.db.models import Max
+            ultimo_orden = SeguimientoServicioComite.objects.filter(comite=comite).aggregate(
+                max_orden=Max('orden_presentacion')
+            )['max_orden'] or 0
+            
+            # Crear el seguimiento
+            seguimiento = SeguimientoServicioComite.objects.create(
+                comite=comite,
+                servicio=servicio,
+                estado_seguimiento='verde',
+                avance_reportado=0,
+                logros_periodo='Servicio agregado al seguimiento del comité.',
+                orden_presentacion=ultimo_orden + 1,
+                actualizado_por=request.user
+            )
+            
+            return JsonResponse({
+                'success': True, 
+                'message': f'Servicio {servicio.numero_orden} agregado al seguimiento'
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Datos JSON inválidos'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Método no permitido'})
 
 
 def gestionar_participantes_comite(request, comite_id):
@@ -441,24 +568,50 @@ class ComiteActaView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         comite = self.get_object()
         
-        # Obtener seguimientos ordenados
+        # Obtener seguimientos de proyectos ordenados
         context['seguimientos'] = comite.seguimientos.select_related('proyecto').order_by('orden_presentacion', 'proyecto__nombre_proyecto')
+        
+        # Obtener seguimientos de servicios ordenados
+        context['seguimientos_servicios'] = comite.seguimientos_servicios.select_related('servicio').order_by('orden_presentacion', 'servicio__numero_orden')
+        
+        # Obtener elementos externos ordenados
+        context['elementos_externos'] = comite.elementos_externos.select_related('responsable_reporte').order_by('orden_presentacion')
         
         # Obtener participantes con asistencia confirmada
         context['participantes_asistieron'] = comite.participantecomite_set.filter(
             estado_asistencia='asistio'
         ).select_related('colaborador').order_by('colaborador__nombre')
         
-        # Calcular estadísticas
+        # Calcular estadísticas combinadas (proyectos + servicios + elementos externos)
         total_proyectos = context['seguimientos'].count()
+        total_servicios = context['seguimientos_servicios'].count()
+        total_externos = context['elementos_externos'].count()
+        total_items = total_proyectos + total_servicios + total_externos
+        
         proyectos_verdes = context['seguimientos'].filter(estado_seguimiento='verde').count()
+        servicios_verdes = context['seguimientos_servicios'].filter(estado_seguimiento='verde').count()
+        externos_verdes = context['elementos_externos'].filter(estado_seguimiento='verde').count()
+        total_verdes = proyectos_verdes + servicios_verdes + externos_verdes
+        
         proyectos_rojos = context['seguimientos'].filter(estado_seguimiento='rojo').count()
+        servicios_rojos = context['seguimientos_servicios'].filter(estado_seguimiento='rojo').count()
+        externos_rojos = context['elementos_externos'].filter(estado_seguimiento='rojo').count()
+        total_rojos = proyectos_rojos + servicios_rojos + externos_rojos
+        
+        proyectos_amarillos = context['seguimientos'].filter(estado_seguimiento='amarillo').count()
+        servicios_amarillos = context['seguimientos_servicios'].filter(estado_seguimiento='amarillo').count()
+        externos_amarillos = context['elementos_externos'].filter(estado_seguimiento='amarillo').count()
+        total_amarillos = proyectos_amarillos + servicios_amarillos + externos_amarillos
         
         context.update({
             'title': f'Acta - {comite.nombre}',
             'total_proyectos': total_proyectos,
-            'proyectos_verdes': proyectos_verdes,
-            'proyectos_rojos': proyectos_rojos,
+            'total_servicios': total_servicios,
+            'total_externos': total_externos,
+            'total_items': total_items,
+            'proyectos_verdes': total_verdes,
+            'proyectos_rojos': total_rojos,
+            'proyectos_amarillos': total_amarillos,
         })
         
         return context
@@ -482,23 +635,122 @@ class ComiteExportView(LoginRequiredMixin, DetailView):
         
         # Headers
         writer.writerow([
-            'Proyecto', 'Responsable', 'Estado Avance', 'Porcentaje Avance',
-            'Semáforo', 'Decisiones Requeridas', 'Observaciones'
+            'Tipo', 'Proyecto/Servicio', 'Cliente/Información', 'Responsable', 'Estado Avance', 
+            'Porcentaje Avance', 'Semáforo', 'Decisiones Requeridas', 'Observaciones'
         ])
         
-        # Datos de seguimientos
+        # Datos de seguimientos de proyectos
         for seguimiento in comite.seguimientos.select_related('proyecto').order_by('orden_presentacion'):
             writer.writerow([
+                'Proyecto',
                 seguimiento.proyecto.nombre_proyecto,
-                seguimiento.proyecto.responsable.nombre if seguimiento.proyecto.responsable else 'Sin asignar',
+                seguimiento.proyecto.cliente or '',
+                seguimiento.responsable_reporte.nombre if seguimiento.responsable_reporte else 'Sin asignar',
                 seguimiento.get_estado_seguimiento_display(),
                 f"{seguimiento.avance_reportado}%",
                 seguimiento.get_estado_seguimiento_display(),
                 'Sí' if seguimiento.requiere_decision else 'No',
-                seguimiento.observaciones or ''
+                seguimiento.logros_periodo or ''
+            ])
+        
+        # Datos de seguimientos de servicios
+        for seguimiento in comite.seguimientos_servicios.select_related('servicio').order_by('orden_presentacion'):
+            writer.writerow([
+                'Servicio',
+                seguimiento.servicio.numero_orden,
+                seguimiento.servicio.cliente_crm.nombre if seguimiento.servicio.cliente_crm else '',
+                seguimiento.responsable_reporte.nombre if seguimiento.responsable_reporte else 'Sin asignar',
+                seguimiento.get_estado_seguimiento_display(),
+                f"{seguimiento.avance_reportado}%",
+                seguimiento.get_estado_seguimiento_display(),
+                'Sí' if seguimiento.requiere_decision else 'No',
+                seguimiento.logros_periodo or ''
+            ])
+        
+        # Datos de elementos externos
+        for elemento in comite.elementos_externos.select_related('responsable_reporte').order_by('orden_presentacion'):
+            writer.writerow([
+                'Externo',
+                elemento.nombre_proyecto,
+                elemento.centro_costos,
+                elemento.responsable_reporte.nombre if elemento.responsable_reporte else 'Sin asignar',
+                elemento.get_estado_seguimiento_display(),
+                f"{elemento.avance_reportado}%",
+                elemento.get_estado_seguimiento_display(),
+                'Sí' if elemento.requiere_decision else 'No',
+                elemento.observaciones or ''
             ])
         
         return response
+
+
+class ElementoExternoCreateView(LoginRequiredMixin, CreateView):
+    """Vista para crear elementos externos (proyectos/servicios que no están en el sistema)"""
+    model = ElementoExternoComite
+    form_class = ElementoExternoComiteForm
+    template_name = 'proyectos/comite/elemento_externo_form.html'
+    
+    def get_success_url(self):
+        return reverse_lazy('proyectos:comite_detail', kwargs={'pk': self.kwargs['comite_id']})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        comite = get_object_or_404(ComiteProyecto, pk=self.kwargs['comite_id'])
+        context['comite'] = comite
+        context['title'] = f'Agregar Elemento Externo - {comite.nombre}'
+        context['form_title'] = 'Agregar Proyecto/Servicio Externo'
+        context['colaboradores'] = Colaborador.objects.all().order_by('nombre')
+        return context
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        comite = get_object_or_404(ComiteProyecto, pk=self.kwargs['comite_id'])
+        kwargs['comite'] = comite
+        return kwargs
+    
+    def form_valid(self, form):
+        comite = get_object_or_404(ComiteProyecto, pk=self.kwargs['comite_id'])
+        form.instance.comite = comite
+        form.instance.creado_por = self.request.user
+        form.instance.actualizado_por = self.request.user
+        
+        messages.success(
+            self.request,
+            f'Elemento externo "{form.instance.nombre_proyecto}" agregado exitosamente al comité.'
+        )
+        return super().form_valid(form)
+
+
+class ElementoExternoUpdateView(LoginRequiredMixin, UpdateView):
+    """Vista para editar elementos externos del comité"""
+    model = ElementoExternoComite
+    form_class = ElementoExternoComiteForm
+    template_name = 'proyectos/comite/elemento_externo_form.html'
+    
+    def get_success_url(self):
+        return reverse_lazy('proyectos:comite_detail', kwargs={'pk': self.object.comite.pk})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        elemento = self.get_object()
+        context['comite'] = elemento.comite
+        context['title'] = f'Editar Elemento Externo - {elemento.nombre_proyecto}'
+        context['form_title'] = 'Editar Proyecto/Servicio Externo'
+        context['colaboradores'] = Colaborador.objects.all().order_by('nombre')
+        return context
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['comite'] = self.object.comite
+        return kwargs
+    
+    def form_valid(self, form):
+        form.instance.actualizado_por = self.request.user
+        messages.success(
+            self.request,
+            f'Elemento externo "{form.instance.nombre_proyecto}" actualizado exitosamente.'
+        )
+        return super().form_valid(form)
 
 
 class ComiteIniciarView(LoginRequiredMixin, DetailView):

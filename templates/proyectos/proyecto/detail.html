@@ -35,6 +35,10 @@
                 <a href="{% url 'proyectos:proyecto_update' proyecto.id %}" class="btn btn-primary btn-sm">
                     <i class="fas fa-edit"></i> Editar
                 </a>
+                <a href="{% url 'proyectos:proyecto_detail' proyecto.id %}" class="btn btn-danger btn-sm"
+                   onclick="return confirm('¿Está seguro de que desea eliminar este proyecto?')">
+                    <i class="fas fa-trash"></i> Eliminar
+                </a>
             </div>
         </div>
         <div class="card-body">

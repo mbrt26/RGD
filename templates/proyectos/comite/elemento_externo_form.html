@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    .field-group {
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        background-color: #f8f9fa;
+    }
+    .field-group h5 {
+        color: #495057;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-plus-circle me-2"></i>{{ form_title }}</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'proyectos:comite_list' %}">Comités</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'proyectos:comite_detail' comite.pk %}">{{ comite.nombre }}</a></li>
+                    <li class="breadcrumb-item active">{{ form_title }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{% url 'proyectos:comite_detail' comite.pk %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver al Comité
+            </a>
+        </div>
+    </div>
+
+    <!-- Información del Comité -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="card-subtitle mb-2 text-muted">Comité</h6>
+                    <h5 class="card-title">{{ comite.nombre }}</h5>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="card-subtitle mb-2 text-muted">Fecha y Lugar</h6>
+                    <p class="card-text mb-0">
+                        <i class="fas fa-calendar me-2"></i>{{ comite.fecha_comite|date:"d/m/Y H:i" }}<br>
+                        {% if comite.lugar %}<i class="fas fa-map-marker-alt me-2"></i>{{ comite.lugar }}{% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <div class="form-container">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            
+            <!-- Información Básica -->
+            <div class="field-group">
+                <h5><i class="fas fa-info-circle me-2"></i>Información Básica</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.tipo_elemento.id_for_label }}" class="form-label required-field">
+                                Tipo de Elemento
+                            </label>
+                            {{ form.tipo_elemento }}
+                            {% if form.tipo_elemento.errors %}
+                                <div class="invalid-feedback d-block">{{ form.tipo_elemento.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Seleccione si es un proyecto o servicio externo</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.centro_costos.id_for_label }}" class="form-label required-field">
+                                Centro de Costos
+                            </label>
+                            {{ form.centro_costos }}
+                            {% if form.centro_costos.errors %}
+                                <div class="invalid-feedback d-block">{{ form.centro_costos.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Código del centro de costos asociado</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.nombre_proyecto.id_for_label }}" class="form-label required-field">
+                        Nombre del Proyecto/Servicio
+                    </label>
+                    {{ form.nombre_proyecto }}
+                    {% if form.nombre_proyecto.errors %}
+                        <div class="invalid-feedback d-block">{{ form.nombre_proyecto.errors.0 }}</div>
+                    {% endif %}
+                    <div class="help-text">Nombre descriptivo del proyecto o servicio externo</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.observaciones.id_for_label }}" class="form-label required-field">
+                        Observaciones
+                    </label>
+                    {{ form.observaciones }}
+                    {% if form.observaciones.errors %}
+                        <div class="invalid-feedback d-block">{{ form.observaciones.errors.0 }}</div>
+                    {% endif %}
+                    <div class="help-text">Información adicional, descripción detallada o contexto relevante</div>
+                </div>
+            </div>
+
+            <!-- Información de Seguimiento -->
+            <div class="field-group">
+                <h5><i class="fas fa-chart-line me-2"></i>Información de Seguimiento</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="{{ form.estado_seguimiento.id_for_label }}" class="form-label">
+                                Estado del Seguimiento
+                            </label>
+                            {{ form.estado_seguimiento }}
+                            {% if form.estado_seguimiento.errors %}
+                                <div class="invalid-feedback d-block">{{ form.estado_seguimiento.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Estado semafórico del elemento</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="{{ form.avance_reportado.id_for_label }}" class="form-label">
+                                % Avance Reportado
+                            </label>
+                            {{ form.avance_reportado }}
+                            {% if form.avance_reportado.errors %}
+                                <div class="invalid-feedback d-block">{{ form.avance_reportado.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Porcentaje de avance (0-100%)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="{{ form.orden_presentacion.id_for_label }}" class="form-label">
+                                Orden de Presentación
+                            </label>
+                            {{ form.orden_presentacion }}
+                            {% if form.orden_presentacion.errors %}
+                                <div class="invalid-feedback d-block">{{ form.orden_presentacion.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Orden en que se presentará en el comité</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.responsable_reporte.id_for_label }}" class="form-label">
+                                Responsable del Reporte
+                            </label>
+                            {{ form.responsable_reporte }}
+                            {% if form.responsable_reporte.errors %}
+                                <div class="invalid-feedback d-block">{{ form.responsable_reporte.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Persona responsable de reportar el seguimiento</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.fecha_proximo_hito.id_for_label }}" class="form-label">
+                                Fecha Próximo Hito
+                            </label>
+                            {{ form.fecha_proximo_hito }}
+                            {% if form.fecha_proximo_hito.errors %}
+                                <div class="invalid-feedback d-block">{{ form.fecha_proximo_hito.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Fecha estimada del próximo hito o entregable</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        {{ form.requiere_decision }}
+                        <label class="form-check-label" for="{{ form.requiere_decision.id_for_label }}">
+                            Requiere decisión del comité
+                        </label>
+                        {% if form.requiere_decision.errors %}
+                            <div class="invalid-feedback d-block">{{ form.requiere_decision.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="help-text">Marque si este elemento requiere una decisión del comité</div>
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'proyectos:comite_detail' comite.pk %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar Elemento Externo
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus en el primer campo
+    const primerCampo = document.querySelector('select[name="tipo_elemento"]');
+    if (primerCampo) {
+        primerCampo.focus();
+    }
+    
+    // Validación en tiempo real del porcentaje de avance
+    const avanceInput = document.querySelector('input[name="avance_reportado"]');
+    if (avanceInput) {
+        avanceInput.addEventListener('input', function() {
+            const valor = parseFloat(this.value);
+            if (valor < 0 || valor > 100) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+    }
+    
+    // Auto-formatear el centro de costos
+    const centroInput = document.querySelector('input[name="centro_costos"]');
+    if (centroInput) {
+        centroInput.addEventListener('blur', function() {
+            this.value = this.value.trim().toUpperCase();
+        });
+    }
+});
+</script>
+{% endblock %}

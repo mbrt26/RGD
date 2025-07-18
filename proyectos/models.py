@@ -1428,3 +1428,275 @@ class SeguimientoProyectoComite(models.Model):
             'azul': 'fas fa-pause-circle'
         }
         return iconos.get(self.estado_seguimiento, 'fas fa-circle')
+
+
+class SeguimientoServicioComite(models.Model):
+    """
+    Modelo para registrar el seguimiento específico de cada servicio en un comité.
+    """
+    
+    ESTADO_SEGUIMIENTO_CHOICES = [
+        ('verde', 'Verde - Sin problemas'),
+        ('amarillo', 'Amarillo - Requiere atención'),
+        ('rojo', 'Rojo - Crítico'),
+        ('azul', 'Azul - En pausa'),
+    ]
+    
+    comite = models.ForeignKey(
+        ComiteProyecto,
+        on_delete=models.CASCADE,
+        related_name='seguimientos_servicios'
+    )
+    servicio = models.ForeignKey(
+        'servicios.SolicitudServicio',
+        on_delete=models.CASCADE,
+        related_name='seguimientos_comite'
+    )
+    
+    # Información específica del servicio en este comité
+    estado_seguimiento = models.CharField(
+        'Estado de Seguimiento',
+        max_length=20,
+        choices=ESTADO_SEGUIMIENTO_CHOICES,
+        default='verde'
+    )
+    
+    avance_reportado = models.DecimalField(
+        'Avance Reportado (%)',
+        max_digits=5,
+        decimal_places=2,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text='Avance reportado en este comité',
+        default=0
+    )
+    
+    # Información detallada
+    logros_periodo = models.TextField(
+        'Logros del Período',
+        help_text='Principales logros desde el último comité',
+        blank=True
+    )
+    
+    dificultades = models.TextField(
+        'Dificultades Encontradas',
+        blank=True,
+        help_text='Problemas o obstáculos identificados'
+    )
+    
+    acciones_requeridas = models.TextField(
+        'Acciones Requeridas',
+        blank=True,
+        help_text='Acciones específicas definidas en el comité'
+    )
+    
+    responsable_reporte = models.ForeignKey(
+        Colaborador,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reportes_servicio_comite',
+        verbose_name='Responsable del Reporte'
+    )
+    
+    fecha_proximo_hito = models.DateField(
+        'Fecha Próximo Hito',
+        null=True,
+        blank=True,
+        help_text='Fecha del próximo hito importante'
+    )
+    
+    requiere_decision = models.BooleanField(
+        'Requiere Decisión',
+        default=False,
+        help_text='Marca si este servicio requiere una decisión del comité'
+    )
+    
+    orden_presentacion = models.PositiveIntegerField(
+        'Orden de Presentación',
+        default=1,
+        help_text='Orden en que se presenta en el comité'
+    )
+    
+    # Metadatos
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    actualizado_por = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='seguimientos_servicio_actualizados'
+    )
+    
+    class Meta:
+        verbose_name = 'Seguimiento de Servicio en Comité'
+        verbose_name_plural = 'Seguimientos de Servicios en Comités'
+        unique_together = ['comite', 'servicio']
+        ordering = ['orden_presentacion', 'servicio__numero_orden']
+    
+    def __str__(self):
+        return f"{self.servicio.numero_orden} - {self.comite.nombre}"
+    
+    @property
+    def color_seguimiento(self):
+        """Retorna el color CSS basado en el estado de seguimiento"""
+        colores = {
+            'verde': '#28a745',
+            'amarillo': '#ffc107', 
+            'rojo': '#dc3545',
+            'azul': '#007bff'
+        }
+        return colores.get(self.estado_seguimiento, '#6c757d')
+    
+    @property
+    def icono_seguimiento(self):
+        """Retorna el icono FontAwesome basado en el estado"""
+        iconos = {
+            'verde': 'fas fa-check-circle',
+            'amarillo': 'fas fa-exclamation-triangle',
+            'rojo': 'fas fa-exclamation-circle',
+            'azul': 'fas fa-pause-circle'
+        }
+        return iconos.get(self.estado_seguimiento, 'fas fa-question-circle')
+
+
+class ElementoExternoComite(models.Model):
+    """
+    Modelo para elementos externos (proyectos/servicios) que no están en el sistema
+    pero se quieren incluir en el seguimiento del comité.
+    """
+    
+    TIPO_ELEMENTO_CHOICES = [
+        ('proyecto', 'Proyecto'),
+        ('servicio', 'Servicio'),
+    ]
+    
+    ESTADO_SEGUIMIENTO_CHOICES = [
+        ('verde', 'Verde - Sin problemas'),
+        ('amarillo', 'Amarillo - Requiere atención'),
+        ('rojo', 'Rojo - Crítico'),
+        ('azul', 'Azul - En pausa'),
+    ]
+    
+    comite = models.ForeignKey(
+        ComiteProyecto,
+        on_delete=models.CASCADE,
+        related_name='elementos_externos'
+    )
+    
+    # Información básica del elemento
+    tipo_elemento = models.CharField(
+        'Tipo de Elemento',
+        max_length=20,
+        choices=TIPO_ELEMENTO_CHOICES,
+        default='proyecto'
+    )
+    
+    centro_costos = models.CharField(
+        'Centro de Costos',
+        max_length=100,
+        help_text='Centro de costos al que pertenece'
+    )
+    
+    nombre_proyecto = models.CharField(
+        'Nombre del Proyecto/Servicio',
+        max_length=200,
+        help_text='Nombre descriptivo del proyecto o servicio'
+    )
+    
+    observaciones = models.TextField(
+        'Observaciones',
+        help_text='Información adicional sobre el elemento'
+    )
+    
+    # Información de seguimiento
+    estado_seguimiento = models.CharField(
+        'Estado de Seguimiento',
+        max_length=20,
+        choices=ESTADO_SEGUIMIENTO_CHOICES,
+        default='verde'
+    )
+    
+    avance_reportado = models.DecimalField(
+        'Avance Reportado (%)',
+        max_digits=5,
+        decimal_places=2,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text='Avance reportado en este comité',
+        default=0
+    )
+    
+    responsable_reporte = models.ForeignKey(
+        Colaborador,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reportes_externos_comite',
+        verbose_name='Responsable del Reporte'
+    )
+    
+    fecha_proximo_hito = models.DateField(
+        'Fecha Próximo Hito',
+        null=True,
+        blank=True,
+        help_text='Fecha del próximo hito importante'
+    )
+    
+    requiere_decision = models.BooleanField(
+        'Requiere Decisión',
+        default=False,
+        help_text='Marca si este elemento requiere una decisión del comité'
+    )
+    
+    orden_presentacion = models.PositiveIntegerField(
+        'Orden de Presentación',
+        default=1,
+        help_text='Orden en que se presenta en el comité'
+    )
+    
+    # Metadatos
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    creado_por = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='elementos_externos_creados'
+    )
+    actualizado_por = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='elementos_externos_actualizados'
+    )
+    
+    class Meta:
+        verbose_name = 'Elemento Externo de Comité'
+        verbose_name_plural = 'Elementos Externos de Comités'
+        ordering = ['orden_presentacion', 'nombre_proyecto']
+    
+    def __str__(self):
+        return f"{self.get_tipo_elemento_display()}: {self.nombre_proyecto} - {self.comite.nombre}"
+    
+    @property
+    def color_seguimiento(self):
+        """Retorna el color CSS basado en el estado de seguimiento"""
+        colores = {
+            'verde': '#28a745',
+            'amarillo': '#ffc107', 
+            'rojo': '#dc3545',
+            'azul': '#007bff'
+        }
+        return colores.get(self.estado_seguimiento, '#6c757d')
+    
+    @property
+    def icono_seguimiento(self):
+        """Retorna el icono FontAwesome basado en el estado"""
+        iconos = {
+            'verde': 'fas fa-check-circle',
+            'amarillo': 'fas fa-exclamation-triangle',
+            'rojo': 'fas fa-exclamation-circle',
+            'azul': 'fas fa-pause-circle'
+        }
+        return iconos.get(self.estado_seguimiento, 'fas fa-question-circle')

@@ -91,16 +91,34 @@
                     <div class="card-body">
                         <h6 class="card-title">Resumen</h6>
                         <div class="row text-center">
-                            <div class="col-4">
+                            <div class="col-3">
                                 <div class="h5 text-primary">{{ total_proyectos }}</div>
                                 <small>Proyectos</small>
                             </div>
+                            <div class="col-3">
+                                <div class="h5 text-info">{{ total_servicios }}</div>
+                                <small>Servicios</small>
+                            </div>
+                            <div class="col-3">
+                                <div class="h5 text-secondary">{{ total_externos }}</div>
+                                <small>Externos</small>
+                            </div>
+                            <div class="col-3">
+                                <div class="h5 text-dark">{{ total_items }}</div>
+                                <small>Total</small>
+                            </div>
+                        </div>
+                        <div class="row text-center mt-2">
                             <div class="col-4">
-                                <div class="h5 text-success">{{ proyectos_verdes }}</div>
+                                <div class="h6 text-success">{{ proyectos_verdes }}</div>
                                 <small>En Verde</small>
                             </div>
                             <div class="col-4">
-                                <div class="h5 text-danger">{{ proyectos_rojos }}</div>
+                                <div class="h6 text-warning">{{ proyectos_amarillos }}</div>
+                                <small>En Amarillo</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h6 text-danger">{{ proyectos_rojos }}</div>
                                 <small>En Rojo</small>
                             </div>
                         </div>
@@ -217,33 +235,202 @@
         </div>
     </div>
 
+    <!-- Seguimiento de Servicios -->
+    {% if seguimientos_servicios %}
+    <div class="acta-section">
+        <h4><i class="fas fa-tools me-2"></i>Seguimiento de Servicios</h4>
+        <div class="table-responsive">
+            <table class="table table-sm acta-table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 20%;">N° Orden</th>
+                        <th style="width: 20%;">Cliente</th>
+                        <th style="width: 15%;">Responsable</th>
+                        <th style="width: 10%;">% Avance</th>
+                        <th style="width: 10%;">Estado</th>
+                        <th style="width: 25%;">Observaciones/Logros</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for seguimiento_servicio in seguimientos_servicios %}
+                    <tr>
+                        <td class="fw-bold">{{ seguimiento_servicio.servicio.numero_orden }}</td>
+                        <td>{{ seguimiento_servicio.servicio.cliente_crm.nombre }}</td>
+                        <td>
+                            {% if seguimiento_servicio.responsable_reporte %}
+                                {{ seguimiento_servicio.responsable_reporte.nombre }}
+                            {% elif seguimiento_servicio.servicio.tecnico_asignado %}
+                                {{ seguimiento_servicio.servicio.tecnico_asignado.nombre_completo }}
+                            {% else %}
+                                Sin asignar
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="progress" style="height: 15px;">
+                                <div class="progress-bar 
+                                    {% if seguimiento_servicio.avance_reportado >= 80 %}bg-success
+                                    {% elif seguimiento_servicio.avance_reportado >= 50 %}bg-warning
+                                    {% else %}bg-danger{% endif %}" 
+                                    style="width: {{ seguimiento_servicio.avance_reportado }}%">
+                                    {{ seguimiento_servicio.avance_reportado }}%
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="estado-{{ seguimiento_servicio.estado_seguimiento }}">
+                                {% if seguimiento_servicio.estado_seguimiento == 'verde' %}●
+                                {% elif seguimiento_servicio.estado_seguimiento == 'amarillo' %}●
+                                {% elif seguimiento_servicio.estado_seguimiento == 'rojo' %}●
+                                {% elif seguimiento_servicio.estado_seguimiento == 'azul' %}●
+                                {% else %}-{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <small>{{ seguimiento_servicio.logros_periodo|default:"-" }}</small>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-muted text-center">No hay servicios registrados para seguimiento</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Seguimiento de Elementos Externos -->
+    {% if elementos_externos %}
+    <div class="acta-section">
+        <h4><i class="fas fa-external-link-alt me-2"></i>Seguimiento de Elementos Externos</h4>
+        <div class="table-responsive">
+            <table class="table table-sm acta-table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 20%;">Proyecto/Servicio</th>
+                        <th style="width: 15%;">Centro Costos</th>
+                        <th style="width: 10%;">Tipo</th>
+                        <th style="width: 15%;">Responsable</th>
+                        <th style="width: 10%;">% Avance</th>
+                        <th style="width: 10%;">Estado</th>
+                        <th style="width: 20%;">Observaciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for elemento in elementos_externos %}
+                    <tr>
+                        <td class="fw-bold">{{ elemento.nombre_proyecto }}</td>
+                        <td>{{ elemento.centro_costos }}</td>
+                        <td>
+                            <span class="badge {% if elemento.tipo_elemento == 'proyecto' %}bg-primary{% else %}bg-success{% endif %}">
+                                {{ elemento.get_tipo_elemento_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if elemento.responsable_reporte %}
+                                {{ elemento.responsable_reporte.nombre }}
+                            {% else %}
+                                Sin asignar
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="progress" style="height: 15px;">
+                                <div class="progress-bar 
+                                    {% if elemento.avance_reportado >= 80 %}bg-success
+                                    {% elif elemento.avance_reportado >= 50 %}bg-warning
+                                    {% else %}bg-danger{% endif %}" 
+                                    style="width: {{ elemento.avance_reportado }}%">
+                                    {{ elemento.avance_reportado }}%
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="estado-{{ elemento.estado_seguimiento }}">
+                                {% if elemento.estado_seguimiento == 'verde' %}●
+                                {% elif elemento.estado_seguimiento == 'amarillo' %}●
+                                {% elif elemento.estado_seguimiento == 'rojo' %}●
+                                {% elif elemento.estado_seguimiento == 'azul' %}●
+                                {% else %}-{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <small>{{ elemento.observaciones|truncatewords:10|default:"-" }}</small>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-muted text-center">No hay elementos externos registrados</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Decisiones y Compromisos -->
     <div class="acta-section">
         <h4><i class="fas fa-balance-scale me-2"></i>Decisiones y Compromisos</h4>
         <div class="card">
             <div class="card-body">
-                {% if seguimientos %}
+                {% if seguimientos or seguimientos_servicios or elementos_externos %}
                 <div class="table-responsive">
                     <table class="table table-sm">
                         <thead>
                             <tr>
-                                <th>Proyecto</th>
+                                <th>Tipo</th>
+                                <th>Proyecto/Servicio</th>
                                 <th>Decisión/Compromiso</th>
                                 <th>Responsable</th>
                                 <th>Fecha Límite</th>
                             </tr>
                         </thead>
                         <tbody>
+                            <!-- Decisiones de Proyectos -->
                             {% for seguimiento in seguimientos %}
-                            {% if seguimiento.requiere_decision or seguimiento.observaciones %}
+                            {% if seguimiento.requiere_decision or seguimiento.decision_tomada %}
                             <tr>
+                                <td><span class="badge bg-primary">Proyecto</span></td>
                                 <td class="fw-bold">{{ seguimiento.proyecto.nombre_proyecto }}</td>
-                                <td>{{ seguimiento.observaciones|default:"Requiere definición de acciones" }}</td>
-                                <td>{{ seguimiento.proyecto.responsable.nombre|default:"Por asignar" }}</td>
+                                <td>{{ seguimiento.decision_tomada|default:"Requiere definición de acciones" }}</td>
+                                <td>{{ seguimiento.responsable_reporte.nombre|default:"Por asignar" }}</td>
                                 <td>{{ seguimiento.fecha_proximo_hito|default:"Por definir" }}</td>
                             </tr>
                             {% endif %}
                             {% endfor %}
+                            
+                            <!-- Decisiones de Servicios -->
+                            {% for seguimiento_servicio in seguimientos_servicios %}
+                            {% if seguimiento_servicio.requiere_decision or seguimiento_servicio.acciones_requeridas %}
+                            <tr>
+                                <td><span class="badge bg-success">Servicio</span></td>
+                                <td class="fw-bold">{{ seguimiento_servicio.servicio.numero_orden }}</td>
+                                <td>{{ seguimiento_servicio.acciones_requeridas|default:"Requiere definición de acciones" }}</td>
+                                <td>{{ seguimiento_servicio.responsable_reporte.nombre|default:"Por asignar" }}</td>
+                                <td>{{ seguimiento_servicio.fecha_proximo_hito|default:"Por definir" }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                            
+                            <!-- Decisiones de Elementos Externos -->
+                            {% for elemento in elementos_externos %}
+                            {% if elemento.requiere_decision %}
+                            <tr>
+                                <td><span class="badge bg-secondary">Externo</span></td>
+                                <td class="fw-bold">{{ elemento.nombre_proyecto }}</td>
+                                <td>Requiere definición de acciones</td>
+                                <td>{{ elemento.responsable_reporte.nombre|default:"Por asignar" }}</td>
+                                <td>{{ elemento.fecha_proximo_hito|default:"Por definir" }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                            
+                            {% if not seguimientos and not seguimientos_servicios and not elementos_externos %}
+                            <tr>
+                                <td colspan="5" class="text-muted text-center">No hay decisiones pendientes registradas.</td>
+                            </tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>

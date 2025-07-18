@@ -92,6 +92,19 @@ DATABASES = {
     }
 }
 
+# Usar PostgreSQL si estamos en Cloud Run
+if os.environ.get('CLOUD_SQL_CONNECTION_NAME'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'rgdaire'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', '/cloudsql/' + os.environ.get('CLOUD_SQL_CONNECTION_NAME', '')),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
+    }
+
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 

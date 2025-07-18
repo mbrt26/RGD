@@ -142,6 +142,11 @@ CACHES = {
     }
 }
 
+# Configuración de seguridad para desarrollo local
+SECURE_SSL_REDIRECT = False
+SECURE_PROXY_SSL_HEADER = None
+USE_TLS = False
+
 # Logging para desarrollo
 LOGGING = {
     'version': 1,

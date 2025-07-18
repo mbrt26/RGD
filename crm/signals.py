@@ -20,8 +20,6 @@ def trato_pre_save_handler(sender, instance, **kwargs):
     Signal que se ejecuta antes de guardar un Trato.
     Guarda el estado anterior para comparar en post_save y valida campos obligatorios.
     """
-    logger.info(f"[SIGNAL-PRE] pre_save - Trato ID: {instance.id if instance.id else 'NEW'}, estado: {instance.estado}, centro_costos: {instance.centro_costos}")
-    
     # Validar centro de costos si se está marcando como ganado
     if instance.estado == 'ganado' and not instance.centro_costos:
         raise ValidationError(
@@ -43,38 +41,23 @@ def trato_post_save_handler(sender, instance, created, **kwargs):
     Signal que se ejecuta después de guardar un Trato.
     Crea automáticamente un proyecto cuando un trato cambia a estado 'ganado'.
     """
-    logger.info(f"[SIGNAL] post_save - Trato ID: {instance.id}, created: {created}, estado: {instance.estado}, tipo_negociacion: {instance.tipo_negociacion}")
-    
     # Solo procesar si el trato cambió a 'ganado' y no es una creación nueva
     if not created and instance.estado == 'ganado':
         estado_anterior = getattr(instance, '_estado_anterior', None)
-        logger.info(f"[SIGNAL] Trato {instance.id} - Estado anterior: {estado_anterior}, Estado actual: {instance.estado}")
         
         # Solo procesar si cambió de otro estado a 'ganado'
         if estado_anterior and estado_anterior != 'ganado':
-            logger.info(f"[SIGNAL] Procesando cambio a 'ganado' para Trato {instance.id} con tipo_negociacion: {instance.tipo_negociacion}")
-            
             try:
                 # Crear proyecto si el tipo de negociación es 'contrato' o 'diseno'
                 if instance.tipo_negociacion in ['contrato', 'diseno']:
-                    logger.info(f"[SIGNAL] Creando proyecto para Trato {instance.id}")
-                    success, message, proyecto = crear_proyecto_desde_trato(instance)
-                    logger.info(f"[SIGNAL] Resultado proyecto - Success: {success}, Message: {message}")
+                    crear_proyecto_desde_trato(instance)
                 
                 # Crear solicitud de servicio si el tipo de negociación es 'control' o 'servicios'
                 elif instance.tipo_negociacion in ['control', 'servicios']:
-                    logger.info(f"[SIGNAL] Creando solicitud de servicio para Trato {instance.id}")
-                    resultado = crear_solicitud_servicio_desde_trato(instance)
-                    if resultado:
-                        success, message, solicitud = resultado
-                        logger.info(f"[SIGNAL] Resultado servicio - Success: {success}, Message: {message}")
-                    else:
-                        logger.error(f"[SIGNAL] crear_solicitud_servicio_desde_trato retornó None para Trato {instance.id}")
-                else:
-                    logger.warning(f"[SIGNAL] Tipo de negociación '{instance.tipo_negociacion}' no reconocido para Trato {instance.id}")
+                    crear_solicitud_servicio_desde_trato(instance)
                     
             except Exception as e:
-                logger.error(f"[SIGNAL] Error al crear proyecto/solicitud desde trato {instance.id}: {str(e)}", exc_info=True)
+                logger.error(f"Error al crear proyecto/solicitud desde trato {instance.id}: {str(e)}")
 
 def crear_proyecto_desde_trato(trato):
     """
@@ -228,10 +211,8 @@ def crear_solicitud_servicio_desde_trato(trato):
     Returns:
         tuple: (success: bool, message: str, solicitud: SolicitudServicio|None)
     """
-    logger.info(f"[SERVICIO] Iniciando creación de solicitud para Trato {trato.id} - tipo: {trato.tipo_negociacion}")
-    
     # 1. Verificar si ya existe una solicitud de servicio para este trato
-    if SolicitudServicio.objects.filter(trato_origen=trato).exists():
+    if SolicitudServicio.objects.filter(numero_orden__icontains=str(trato.numero_oferta)).exists():
         mensaje = f"⚠️ Ya existe una solicitud de servicio asociada al trato #{trato.numero_oferta}. No se creará una nueva solicitud."
         logger.warning(mensaje)
         return False, mensaje, None
@@ -263,12 +244,9 @@ def crear_solicitud_servicio_desde_trato(trato):
     # Cotización aprobada (si existe una versión de cotización activa/aprobada para este trato)
     try:
         # Buscar la cotización más reciente del trato
-        cotizacion = trato.cotizaciones.order_by('-fecha_creacion').first()
-        if cotizacion:
-            # Obtener la versión más reciente de la cotización
-            version_activa = cotizacion.versiones.order_by('-version').first()
-            if version_activa:
-                datos_solicitud['cotizacion_aprobada'] = version_activa
+        cotizacion_activa = trato.versiones_cotizacion.order_by('-fecha_creacion').first()
+        if cotizacion_activa:
+            datos_solicitud['cotizacion_aprobada'] = cotizacion_activa
     except Exception as e:
         logger.warning(f"No se pudo asignar cotización al servicio para trato {trato.id}: {str(e)}")
     
@@ -288,9 +266,9 @@ def crear_solicitud_servicio_desde_trato(trato):
         campos_faltantes.append('Dirección del Servicio')
     
     # 3. Configurar datos específicos de la solicitud de servicio
-    # Generar número de orden único (máximo 20 caracteres)
-    # No asignar numero_orden para que se genere automáticamente en el modelo
-    # datos_solicitud['numero_orden'] se generará automáticamente como FS{año}{numero}
+    # Generar número de orden único
+    timestamp = timezone.now().strftime('%Y%m%d%H%M%S')
+    datos_solicitud['numero_orden'] = f"SRV-{trato.numero_oferta}-{timestamp}"
     
     # Determinar tipo de servicio basado en el tipo de negociación
     if trato.tipo_negociacion == 'control':

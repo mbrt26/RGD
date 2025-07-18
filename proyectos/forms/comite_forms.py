@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from proyectos.models import ComiteProyecto, ParticipanteComite, SeguimientoProyectoComite, Colaborador
+from proyectos.models import ComiteProyecto, ParticipanteComite, SeguimientoProyectoComite, SeguimientoServicioComite, ElementoExternoComite, Colaborador
 
 
 class ComiteProyectoForm(forms.ModelForm):
@@ -274,6 +274,187 @@ class SeguimientoProyectoComiteForm(forms.ModelForm):
                 'Si el proyecto requiere decisión, especifique cuál fue tomada.')
         
         return cleaned_data
+
+
+class SeguimientoServicioComiteForm(forms.ModelForm):
+    """Formulario para editar el seguimiento de un servicio en el comité"""
+    
+    class Meta:
+        model = SeguimientoServicioComite
+        fields = [
+            'estado_seguimiento', 'avance_reportado', 'logros_periodo',
+            'dificultades', 'acciones_requeridas', 'responsable_reporte',
+            'fecha_proximo_hito', 'orden_presentacion', 'requiere_decision'
+        ]
+        widgets = {
+            'estado_seguimiento': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'avance_reportado': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'max': 100,
+                'step': 0.01
+            }),
+            'logros_periodo': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Describa los principales logros y avances desde el último comité...'
+            }),
+            'dificultades': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Describa los problemas, obstáculos o riesgos identificados...'
+            }),
+            'acciones_requeridas': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Especifique las acciones concretas a tomar...'
+            }),
+            'responsable_reporte': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'fecha_proximo_hito': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'orden_presentacion': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1
+            }),
+            'requiere_decision': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Configurar queryset de responsables
+        self.fields['responsable_reporte'].queryset = Colaborador.objects.all().order_by('nombre')
+        self.fields['responsable_reporte'].empty_label = "Seleccionar responsable..."
+        
+        # Configurar campos requeridos
+        self.fields['estado_seguimiento'].required = True
+        self.fields['avance_reportado'].required = True
+        self.fields['logros_periodo'].required = True
+        
+        # Configurar valores por defecto si no existen
+        if not self.instance.pk:
+            self.fields['orden_presentacion'].initial = 1
+    
+    def clean_avance_reportado(self):
+        avance = self.cleaned_data.get('avance_reportado')
+        
+        if avance is not None:
+            if avance < 0 or avance > 100:
+                raise ValidationError('El avance debe estar entre 0 y 100%.')
+        
+        return avance
+
+
+class ElementoExternoComiteForm(forms.ModelForm):
+    """Formulario para agregar elementos externos (proyectos/servicios) al comité"""
+    
+    class Meta:
+        model = ElementoExternoComite
+        fields = [
+            'tipo_elemento', 'centro_costos', 'nombre_proyecto', 'observaciones',
+            'estado_seguimiento', 'avance_reportado', 'responsable_reporte',
+            'fecha_proximo_hito', 'requiere_decision', 'orden_presentacion'
+        ]
+        widgets = {
+            'tipo_elemento': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'centro_costos': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: 1001, 2001, CC-OBRAS, etc.'
+            }),
+            'nombre_proyecto': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre descriptivo del proyecto o servicio'
+            }),
+            'observaciones': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Información adicional, descripción, detalles relevantes...'
+            }),
+            'estado_seguimiento': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'avance_reportado': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'max': 100,
+                'step': 0.01,
+                'value': 0
+            }),
+            'responsable_reporte': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'fecha_proximo_hito': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'requiere_decision': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'orden_presentacion': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        comite = kwargs.pop('comite', None)
+        super().__init__(*args, **kwargs)
+        
+        # Configurar queryset de responsables
+        self.fields['responsable_reporte'].queryset = Colaborador.objects.all().order_by('nombre')
+        self.fields['responsable_reporte'].empty_label = "Seleccionar responsable..."
+        
+        # Configurar campos requeridos
+        self.fields['tipo_elemento'].required = True
+        self.fields['centro_costos'].required = True
+        self.fields['nombre_proyecto'].required = True
+        self.fields['observaciones'].required = True
+        
+        # Configurar valores por defecto
+        if not self.instance.pk and comite:
+            # Obtener el siguiente número de orden
+            from django.db.models import Max
+            ultimo_orden = ElementoExternoComite.objects.filter(
+                comite=comite
+            ).aggregate(max_orden=Max('orden_presentacion'))['max_orden'] or 0
+            self.fields['orden_presentacion'].initial = ultimo_orden + 1
+    
+    def clean_avance_reportado(self):
+        avance = self.cleaned_data.get('avance_reportado')
+        
+        if avance is not None:
+            if avance < 0 or avance > 100:
+                raise ValidationError('El avance debe estar entre 0 y 100%.')
+        
+        return avance
+    
+    def clean_centro_costos(self):
+        centro_costos = self.cleaned_data.get('centro_costos')
+        
+        if centro_costos:
+            # Limpiar espacios y convertir a mayúsculas
+            centro_costos = centro_costos.strip().upper()
+        
+        return centro_costos
+    
+    def clean_nombre_proyecto(self):
+        nombre = self.cleaned_data.get('nombre_proyecto')
+        
+        if nombre:
+            # Limpiar espacios extras
+            nombre = ' '.join(nombre.split())
+        
+        return nombre
 
 
 class BusquedaComiteForm(forms.Form):

@@ -10,7 +10,7 @@ from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import (
-    ListView, CreateView, UpdateView, DetailView, TemplateView
+    ListView, CreateView, UpdateView, DetailView, TemplateView, DeleteView
 )
 
 # Project imports
@@ -476,6 +476,18 @@ class ProyectoUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         return super().form_valid(form)
 
 
+class ProyectoDeleteView(LoginRequiredMixin, DeleteView):
+    model = Proyecto
+    template_name = 'proyectos/proyecto/confirm_delete.html'
+    success_url = reverse_lazy('proyectos:proyecto_list')
+    context_object_name = 'proyecto'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f'Eliminar Proyecto {self.object.nombre_proyecto}'
+        return context
+
+
 class ProyectoDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'proyectos/dashboard.html'
     
@@ -648,3 +660,72 @@ class ProyectoDashboardView(LoginRequiredMixin, TemplateView):
         ).order_by('fecha_fin')[:5]
         
         return context
+
+
+class ProyectoDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    """Vista para eliminar un proyecto con confirmación robusta"""
+    model = Proyecto
+    template_name = 'proyectos/proyecto/confirm_delete.html'
+    success_url = reverse_lazy('proyectos:proyecto_list')
+    context_object_name = 'proyecto'
+    
+    def test_func(self):
+        """Solo usuarios staff pueden eliminar proyectos"""
+        return self.request.user.is_staff
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        proyecto = self.get_object()
+        
+        # Obtener información relacionada para mostrar advertencias
+        actividades_count = Actividad.objects.filter(proyecto=proyecto).count()
+        bitacoras_count = Bitacora.objects.filter(proyecto=proyecto).count()
+        entregables_count = EntregaDocumental.objects.filter(proyecto=proyecto).count()
+        
+        # Calcular datos financieros
+        presupuesto_ejecutado = proyecto.gasto_real or 0
+        porcentaje_ejecucion = (presupuesto_ejecutado / proyecto.presupuesto * 100) if proyecto.presupuesto > 0 else 0
+        
+        context.update({
+            'title': f'Eliminar Proyecto: {proyecto.nombre_proyecto}',
+            'actividades_count': actividades_count,
+            'bitacoras_count': bitacoras_count,
+            'entregables_count': entregables_count,
+            'presupuesto_ejecutado': presupuesto_ejecutado,
+            'porcentaje_ejecucion': round(porcentaje_ejecucion, 2),
+            'tiene_datos_relacionados': any([actividades_count, bitacoras_count, entregables_count]),
+            'avance_proyecto': proyecto.avance or 0,
+        })
+        
+        return context
+    
+    def delete(self, request, *args, **kwargs):
+        """Sobrescribir para agregar mensaje de confirmación"""
+        proyecto = self.get_object()
+        nombre_proyecto = proyecto.nombre_proyecto
+        cliente = proyecto.cliente
+        
+        # Verificar que el usuario confirmó explícitamente
+        confirmacion = request.POST.get('confirmacion')
+        if confirmacion != 'ELIMINAR':
+            messages.error(
+                request, 
+                'Debe escribir "ELIMINAR" exactamente para confirmar la eliminación.'
+            )
+            return redirect('proyectos:proyecto_delete', pk=proyecto.pk)
+        
+        # Mensaje de éxito antes de eliminar
+        messages.success(
+            request,
+            f'Proyecto "{nombre_proyecto}" del cliente "{cliente}" ha sido eliminado permanentemente.'
+        )
+        
+        return super().delete(request, *args, **kwargs)
+    
+    def handle_no_permission(self):
+        """Mensaje personalizado cuando no tiene permisos"""
+        messages.error(
+            self.request,
+            'No tiene permisos para eliminar proyectos. Solo los administradores pueden realizar esta acción.'
+        )
+        return redirect('proyectos:proyecto_list')

@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.contrib.auth.password_validation import validate_password
 from django.utils.translation import gettext_lazy as _
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Row, Column, Submit, Button
@@ -48,7 +49,18 @@ class CustomUserCreationForm(UserCreationForm):
 class CustomUserChangeForm(UserChangeForm):
     """Formulario para editar usuarios."""
     
-    password = None  # Removemos el campo de contraseña del formulario de edición
+    password = None  # Removemos el campo de contraseña heredado
+    new_password1 = forms.CharField(
+        label=_("Nueva contraseña"),
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=False,
+        help_text=_("Deje en blanco si no desea cambiar la contraseña.")
+    )
+    new_password2 = forms.CharField(
+        label=_("Confirmar nueva contraseña"),
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=False
+    )
     
     class Meta:
         model = User
@@ -78,12 +90,43 @@ class CustomUserChangeForm(UserChangeForm):
                 Column('is_active', css_class='form-group col-md-6 mb-0'),
                 css_class='form-row'
             ),
+            Row(
+                Column('new_password1', css_class='form-group col-md-6 mb-0'),
+                Column('new_password2', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row'
+            ),
             FormActions(
                 Submit('submit', _('Actualizar Usuario'), css_class='btn btn-primary'),
                 Button('cancel', _('Cancelar'), css_class='btn btn-secondary', 
                       onclick="window.history.back();")
             )
         )
+    
+    def clean_new_password1(self):
+        password1 = self.cleaned_data.get('new_password1')
+        if password1:
+            try:
+                validate_password(password1, self.instance)
+            except forms.ValidationError as error:
+                raise forms.ValidationError(error)
+        return password1
+    
+    def clean_new_password2(self):
+        password1 = self.cleaned_data.get('new_password1')
+        password2 = self.cleaned_data.get('new_password2')
+        if password1 and password2:
+            if password1 != password2:
+                raise forms.ValidationError(_("Las contraseñas no coinciden."))
+        return password2
+    
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        password = self.cleaned_data.get('new_password1')
+        if password:
+            user.set_password(password)
+        if commit:
+            user.save()
+        return user
 
 class RoleForm(forms.ModelForm):
     """Formulario para crear y editar roles."""

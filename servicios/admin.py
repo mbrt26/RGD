@@ -28,8 +28,9 @@ class SolicitudServicioAdmin(admin.ModelAdmin):
                    'fecha_programada', 'tecnico_asignado', 'fecha_creacion']
     list_filter = ['estado', 'tipo_servicio', 'prioridad', 'fecha_programada', 'fecha_creacion']
     search_fields = ['numero_orden', 'cliente_crm__nombre', 'direccion_servicio']
-    readonly_fields = ['numero_orden', 'fecha_creacion', 'fecha_actualizacion']
-    raw_id_fields = ['cliente_crm', 'contacto_crm', 'tecnico_asignado', 'creado_por']
+    readonly_fields = ['numero_orden', 'fecha_creacion', 'fecha_actualizacion', 'fecha_contractual']
+    raw_id_fields = ['cliente_crm', 'contacto_crm', 'tecnico_asignado', 'creado_por', 
+                    'trato_origen', 'cotizacion_aprobada', 'director_proyecto', 'ingeniero_residente']
     date_hierarchy = 'fecha_programada'
     
     fieldsets = (
@@ -37,10 +38,16 @@ class SolicitudServicioAdmin(admin.ModelAdmin):
             'fields': ('numero_orden', 'estado', 'tipo_servicio', 'prioridad')
         }),
         ('Cliente', {
-            'fields': ('cliente_crm', 'contacto_crm', 'direccion_servicio', 'centro_costo')
+            'fields': ('cliente_crm', 'contacto_crm', 'direccion_servicio', 'centro_costo', 
+                      'nombre_proyecto', 'orden_contrato', 'dias_prometidos', 'fecha_contractual',
+                      'trato_origen', 'cotizacion_aprobada')
         }),
         ('Programación', {
             'fields': ('fecha_programada', 'duracion_estimada', 'tecnico_asignado')
+        }),
+        ('Equipo del Proyecto', {
+            'fields': ('director_proyecto', 'ingeniero_residente', 'cronograma'),
+            'classes': ('collapse',)
         }),
         ('Geolocalización', {
             'fields': ('latitud', 'longitud', 'direccion_gps'),

@@ -7,6 +7,7 @@ from .views import (
     ProyectoDashboardView, ColaboradorListView, ColaboradorCreateView, 
     ColaboradorDetailView, ColaboradorUpdateView
 )
+from .views.proyecto.views import ProyectoDeleteView
 from .views.colaborador.views import ColaboradorDeleteView
 from .views.colaborador.views import ColaboradorImportView, ColaboradorPlantillaExcelView
 from .views.debug_views import debug_template_loading
@@ -36,8 +37,9 @@ from .views.entregable.views import (
 from .views.comite.views import (
     ComiteListView, ComiteCreateView, ComiteDetailView, ComiteUpdateView,
     ComiteDeleteView, ComiteActaView, ComiteExportView, ComiteIniciarView, 
-    ComiteFinalizarView, SeguimientoUpdateView, gestionar_participantes_comite, 
-    duplicar_comite, ajax_buscar_colaboradores
+    ComiteFinalizarView, SeguimientoUpdateView, SeguimientoServicioUpdateView, gestionar_participantes_comite, 
+    duplicar_comite, ajax_buscar_colaboradores, agregar_servicio_seguimiento,
+    ElementoExternoCreateView, ElementoExternoUpdateView
 )
 from .views.prorroga.views import (
     ProrrogaListView, ProrrogaCreateView, ProrrogaDetailView, ProrrogaAprobacionView,
@@ -65,6 +67,7 @@ urlpatterns = [
         path('<int:pk>/', include([
             path('', login_required(ProyectoDetailView.as_view()), name='proyecto_detail'),
             path('editar/', login_required(ProyectoUpdateView.as_view()), name='proyecto_update'),
+            path('eliminar/', login_required(ProyectoDeleteView.as_view()), name='proyecto_delete'),
         ])),
     ])),
     
@@ -151,7 +154,11 @@ urlpatterns = [
         path('<int:pk>/eliminar/', login_required(ComiteDeleteView.as_view()), name='comite_delete'),
         path('<int:comite_id>/participantes/', login_required(gestionar_participantes_comite), name='gestionar_participantes_comite'),
         path('<int:comite_id>/duplicar/', login_required(duplicar_comite), name='duplicar_comite'),
+        path('<int:comite_id>/agregar-servicio/', login_required(agregar_servicio_seguimiento), name='agregar_servicio_seguimiento'),
+        path('<int:comite_id>/elemento-externo/nuevo/', login_required(ElementoExternoCreateView.as_view()), name='elemento_externo_create'),
+        path('elemento-externo/<int:pk>/editar/', login_required(ElementoExternoUpdateView.as_view()), name='elemento_externo_update'),
         path('seguimiento/<int:pk>/editar/', login_required(SeguimientoUpdateView.as_view()), name='seguimiento_update'),
+        path('seguimiento-servicio/<int:pk>/editar/', login_required(SeguimientoServicioUpdateView.as_view()), name='seguimiento_servicio_update'),
         path('ajax/buscar-colaboradores/', login_required(ajax_buscar_colaboradores), name='ajax_buscar_colaboradores'),
     ])),
     

@@ -19,6 +19,10 @@
                     <i class="fas fa-file-alt me-1"></i>Crear Informe
                 </a>
             {% endif %}
+            <a href="{% url 'servicios:solicitud_delete' solicitud.pk %}" class="btn btn-danger"
+               onclick="return confirm('¿Está seguro de que desea eliminar esta solicitud?')">
+                <i class="fas fa-trash me-1"></i>Eliminar
+            </a>
             <a href="{% url 'servicios:solicitud_list' %}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left me-1"></i>Volver
             </a>
@@ -115,6 +119,21 @@
                                 {% if solicitud.nombre_proyecto %}
                                 <dt class="col-sm-5">Proyecto:</dt>
                                 <dd class="col-sm-7">{{ solicitud.nombre_proyecto }}</dd>
+                                {% endif %}
+                                
+                                {% if solicitud.orden_contrato %}
+                                <dt class="col-sm-5">Orden/Contrato:</dt>
+                                <dd class="col-sm-7">{{ solicitud.orden_contrato }}</dd>
+                                {% endif %}
+                                
+                                {% if solicitud.dias_prometidos %}
+                                <dt class="col-sm-5">Días Prometidos:</dt>
+                                <dd class="col-sm-7">{{ solicitud.dias_prometidos }} días</dd>
+                                {% endif %}
+                                
+                                {% if solicitud.fecha_contractual %}
+                                <dt class="col-sm-5">Fecha Contractual:</dt>
+                                <dd class="col-sm-7">{{ solicitud.fecha_contractual|date:"d/m/Y" }}</dd>
                                 {% endif %}
                                 
                                 {% if solicitud.trato_origen %}

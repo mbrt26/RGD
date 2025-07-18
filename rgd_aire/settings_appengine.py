@@ -107,9 +107,10 @@ GS_PROJECT_ID = PROJECT_ID
 GS_DEFAULT_ACL = 'publicRead'
 GS_QUERYSTRING_AUTH = False
 GS_FILE_OVERWRITE = False
+# No usar GS_LOCATION para mantener compatibilidad con archivos existentes
 
-# URL para archivos de media en GCS
-MEDIA_URL = f'https://storage.googleapis.com/{GS_BUCKET_NAME}/media/'
+# URL para archivos de media en GCS (sin prefijo /media/ extra)
+MEDIA_URL = f'https://storage.googleapis.com/{GS_BUCKET_NAME}/'
 
 # Configuración de seguridad para App Engine
 SECURE_SSL_REDIRECT = True

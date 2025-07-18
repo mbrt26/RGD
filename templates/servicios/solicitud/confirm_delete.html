@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-trash text-danger"></i>
+                        {{ title }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h4><i class="icon fas fa-exclamation-triangle"></i> ¡Atención!</h4>
+                        ¿Está seguro de que desea eliminar esta solicitud de servicio?
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Número de Orden:</strong> {{ object.numero_orden }}<br>
+                            <strong>Cliente:</strong> {{ object.cliente_crm.nombre }}<br>
+                            {% if object.contacto_crm %}
+                            <strong>Contacto:</strong> {{ object.contacto_crm.nombre }}<br>
+                            {% endif %}
+                            {% if object.tecnico_asignado %}
+                            <strong>Técnico:</strong> {{ object.tecnico_asignado.nombre_completo }}<br>
+                            {% endif %}
+                            <strong>Estado:</strong> 
+                            <span class="badge 
+                                {% if object.estado == 'pendiente' %}bg-secondary
+                                {% elif object.estado == 'en_ejecucion' %}bg-primary
+                                {% elif object.estado == 'atrasado' %}bg-warning
+                                {% elif object.estado == 'finalizado' %}bg-success
+                                {% else %}bg-light{% endif %}">
+                                {{ object.get_estado_display }}
+                            </span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Fecha Creación:</strong> {{ object.fecha_creacion|date:"d/m/Y H:i" }}<br>
+                            <strong>Fecha Programada:</strong> 
+                            {% if object.fecha_programada %}
+                                {{ object.fecha_programada|date:"d/m/Y H:i" }}
+                            {% else %}
+                                <em>No programada</em>
+                            {% endif %}<br>
+                            <strong>Descripción:</strong> {{ object.descripcion|truncatewords:10 }}
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-danger mt-3">
+                        <strong>Esta acción no se puede deshacer.</strong> 
+                        Se eliminarán también todos los registros relacionados (informes de trabajo, ubicaciones técnico, etc.).
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Confirmar Eliminación
+                            </button>
+                            <a href="{% url 'servicios:solicitud_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

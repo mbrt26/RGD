@@ -109,6 +109,7 @@
                             <th>Cotización</th>
                             <th>Tipo de Servicio</th>
                             <th>Fecha Programada</th>
+                            <th>Fecha Contractual</th>
                             <th>Técnico Asignado</th>
                             <th>Estado</th>
                             <th>Acciones</th>
@@ -128,6 +129,9 @@
                                     <div>{{ solicitud.cliente_crm.nombre|truncatechars:30 }}</div>
                                     {% if solicitud.nombre_proyecto %}
                                         <small class="text-primary">{{ solicitud.nombre_proyecto|truncatechars:25 }}</small>
+                                    {% endif %}
+                                    {% if solicitud.orden_contrato %}
+                                        <small class="text-info d-block">Ord/Ctr: {{ solicitud.orden_contrato|truncatechars:20 }}</small>
                                     {% endif %}
                                     {% if solicitud.contacto_crm %}
                                         <small class="text-muted d-block">{{ solicitud.contacto_crm.nombre }}</small>
@@ -157,6 +161,16 @@
                             <td>
                                 <div>{{ solicitud.fecha_programada|date:"d/m/Y" }}</div>
                                 <small class="text-muted">{{ solicitud.fecha_programada|date:"H:i" }}</small>
+                            </td>
+                            <td>
+                                {% if solicitud.fecha_contractual %}
+                                    <div>{{ solicitud.fecha_contractual|date:"d/m/Y" }}</div>
+                                    {% if solicitud.dias_prometidos %}
+                                        <small class="text-muted">{{ solicitud.dias_prometidos }} días</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
                             </td>
                             <td>
                                 {% if solicitud.tecnico_asignado %}
@@ -204,6 +218,12 @@
                                            class="btn btn-outline-success btn-sm" title="Crear informe">
                                             <i class="fas fa-file-alt"></i>
                                         </a>
+                                    {% endif %}
+                                    {% if user.is_staff %}
+                                    <a href="{% url 'servicios:solicitud_delete' solicitud.pk %}" 
+                                       class="btn btn-outline-danger btn-sm" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
                                     {% endif %}
                                 </div>
                             </td>

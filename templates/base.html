@@ -107,14 +107,6 @@
                                 <i class="fas fa-file-excel me-2"></i>Reportes Excel
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">Comités</h6></li>
-                            <li><a class="dropdown-item" href="{% url 'proyectos:comite_list' %}">
-                                <i class="fas fa-users me-2"></i>Comités de Proyectos
-                            </a></li>
-                            <li><a class="dropdown-item" href="{% url 'proyectos:comite_create' %}">
-                                <i class="fas fa-plus me-2"></i>Nuevo Comité
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
                             <li><h6 class="dropdown-header">Prórrogas</h6></li>
                             <li><a class="dropdown-item" href="{% url 'proyectos:prorroga_list' %}">
                                 <i class="fas fa-clock me-2"></i>Gestión de Prórrogas
@@ -136,7 +128,7 @@
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{% url 'servicios:solicitud_list' %}">
-                                <i class="fas fa-clipboard-list me-2"></i>Solicitudes de Servicio
+                                <i class="fas fa-clipboard-list me-2"></i>Listado de Servicio
                             </a></li>
                             <li><a class="dropdown-item" href="{% url 'servicios:tecnico_list' %}">
                                 <i class="fas fa-users me-2"></i>Técnicos
@@ -236,6 +228,26 @@
                             </a></li>
                             <li><a class="dropdown-item" href="{% url 'tasks:category_create' %}">
                                 <i class="fas fa-tag me-2"></i>Nueva Categoría
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Menú desplegable Comités -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="comitesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-users me-1"></i>Comités
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="comitesDropdown">
+                            <li><a class="dropdown-item" href="{% url 'proyectos:comite_list' %}">
+                                <i class="fas fa-list me-2"></i>Lista de Comités
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'proyectos:comite_create' %}">
+                                <i class="fas fa-plus me-2"></i>Nuevo Comité
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Gestión</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'proyectos:comite_list' %}">
+                                <i class="fas fa-search me-2"></i>Buscar Comités
                             </a></li>
                         </ul>
                     </li>

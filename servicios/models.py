@@ -80,6 +80,9 @@ class SolicitudServicio(models.Model):
     direccion_servicio = models.TextField('Dirección de Servicio', help_text='Dirección específica donde se realizará el servicio')
     centro_costo = models.CharField('Centro de Costo', max_length=100, blank=True)
     nombre_proyecto = models.CharField('Nombre del Proyecto', max_length=200, blank=True, help_text='Nombre del proyecto asociado al servicio')
+    orden_contrato = models.CharField('Orden o Contrato', max_length=100, blank=True, help_text='Orden o contrato proveniente del CRM')
+    dias_prometidos = models.PositiveIntegerField('Promesa de Días', null=True, blank=True, help_text='Días prometidos del trato original')
+    fecha_contractual = models.DateField('Fecha Contractual', null=True, blank=True, help_text='Fecha de creación + días prometidos')
     
     # Programación
     fecha_programada = models.DateTimeField('Fecha Programada')
@@ -151,6 +154,14 @@ class SolicitudServicio(models.Model):
                 nuevo_num = 1
             
             self.numero_orden = f"FS{timezone.now().year}{nuevo_num:04d}"
+        
+        # Calcular fecha_contractual si hay dias_prometidos
+        if self.dias_prometidos and self.dias_prometidos > 0:
+            if not self.pk:  # Es una nueva instancia
+                self.fecha_contractual = timezone.now().date() + timezone.timedelta(days=self.dias_prometidos)
+            elif not self.fecha_contractual:  # Ya existe pero no tiene fecha_contractual
+                # Usar fecha_creacion si ya existe
+                self.fecha_contractual = self.fecha_creacion.date() + timezone.timedelta(days=self.dias_prometidos)
         
         super().save(*args, **kwargs)
 

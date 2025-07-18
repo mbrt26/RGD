@@ -182,11 +182,9 @@ class Trato(models.Model):
 
     TIPO_CHOICES = [
         ('contrato', 'Contrato'),
-        ('control', 'Control'),
-        ('diseno', 'Diseño'),
-        ('filtros', 'Filtros'),
-        ('mantenimiento', 'Mantenimiento'),
         ('servicios', 'Servicios'),
+        ('mantenimiento', 'Mantenimiento'),
+        ('suministro', 'Suministro'),
     ]
     
     numero_oferta = models.CharField('# Oferta', max_length=10, unique=True, blank=True)

@@ -3,6 +3,18 @@
 
 {% block title %}{{ role.name }} - Detalles del Rol{% endblock %}
 
+{% block extra_css %}
+<style>
+    .card-header h6 {
+        color: #000000 !important;
+        font-weight: 600;
+    }
+    .card-header h6 i {
+        color: #000000 !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <div class="row">
