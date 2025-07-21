@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Recopilar archivos estáticos usando settings locales
-ENV DJANGO_SETTINGS_MODULE=rgd_aire.settings_appengine
+ENV DJANGO_SETTINGS_MODULE=rgd_aire.settings_cloudrun
 RUN python manage.py collectstatic --noinput
 
 # Crear usuario no-root para seguridad

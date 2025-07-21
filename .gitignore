@@ -66,3 +66,5 @@ staticfiles/
 
 # Exclude nested git repositories
 RGD/
+# Cloud Run environment variables
+.env.cloudrun

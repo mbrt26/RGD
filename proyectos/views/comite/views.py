@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q, Count, Avg
+from django.views.decorators.http import require_http_methods
 from decimal import Decimal
 
 from proyectos.models import (
@@ -344,53 +345,60 @@ class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
+@require_http_methods(["POST"])
 def agregar_servicio_seguimiento(request, comite_id):
     """Vista AJAX para agregar un servicio al seguimiento del comité"""
-    if request.method == 'POST':
-        import json
-        
-        try:
-            comite = get_object_or_404(ComiteProyecto, pk=comite_id)
-            data = json.loads(request.body)
-            servicio_id = data.get('servicio_id')
-            
-            if not servicio_id:
-                return JsonResponse({'success': False, 'message': 'ID de servicio requerido'})
-            
-            servicio = get_object_or_404(SolicitudServicio, pk=servicio_id)
-            
-            # Verificar si ya existe seguimiento para este servicio
-            if SeguimientoServicioComite.objects.filter(comite=comite, servicio=servicio).exists():
-                return JsonResponse({'success': False, 'message': 'El servicio ya tiene seguimiento en este comité'})
-            
-            # Obtener el siguiente número de orden
-            from django.db.models import Max
-            ultimo_orden = SeguimientoServicioComite.objects.filter(comite=comite).aggregate(
-                max_orden=Max('orden_presentacion')
-            )['max_orden'] or 0
-            
-            # Crear el seguimiento
-            seguimiento = SeguimientoServicioComite.objects.create(
-                comite=comite,
-                servicio=servicio,
-                estado_seguimiento='verde',
-                avance_reportado=0,
-                logros_periodo='Servicio agregado al seguimiento del comité.',
-                orden_presentacion=ultimo_orden + 1,
-                actualizado_por=request.user
-            )
-            
-            return JsonResponse({
-                'success': True, 
-                'message': f'Servicio {servicio.numero_orden} agregado al seguimiento'
-            })
-            
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'message': 'Datos JSON inválidos'})
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
+    import json
+    import logging
     
-    return JsonResponse({'success': False, 'message': 'Método no permitido'})
+    logger = logging.getLogger(__name__)
+    
+    try:
+        comite = get_object_or_404(ComiteProyecto, pk=comite_id)
+        data = json.loads(request.body)
+        servicio_id = data.get('servicio_id')
+        
+        logger.info(f"Intentando agregar servicio {servicio_id} al comité {comite_id}")
+        
+        if not servicio_id:
+            return JsonResponse({'success': False, 'message': 'ID de servicio requerido'})
+        
+        servicio = get_object_or_404(SolicitudServicio, pk=servicio_id)
+        
+        # Verificar si ya existe seguimiento para este servicio
+        if SeguimientoServicioComite.objects.filter(comite=comite, servicio=servicio).exists():
+            return JsonResponse({'success': False, 'message': 'El servicio ya tiene seguimiento en este comité'})
+        
+        # Obtener el siguiente número de orden
+        from django.db.models import Max
+        ultimo_orden = SeguimientoServicioComite.objects.filter(comite=comite).aggregate(
+            max_orden=Max('orden_presentacion')
+        )['max_orden'] or 0
+        
+        # Crear el seguimiento
+        seguimiento = SeguimientoServicioComite.objects.create(
+            comite=comite,
+            servicio=servicio,
+            estado_seguimiento='verde',
+            avance_reportado=0,
+            logros_periodo='Servicio agregado al seguimiento del comité.',
+            orden_presentacion=ultimo_orden + 1,
+            actualizado_por=request.user
+        )
+        
+        logger.info(f"Seguimiento creado exitosamente: {seguimiento.id}")
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'Servicio {servicio.numero_orden} agregado al seguimiento'
+        })
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"Error decodificando JSON: {str(e)}")
+        return JsonResponse({'success': False, 'message': 'Datos JSON inválidos'})
+    except Exception as e:
+        logger.error(f"Error al agregar servicio al seguimiento: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
 
 
 def gestionar_participantes_comite(request, comite_id):

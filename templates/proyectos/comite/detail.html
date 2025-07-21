@@ -724,24 +724,42 @@
     <i class="fas fa-bolt"></i>
 </button>
 {% endif %}
+
+<!-- Campo CSRF oculto para JavaScript -->
+{% csrf_token %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
 // Función helper para obtener el token CSRF de manera robusta
 function getCSRFToken() {
-    // Buscar token CSRF en múltiples ubicaciones
+    // Primero buscar en el input hidden del formulario
     let csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfToken && csrfToken.value) {
+        console.log('CSRF token encontrado en formulario');
+        return csrfToken.value;
+    }
     
-    // Si no se encuentra, buscar en cookies como alternativa
-    if (!csrfToken) {
-        const csrfCookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
-        if (csrfCookie) {
-            return csrfCookie.split('=')[1];
+    // Si no se encuentra, buscar en cookies
+    const name = 'csrftoken';
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                console.log('CSRF token encontrado en cookie');
+                break;
+            }
         }
     }
     
-    return csrfToken ? csrfToken.value : null;
+    if (!cookieValue) {
+        console.error('No se pudo encontrar el token CSRF');
+    }
+    
+    return cookieValue;
 }
 
 function iniciarComite() {
@@ -760,6 +778,7 @@ function iniciarComite() {
             method: 'POST',
             headers: {
                 'X-CSRFToken': csrfTokenValue,
+                'X-Csrftoken': csrfTokenValue,
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
         })
@@ -806,6 +825,7 @@ function finalizarComite() {
             method: 'POST',
             headers: {
                 'X-CSRFToken': csrfTokenValue,
+                'X-Csrftoken': csrfTokenValue,
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
         })
@@ -847,19 +867,46 @@ function imprimirActa() {
 
 function agregarSeguimientoServicio(servicioId) {
     if (confirm('¿Desea agregar este servicio al seguimiento del comité?')) {
+        console.log('Agregando servicio ID:', servicioId);
+        
+        // Obtener el token CSRF usando el método mejorado
+        const csrfToken = getCSRFToken();
+        console.log('CSRF Token:', csrfToken ? 'Encontrado' : 'No encontrado');
+        
+        if (!csrfToken) {
+            alert('Error: No se pudo obtener el token CSRF. Por favor recarga la página.');
+            return;
+        }
+        
         // Crear seguimiento de servicio via AJAX
         fetch(`/proyectos/comite/{{ comite.pk }}/agregar-servicio/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': csrfToken,
+                'X-Csrftoken': csrfToken  // Agregar ambas versiones por compatibilidad
             },
             body: JSON.stringify({
                 'servicio_id': servicioId
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            
+            if (!response.ok) {
+                // Si es 403, probablemente es un problema de CSRF
+                if (response.status === 403) {
+                    throw new Error('Error de autenticación (403). Por favor recarga la página e intenta nuevamente.');
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return response.json();
+        })
         .then(data => {
+            console.log('Response data:', data);
+            
             if (data.success) {
                 alert('Servicio agregado al seguimiento del comité');
                 location.reload();
@@ -868,8 +915,8 @@ function agregarSeguimientoServicio(servicioId) {
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Error al agregar el servicio al seguimiento');
+            console.error('Error completo:', error);
+            alert(`Error al agregar el servicio al seguimiento: ${error.message}`);
         });
     }
 }
