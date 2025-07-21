@@ -1391,6 +1391,15 @@ class SeguimientoProyectoComite(models.Model):
         help_text='Decisión específica tomada por el comité para este proyecto'
     )
     
+    # Relación con tareas generadas
+    tareas_generadas = models.ManyToManyField(
+        'tasks.Task',
+        blank=True,
+        related_name='seguimientos_comite',
+        verbose_name='Tareas Generadas',
+        help_text='Tareas creadas desde este seguimiento de comité'
+    )
+    
     class Meta:
         unique_together = ['comite', 'proyecto']
         verbose_name = 'Seguimiento de Proyecto en Comité'
@@ -1511,6 +1520,12 @@ class SeguimientoServicioComite(models.Model):
         help_text='Marca si este servicio requiere una decisión del comité'
     )
     
+    decision_tomada = models.TextField(
+        'Decisión Tomada',
+        blank=True,
+        help_text='Decisión específica tomada por el comité para este servicio'
+    )
+    
     orden_presentacion = models.PositiveIntegerField(
         'Orden de Presentación',
         default=1,
@@ -1568,6 +1583,7 @@ class ElementoExternoComite(models.Model):
     TIPO_ELEMENTO_CHOICES = [
         ('proyecto', 'Proyecto'),
         ('servicio', 'Servicio'),
+        ('otros', 'Otros'),
     ]
     
     ESTADO_SEGUIMIENTO_CHOICES = [
@@ -1591,9 +1607,16 @@ class ElementoExternoComite(models.Model):
         default='proyecto'
     )
     
+    cliente = models.CharField(
+        'Cliente',
+        max_length=200,
+        help_text='Nombre del cliente'
+    )
+    
     centro_costos = models.CharField(
         'Centro de Costos',
         max_length=100,
+        blank=True,
         help_text='Centro de costos al que pertenece'
     )
     
@@ -1601,11 +1624,6 @@ class ElementoExternoComite(models.Model):
         'Nombre del Proyecto/Servicio',
         max_length=200,
         help_text='Nombre descriptivo del proyecto o servicio'
-    )
-    
-    observaciones = models.TextField(
-        'Observaciones',
-        help_text='Información adicional sobre el elemento'
     )
     
     # Información de seguimiento
@@ -1625,6 +1643,24 @@ class ElementoExternoComite(models.Model):
         default=0
     )
     
+    logros_periodo = models.TextField(
+        'Logros del Período',
+        blank=True,
+        help_text='Principales logros y avances desde el último comité'
+    )
+    
+    dificultades = models.TextField(
+        'Dificultades',
+        blank=True,
+        help_text='Problemas, obstáculos o riesgos identificados'
+    )
+    
+    acciones_requeridas = models.TextField(
+        'Acciones Requeridas',
+        blank=True,
+        help_text='Acciones específicas a tomar para resolver dificultades'
+    )
+    
     responsable_reporte = models.ForeignKey(
         Colaborador,
         on_delete=models.SET_NULL,
@@ -1634,22 +1670,31 @@ class ElementoExternoComite(models.Model):
         verbose_name='Responsable del Reporte'
     )
     
-    fecha_proximo_hito = models.DateField(
-        'Fecha Próximo Hito',
-        null=True,
+    observaciones = models.TextField(
+        'Observaciones',
         blank=True,
-        help_text='Fecha del próximo hito importante'
+        help_text='Información adicional sobre el elemento'
     )
     
-    requiere_decision = models.BooleanField(
-        'Requiere Decisión',
-        default=False,
-        help_text='Marca si este elemento requiere una decisión del comité'
+    decision_tomada = models.TextField(
+        'Decisión Tomada',
+        blank=True,
+        help_text='Decisiones tomadas o pendientes de tomar'
     )
     
+    # Relación con tareas generadas
+    tareas_generadas = models.ManyToManyField(
+        'tasks.Task',
+        blank=True,
+        related_name='elementos_externos_comite',
+        verbose_name='Tareas Generadas',
+        help_text='Tareas creadas desde este elemento externo'
+    )
+    
+    # Campo temporal para compatibilidad
     orden_presentacion = models.PositiveIntegerField(
         'Orden de Presentación',
-        default=1,
+        default=999,
         help_text='Orden en que se presenta en el comité'
     )
     
@@ -1674,7 +1719,7 @@ class ElementoExternoComite(models.Model):
     class Meta:
         verbose_name = 'Elemento Externo de Comité'
         verbose_name_plural = 'Elementos Externos de Comités'
-        ordering = ['orden_presentacion', 'nombre_proyecto']
+        ordering = ['comite', 'nombre_proyecto']
     
     def __str__(self):
         return f"{self.get_tipo_elemento_display()}: {self.nombre_proyecto} - {self.comite.nombre}"

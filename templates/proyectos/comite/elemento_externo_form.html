@@ -1,249 +1,631 @@
-{% extends "base.html" %}
+{% extends "base/form_base.html" %}
 {% load static %}
 
 {% block title %}{{ title }}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .form-container {
-        max-width: 900px;
-        margin: 0 auto;
-    }
-    .field-group {
-        margin-bottom: 2rem;
-        padding: 1.5rem;
-        border: 1px solid #e9ecef;
+    .proyecto-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
         border-radius: 0.5rem;
-        background-color: #f8f9fa;
+        margin-bottom: 1.5rem;
     }
-    .field-group h5 {
-        color: #495057;
-        border-bottom: 2px solid #007bff;
-        padding-bottom: 0.5rem;
-        margin-bottom: 1rem;
+    .estado-preview {
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        margin-bottom: 0.5rem;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
     }
-    .help-text {
-        font-size: 0.875rem;
-        color: #6c757d;
-        margin-top: 0.25rem;
+    .estado-preview:hover {
+        border-color: #0d6efd;
+        transform: translateY(-1px);
     }
-    .required-field::after {
-        content: " *";
-        color: #dc3545;
+    .estado-preview.selected {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    .estado-verde { background: rgba(40, 167, 69, 0.1); color: #28a745; }
+    .estado-amarillo { background: rgba(255, 193, 7, 0.1); color: #ffc107; }
+    .estado-rojo { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+    .estado-azul { background: rgba(0, 123, 255, 0.1); color: #007bff; }
+    
+    .avance-container {
+        position: relative;
+    }
+    .avance-visual {
+        height: 20px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    .avance-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #20c997);
+        border-radius: 10px;
+        transition: width 0.3s ease;
+        position: relative;
+    }
+    .avance-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     }
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2><i class="fas fa-plus-circle me-2"></i>{{ form_title }}</h2>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'proyectos:comite_list' %}">Comités</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'proyectos:comite_detail' comite.pk %}">{{ comite.nombre }}</a></li>
-                    <li class="breadcrumb-item active">{{ form_title }}</li>
-                </ol>
-            </nav>
+{% block form_content %}
+<!-- Header del elemento externo -->
+<div class="proyecto-header p-4 mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h4 class="mb-1">{{ form_title }}</h4>
+            <p class="mb-0 opacity-75">
+                <i class="fas fa-calendar me-2"></i>Comité: {{ comite.nombre }}
+                <span class="mx-2">|</span>
+                <i class="fas fa-clock me-2"></i>{{ comite.fecha_comite|date:"d/m/Y" }}
+            </p>
         </div>
-        <div>
-            <a href="{% url 'proyectos:comite_detail' comite.pk %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Volver al Comité
-            </a>
-        </div>
-    </div>
-
-    <!-- Información del Comité -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <h6 class="card-subtitle mb-2 text-muted">Comité</h6>
-                    <h5 class="card-title">{{ comite.nombre }}</h5>
-                </div>
-                <div class="col-md-6">
-                    <h6 class="card-subtitle mb-2 text-muted">Fecha y Lugar</h6>
-                    <p class="card-text mb-0">
-                        <i class="fas fa-calendar me-2"></i>{{ comite.fecha_comite|date:"d/m/Y H:i" }}<br>
-                        {% if comite.lugar %}<i class="fas fa-map-marker-alt me-2"></i>{{ comite.lugar }}{% endif %}
-                    </p>
-                </div>
+        <div class="col-md-4 text-end">
+            <div class="badge bg-light text-dark fs-6 p-2">
+                <i class="fas fa-external-link-alt me-1"></i>Elemento Externo
             </div>
         </div>
-    </div>
-
-    <!-- Formulario -->
-    <div class="form-container">
-        <form method="post" novalidate>
-            {% csrf_token %}
-            
-            <!-- Información Básica -->
-            <div class="field-group">
-                <h5><i class="fas fa-info-circle me-2"></i>Información Básica</h5>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="{{ form.tipo_elemento.id_for_label }}" class="form-label required-field">
-                                Tipo de Elemento
-                            </label>
-                            {{ form.tipo_elemento }}
-                            {% if form.tipo_elemento.errors %}
-                                <div class="invalid-feedback d-block">{{ form.tipo_elemento.errors.0 }}</div>
-                            {% endif %}
-                            <div class="help-text">Seleccione si es un proyecto o servicio externo</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="{{ form.centro_costos.id_for_label }}" class="form-label required-field">
-                                Centro de Costos
-                            </label>
-                            {{ form.centro_costos }}
-                            {% if form.centro_costos.errors %}
-                                <div class="invalid-feedback d-block">{{ form.centro_costos.errors.0 }}</div>
-                            {% endif %}
-                            <div class="help-text">Código del centro de costos asociado</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="{{ form.nombre_proyecto.id_for_label }}" class="form-label required-field">
-                        Nombre del Proyecto/Servicio
-                    </label>
-                    {{ form.nombre_proyecto }}
-                    {% if form.nombre_proyecto.errors %}
-                        <div class="invalid-feedback d-block">{{ form.nombre_proyecto.errors.0 }}</div>
-                    {% endif %}
-                    <div class="help-text">Nombre descriptivo del proyecto o servicio externo</div>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="{{ form.observaciones.id_for_label }}" class="form-label required-field">
-                        Observaciones
-                    </label>
-                    {{ form.observaciones }}
-                    {% if form.observaciones.errors %}
-                        <div class="invalid-feedback d-block">{{ form.observaciones.errors.0 }}</div>
-                    {% endif %}
-                    <div class="help-text">Información adicional, descripción detallada o contexto relevante</div>
-                </div>
-            </div>
-
-            <!-- Información de Seguimiento -->
-            <div class="field-group">
-                <h5><i class="fas fa-chart-line me-2"></i>Información de Seguimiento</h5>
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label for="{{ form.estado_seguimiento.id_for_label }}" class="form-label">
-                                Estado del Seguimiento
-                            </label>
-                            {{ form.estado_seguimiento }}
-                            {% if form.estado_seguimiento.errors %}
-                                <div class="invalid-feedback d-block">{{ form.estado_seguimiento.errors.0 }}</div>
-                            {% endif %}
-                            <div class="help-text">Estado semafórico del elemento</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label for="{{ form.avance_reportado.id_for_label }}" class="form-label">
-                                % Avance Reportado
-                            </label>
-                            {{ form.avance_reportado }}
-                            {% if form.avance_reportado.errors %}
-                                <div class="invalid-feedback d-block">{{ form.avance_reportado.errors.0 }}</div>
-                            {% endif %}
-                            <div class="help-text">Porcentaje de avance (0-100%)</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label for="{{ form.orden_presentacion.id_for_label }}" class="form-label">
-                                Orden de Presentación
-                            </label>
-                            {{ form.orden_presentacion }}
-                            {% if form.orden_presentacion.errors %}
-                                <div class="invalid-feedback d-block">{{ form.orden_presentacion.errors.0 }}</div>
-                            {% endif %}
-                            <div class="help-text">Orden en que se presentará en el comité</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="{{ form.responsable_reporte.id_for_label }}" class="form-label">
-                                Responsable del Reporte
-                            </label>
-                            {{ form.responsable_reporte }}
-                            {% if form.responsable_reporte.errors %}
-                                <div class="invalid-feedback d-block">{{ form.responsable_reporte.errors.0 }}</div>
-                            {% endif %}
-                            <div class="help-text">Persona responsable de reportar el seguimiento</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="{{ form.fecha_proximo_hito.id_for_label }}" class="form-label">
-                                Fecha Próximo Hito
-                            </label>
-                            {{ form.fecha_proximo_hito }}
-                            {% if form.fecha_proximo_hito.errors %}
-                                <div class="invalid-feedback d-block">{{ form.fecha_proximo_hito.errors.0 }}</div>
-                            {% endif %}
-                            <div class="help-text">Fecha estimada del próximo hito o entregable</div>
-                        </div>
-                    </div>
-                </div>
-                
-            </div>
-
-            <!-- Botones de Acción -->
-            <div class="d-flex justify-content-between">
-                <a href="{% url 'proyectos:comite_detail' comite.pk %}" class="btn btn-secondary">
-                    <i class="fas fa-times me-2"></i>Cancelar
-                </a>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save me-2"></i>Guardar Elemento Externo
-                </button>
-            </div>
-        </form>
     </div>
 </div>
 
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>{{ title }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="elementoExternoForm">
+                    {% csrf_token %}
+                    
+                    <!-- Información básica -->
+                    <div class="mb-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="{{ form.tipo_elemento.id_for_label }}" class="form-label">
+                                    {{ form.tipo_elemento.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.tipo_elemento }}
+                                {% if form.tipo_elemento.errors %}
+                                    <div class="text-danger small">{{ form.tipo_elemento.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.cliente.id_for_label }}" class="form-label">
+                                    {{ form.cliente.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.cliente }}
+                                {% if form.cliente.errors %}
+                                    <div class="text-danger small">{{ form.cliente.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="{{ form.centro_costos.id_for_label }}" class="form-label">
+                                    {{ form.centro_costos.label }}
+                                </label>
+                                {{ form.centro_costos }}
+                                {% if form.centro_costos.errors %}
+                                    <div class="text-danger small">{{ form.centro_costos.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.nombre_proyecto.id_for_label }}" class="form-label">
+                                    {{ form.nombre_proyecto.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.nombre_proyecto }}
+                                {% if form.nombre_proyecto.errors %}
+                                    <div class="text-danger small">{{ form.nombre_proyecto.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Estado del seguimiento -->
+                    <div class="mb-4">
+                        <label class="form-label">Estado del Seguimiento <span class="text-danger">*</span></label>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <div class="estado-preview estado-verde" onclick="seleccionarEstado('verde', this)">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">Verde - Sin problemas</div>
+                                            <small>El proyecto avanza según lo planificado</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="estado-preview estado-amarillo" onclick="seleccionarEstado('amarillo', this)">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">Amarillo - Requiere atención</div>
+                                            <small>Hay aspectos que requieren seguimiento</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="estado-preview estado-rojo" onclick="seleccionarEstado('rojo', this)">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-exclamation-circle me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">Rojo - Crítico</div>
+                                            <small>Requiere intervención inmediata</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="estado-preview estado-azul" onclick="seleccionarEstado('azul', this)">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-pause-circle me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">Azul - En pausa</div>
+                                            <small>Proyecto temporalmente pausado</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {{ form.estado_seguimiento }}
+                        {% if form.estado_seguimiento.errors %}
+                            <div class="text-danger small mt-1">{{ form.estado_seguimiento.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Avance reportado -->
+                    <div class="mb-4">
+                        <label for="{{ form.avance_reportado.id_for_label }}" class="form-label">
+                            {{ form.avance_reportado.label }} <span class="text-danger">*</span>
+                        </label>
+                        <div class="avance-container">
+                            {{ form.avance_reportado }}
+                            <div class="avance-visual">
+                                <div class="avance-bar" id="avanceBar" style="width: {{ form.avance_reportado.value|default:0 }}%">
+                                    <div class="avance-text" id="avanceText">{{ form.avance_reportado.value|default:0 }}%</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% if form.avance_reportado.errors %}
+                            <div class="text-danger small">{{ form.avance_reportado.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Logros del período -->
+                    <div class="mb-3">
+                        <label for="{{ form.logros_periodo.id_for_label }}" class="form-label">
+                            {{ form.logros_periodo.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.logros_periodo }}
+                        <div class="form-text">Principales logros y avances desde el último comité</div>
+                        {% if form.logros_periodo.errors %}
+                            <div class="text-danger small">{{ form.logros_periodo.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Dificultades -->
+                    <div class="mb-3">
+                        <label for="{{ form.dificultades.id_for_label }}" class="form-label">
+                            {{ form.dificultades.label }}
+                        </label>
+                        {{ form.dificultades }}
+                        <div class="form-text">Problemas, obstáculos o riesgos identificados</div>
+                        {% if form.dificultades.errors %}
+                            <div class="text-danger small">{{ form.dificultades.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Acciones requeridas -->
+                    <div class="mb-3">
+                        <label for="{{ form.acciones_requeridas.id_for_label }}" class="form-label">
+                            {{ form.acciones_requeridas.label }}
+                        </label>
+                        {{ form.acciones_requeridas }}
+                        <div class="form-text">Acciones específicas a tomar</div>
+                        {% if form.acciones_requeridas.errors %}
+                            <div class="text-danger small">{{ form.acciones_requeridas.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.responsable_reporte.id_for_label }}" class="form-label">
+                                {{ form.responsable_reporte.label }}
+                            </label>
+                            {{ form.responsable_reporte }}
+                            {% if form.responsable_reporte.errors %}
+                                <div class="text-danger small">{{ form.responsable_reporte.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Observaciones -->
+                    <div class="mb-4">
+                        <label for="{{ form.observaciones.id_for_label }}" class="form-label">
+                            {{ form.observaciones.label }}
+                        </label>
+                        {{ form.observaciones }}
+                        {% if form.observaciones.errors %}
+                            <div class="text-danger small">{{ form.observaciones.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Decisión tomada -->
+                    <div class="mb-4">
+                        <label for="{{ form.decision_tomada.id_for_label }}" class="form-label">
+                            {{ form.decision_tomada.label }}
+                        </label>
+                        {{ form.decision_tomada }}
+                        {% if form.decision_tomada.errors %}
+                            <div class="text-danger small">{{ form.decision_tomada.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Sección de Tareas -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-tasks me-2"></i>Tareas del Elemento Externo
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- Tareas existentes -->
+                            {% if tareas_existentes %}
+                            <div class="mb-3">
+                                <h6 class="text-muted">Tareas creadas anteriormente:</h6>
+                                <div class="list-group list-group-flush">
+                                    {% for tarea in tareas_existentes %}
+                                    <div class="list-group-item px-0">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="mb-1">{{ tarea.title }}</h6>
+                                                <p class="mb-1 text-muted small">{{ tarea.description|default:"Sin descripción" }}</p>
+                                                <div class="small">
+                                                    <span class="text-muted">Asignado a:</span> {{ tarea.assigned_to.get_full_name|default:tarea.assigned_to.username }}
+                                                    <span class="ms-2 text-muted">Vence:</span> {{ tarea.due_date|date:"d/m/Y" }}
+                                                    <span class="ms-2 badge bg-{{ tarea.get_priority_color }}">{{ tarea.get_priority_display }}</span>
+                                                </div>
+                                            </div>
+                                            <span class="badge bg-{{ tarea.get_status_color }}">{{ tarea.get_status_display }}</span>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <hr>
+                            {% endif %}
+
+                            <!-- Formulario para nuevas tareas -->
+                            <h6 class="mb-3">Agregar nuevas tareas:</h6>
+                            <div id="tareas-container">
+                                <!-- Las tareas dinámicas se agregarán aquí -->
+                            </div>
+                            
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="agregar-tarea">
+                                <i class="fas fa-plus me-1"></i>Agregar Tarea
+                            </button>
+                            
+                            <!-- Campo oculto para almacenar las tareas en JSON -->
+                            <input type="hidden" name="tareas-tareas_json" id="tareas-json">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'proyectos:comite_detail' comite.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Volver al Comité
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="fas fa-save me-2"></i>Guardar Elemento Externo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Información del comité -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Información del Comité
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Nombre:</strong> {{ comite.nombre }}
+                </div>
+                <div class="mb-3">
+                    <strong>Fecha:</strong> {{ comite.fecha_comite|date:"d/m/Y H:i" }}
+                </div>
+                <div class="mb-3">
+                    <strong>Lugar:</strong> {{ comite.lugar|default:"No especificado" }}
+                </div>
+                <div class="mb-3">
+                    <strong>Coordinador:</strong> {{ comite.coordinador.nombre|default:"Sin asignar" }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Consejos -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Consejos
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="small mb-0">
+                    <li class="mb-2">Use <strong>Verde</strong> para proyectos que avanzan normalmente</li>
+                    <li class="mb-2">Use <strong>Amarillo</strong> para proyectos con alertas menores</li>
+                    <li class="mb-2">Use <strong>Rojo</strong> para proyectos críticos o con retrasos</li>
+                    <li class="mb-2">Use <strong>Azul</strong> para proyectos pausados por decisiones externas</li>
+                    <li class="mb-2">Sea específico en los logros y dificultades</li>
+                    <li>Incluya fechas concretas en las acciones requeridas</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-focus en el primer campo
-    const primerCampo = document.querySelector('select[name="tipo_elemento"]');
-    if (primerCampo) {
-        primerCampo.focus();
-    }
-    
-    // Validación en tiempo real del porcentaje de avance
-    const avanceInput = document.querySelector('input[name="avance_reportado"]');
-    if (avanceInput) {
-        avanceInput.addEventListener('input', function() {
-            const valor = parseFloat(this.value);
-            if (valor < 0 || valor > 100) {
-                this.classList.add('is-invalid');
-            } else {
-                this.classList.remove('is-invalid');
+    // Configurar campos del formulario
+    const campos = {
+        'id_tipo_elemento': 'form-select',
+        'id_cliente': 'form-control',
+        'id_centro_costos': 'form-control',
+        'id_nombre_proyecto': 'form-control',
+        'id_estado_seguimiento': 'form-select',
+        'id_avance_reportado': 'form-control',
+        'id_logros_periodo': 'form-control',
+        'id_dificultades': 'form-control',
+        'id_acciones_requeridas': 'form-control',
+        'id_responsable_reporte': 'form-select',
+        'id_observaciones': 'form-control',
+        'id_decision_tomada': 'form-control'
+    };
+
+    for (const [id, className] of Object.entries(campos)) {
+        const field = document.getElementById(id);
+        if (field) {
+            field.classList.add(className);
+            if (field.tagName === 'TEXTAREA') {
+                field.rows = 3;
             }
-        });
+        }
+    }
+
+    // Ocultar el campo select original de estado
+    const estadoSelect = document.getElementById('id_estado_seguimiento');
+    if (estadoSelect) {
+        estadoSelect.style.display = 'none';
+        
+        // Seleccionar el estado actual
+        const estadoActual = estadoSelect.value;
+        if (estadoActual) {
+            const preview = document.querySelector(`[onclick*="${estadoActual}"]`);
+            if (preview) {
+                preview.classList.add('selected');
+            }
+        } else {
+            // Por defecto seleccionar verde
+            const previewVerde = document.querySelector('.estado-verde');
+            if (previewVerde) {
+                previewVerde.classList.add('selected');
+                estadoSelect.value = 'verde';
+            }
+        }
+    }
+
+    // Configurar el avance reportado
+    const avanceInput = document.getElementById('id_avance_reportado');
+    const avanceBar = document.getElementById('avanceBar');
+    const avanceText = document.getElementById('avanceText');
+
+    function updateAvance() {
+        const valor = parseFloat(avanceInput.value) || 0;
+        avanceBar.style.width = valor + '%';
+        avanceText.textContent = valor + '%';
+
+        // Cambiar color basado en el valor
+        if (valor < 25) {
+            avanceBar.style.background = 'linear-gradient(90deg, #dc3545, #e74c3c)';
+        } else if (valor < 50) {
+            avanceBar.style.background = 'linear-gradient(90deg, #ffc107, #f39c12)';
+        } else if (valor < 75) {
+            avanceBar.style.background = 'linear-gradient(90deg, #17a2b8, #3498db)';
+        } else {
+            avanceBar.style.background = 'linear-gradient(90deg, #28a745, #20c997)';
+        }
+    }
+
+    if (avanceInput) {
+        updateAvance(); // Configurar estado inicial
+        avanceInput.addEventListener('input', updateAvance);
+    }
+});
+
+// Funcionalidad para tareas dinámicas
+let tareaCounter = 0;
+const tareasContainer = document.getElementById('tareas-container');
+const agregarTareaBtn = document.getElementById('agregar-tarea');
+const tareasJsonInput = document.getElementById('tareas-json');
+
+function agregarTarea() {
+    tareaCounter++;
+    const tareaId = `tarea-${tareaCounter}`;
+    
+    const tareaHtml = `
+        <div class="card mb-3 tarea-item" id="${tareaId}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <h6 class="mb-0">Nueva Tarea ${tareaCounter}</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarTarea('${tareaId}')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="row">
+                    <div class="col-md-12 mb-2">
+                        <input type="text" class="form-control tarea-titulo" placeholder="Título de la tarea..." required>
+                    </div>
+                    <div class="col-md-12 mb-2">
+                        <textarea class="form-control tarea-descripcion" rows="2" placeholder="Descripción de la tarea..."></textarea>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <select class="form-select tarea-responsable" required>
+                            <option value="">Seleccione responsable...</option>
+                            {% for user in usuarios_disponibles %}
+                            <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <input type="date" class="form-control tarea-fecha" required>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <select class="form-select tarea-prioridad">
+                            <option value="low">Baja</option>
+                            <option value="medium" selected>Media</option>
+                            <option value="high">Alta</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    tareasContainer.insertAdjacentHTML('beforeend', tareaHtml);
+    
+    // Establecer fecha mínima como hoy
+    const fechaInput = document.querySelector(`#${tareaId} .tarea-fecha`);
+    if (fechaInput) {
+        const today = new Date().toISOString().split('T')[0];
+        fechaInput.setAttribute('min', today);
+    }
+}
+
+function eliminarTarea(tareaId) {
+    const tareaElement = document.getElementById(tareaId);
+    if (tareaElement && confirm('¿Está seguro de eliminar esta tarea?')) {
+        tareaElement.remove();
+    }
+}
+
+function recopilarTareas() {
+    const tareas = [];
+    const tareaItems = document.querySelectorAll('.tarea-item');
+    
+    tareaItems.forEach((item) => {
+        const titulo = item.querySelector('.tarea-titulo').value.trim();
+        const descripcion = item.querySelector('.tarea-descripcion').value.trim();
+        const responsable = item.querySelector('.tarea-responsable').value;
+        const fecha = item.querySelector('.tarea-fecha').value;
+        const prioridad = item.querySelector('.tarea-prioridad').value;
+        
+        if (titulo && responsable && fecha) {
+            tareas.push({
+                titulo: titulo,
+                descripcion: descripcion,
+                responsable: responsable,
+                fecha_vencimiento: fecha,
+                prioridad: prioridad
+            });
+        }
+    });
+    
+    return tareas;
+}
+
+// Event listeners
+if (agregarTareaBtn) {
+    agregarTareaBtn.addEventListener('click', agregarTarea);
+}
+
+function seleccionarEstado(estado, elemento) {
+    // Quitar selección de otros elementos
+    document.querySelectorAll('.estado-preview').forEach(el => el.classList.remove('selected'));
+    
+    // Seleccionar el elemento actual
+    elemento.classList.add('selected');
+    
+    // Actualizar el select oculto
+    const estadoSelect = document.getElementById('id_estado_seguimiento');
+    if (estadoSelect) {
+        estadoSelect.value = estado;
+    }
+}
+
+// Validación del formulario
+document.getElementById('elementoExternoForm').addEventListener('submit', function(e) {
+    const estadoSelect = document.getElementById('id_estado_seguimiento');
+    const avanceInput = document.getElementById('id_avance_reportado');
+    const logrosInput = document.getElementById('id_logros_periodo');
+    const clienteInput = document.getElementById('id_cliente');
+    const nombreInput = document.getElementById('id_nombre_proyecto');
+
+    if (!estadoSelect.value) {
+        e.preventDefault();
+        alert('Debe seleccionar un estado de seguimiento');
+        return;
+    }
+
+    if (!clienteInput.value.trim()) {
+        e.preventDefault();
+        alert('Debe ingresar el nombre del cliente');
+        clienteInput.focus();
+        return;
+    }
+
+    if (!nombreInput.value.trim()) {
+        e.preventDefault();
+        alert('Debe ingresar el nombre del proyecto/servicio');
+        nombreInput.focus();
+        return;
+    }
+
+    if (!avanceInput.value || parseFloat(avanceInput.value) < 0 || parseFloat(avanceInput.value) > 100) {
+        e.preventDefault();
+        alert('El avance debe estar entre 0 y 100%');
+        avanceInput.focus();
+        return;
+    }
+
+    if (!logrosInput.value.trim()) {
+        e.preventDefault();
+        alert('Debe describir los logros del período');
+        logrosInput.focus();
+        return;
     }
     
-    // Auto-formatear el centro de costos
-    const centroInput = document.querySelector('input[name="centro_costos"]');
-    if (centroInput) {
-        centroInput.addEventListener('blur', function() {
-            this.value = this.value.trim().toUpperCase();
-        });
-    }
+    // Recopilar y guardar las tareas en el campo JSON antes de enviar
+    const tareas = recopilarTareas();
+    tareasJsonInput.value = JSON.stringify(tareas);
 });
 </script>
 {% endblock %}

@@ -181,17 +181,21 @@
             <table class="table table-sm acta-table table-bordered">
                 <thead class="table-light">
                     <tr>
-                        <th style="width: 25%;">Proyecto</th>
-                        <th style="width: 15%;">Responsable</th>
-                        <th style="width: 10%;">% Avance</th>
-                        <th style="width: 10%;">Estado</th>
-                        <th style="width: 10%;">Registro</th>
-                        <th style="width: 30%;">Observaciones</th>
+                        <th style="width: 20%;">Cliente</th>
+                        <th style="width: 10%;">Centro de Costos</th>
+                        <th style="width: 20%;">Proyecto</th>
+                        <th style="width: 10%;">Responsable</th>
+                        <th style="width: 8%;">% Avance</th>
+                        <th style="width: 7%;">Estado</th>
+                        <th style="width: 7%;">Registro</th>
+                        <th style="width: 18%;">Observaciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for seguimiento in seguimientos %}
                     <tr>
+                        <td>{{ seguimiento.proyecto.cliente }}</td>
+                        <td class="text-center">{{ seguimiento.proyecto.centro_costos }}</td>
                         <td class="fw-bold">{{ seguimiento.proyecto.nombre_proyecto }}</td>
                         <td>{{ seguimiento.proyecto.responsable.nombre|default:"Sin asignar" }}</td>
                         <td class="text-center">
@@ -223,7 +227,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-muted text-center">No hay proyectos registrados para seguimiento</td>
+                        <td colspan="8" class="text-muted text-center">No hay proyectos registrados para seguimiento</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -239,19 +243,29 @@
             <table class="table table-sm acta-table table-bordered">
                 <thead class="table-light">
                     <tr>
-                        <th style="width: 20%;">N° Orden</th>
-                        <th style="width: 20%;">Cliente</th>
-                        <th style="width: 15%;">Responsable</th>
-                        <th style="width: 10%;">% Avance</th>
-                        <th style="width: 10%;">Estado</th>
+                        <th style="width: 15%;">Cliente</th>
+                        <th style="width: 8%;">Centro de Costos</th>
+                        <th style="width: 10%;">N° Orden</th>
+                        <th style="width: 20%;">Descripción</th>
+                        <th style="width: 10%;">Responsable</th>
+                        <th style="width: 7%;">% Avance</th>
+                        <th style="width: 5%;">Estado</th>
                         <th style="width: 25%;">Observaciones/Logros</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for seguimiento_servicio in seguimientos_servicios %}
                     <tr>
-                        <td class="fw-bold">{{ seguimiento_servicio.servicio.numero_orden }}</td>
                         <td>{{ seguimiento_servicio.servicio.cliente_crm.nombre }}</td>
+                        <td class="text-center">{{ seguimiento_servicio.servicio.centro_costos|default:"Sin CC" }}</td>
+                        <td class="fw-bold">{{ seguimiento_servicio.servicio.numero_orden }}</td>
+                        <td>
+                            {% if seguimiento_servicio.servicio.trato_origen and seguimiento_servicio.servicio.trato_origen.descripcion %}
+                                <small>{{ seguimiento_servicio.servicio.trato_origen.descripcion|truncatewords:15 }}</small>
+                            {% else %}
+                                <small class="text-muted">Sin descripción</small>
+                            {% endif %}
+                        </td>
                         <td>
                             {% if seguimiento_servicio.responsable_reporte %}
                                 {{ seguimiento_servicio.responsable_reporte.nombre }}
@@ -287,7 +301,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-muted text-center">No hay servicios registrados para seguimiento</td>
+                        <td colspan="8" class="text-muted text-center">No hay servicios registrados para seguimiento</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -304,20 +318,22 @@
             <table class="table table-sm acta-table table-bordered">
                 <thead class="table-light">
                     <tr>
+                        <th style="width: 20%;">Cliente</th>
+                        <th style="width: 10%;">Centro Costos</th>
                         <th style="width: 20%;">Proyecto/Servicio</th>
-                        <th style="width: 15%;">Centro Costos</th>
-                        <th style="width: 10%;">Tipo</th>
-                        <th style="width: 15%;">Responsable</th>
-                        <th style="width: 10%;">% Avance</th>
-                        <th style="width: 10%;">Estado</th>
-                        <th style="width: 20%;">Observaciones</th>
+                        <th style="width: 8%;">Tipo</th>
+                        <th style="width: 10%;">Responsable</th>
+                        <th style="width: 8%;">% Avance</th>
+                        <th style="width: 7%;">Estado</th>
+                        <th style="width: 17%;">Observaciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for elemento in elementos_externos %}
                     <tr>
+                        <td>{{ elemento.cliente }}</td>
+                        <td class="text-center">{{ elemento.centro_costos|default:"Sin CC" }}</td>
                         <td class="fw-bold">{{ elemento.nombre_proyecto }}</td>
-                        <td>{{ elemento.centro_costos }}</td>
                         <td>
                             <span class="badge {% if elemento.tipo_elemento == 'proyecto' %}bg-primary{% else %}bg-success{% endif %}">
                                 {{ elemento.get_tipo_elemento_display }}
@@ -356,7 +372,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-muted text-center">No hay elementos externos registrados</td>
+                        <td colspan="8" class="text-muted text-center">No hay elementos externos registrados</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -398,11 +414,11 @@
                             
                             <!-- Decisiones de Servicios -->
                             {% for seguimiento_servicio in seguimientos_servicios %}
-                            {% if seguimiento_servicio.acciones_requeridas %}
+                            {% if seguimiento_servicio.decision_tomada %}
                             <tr>
                                 <td><span class="badge bg-success">Servicio</span></td>
                                 <td class="fw-bold">{{ seguimiento_servicio.servicio.numero_orden }}</td>
-                                <td>{{ seguimiento_servicio.acciones_requeridas|default:"Requiere definición de acciones" }}</td>
+                                <td>{{ seguimiento_servicio.decision_tomada|default:"Requiere definición de acciones" }}</td>
                                 <td>{{ seguimiento_servicio.responsable_reporte.nombre|default:"Por asignar" }}</td>
                                 <td>{{ seguimiento_servicio.fecha_proximo_hito|default:"Por definir" }}</td>
                             </tr>
@@ -436,6 +452,124 @@
             </div>
         </div>
     </div>
+
+    <!-- Tareas Asignadas -->
+    {% if tiene_tareas %}
+    <div class="acta-section">
+        <h4><i class="fas fa-tasks me-2"></i>Tareas Asignadas</h4>
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th style="width: 20%;">Proyecto/Elemento</th>
+                                <th style="width: 30%;">Tarea</th>
+                                <th style="width: 15%;">Responsable</th>
+                                <th style="width: 12%;">Fecha Vencimiento</th>
+                                <th style="width: 10%;">Prioridad</th>
+                                <th style="width: 13%;">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Tareas de Proyectos -->
+                            {% for item in tareas_proyectos %}
+                                {% for tarea in item.tareas %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-primary mb-1">Proyecto</span><br>
+                                        <small class="fw-bold">{{ item.proyecto }}</small>
+                                    </td>
+                                    <td>
+                                        <strong>{{ tarea.title }}</strong>
+                                        {% if tarea.description %}
+                                        <br><small class="text-muted">{{ tarea.description|truncatewords:15 }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ tarea.assigned_to.get_full_name|default:tarea.assigned_to.username }}</td>
+                                    <td>{{ tarea.due_date|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ tarea.get_priority_color }}">
+                                            {{ tarea.get_priority_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ tarea.get_status_color }}">
+                                            {{ tarea.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endfor %}
+                            
+                            <!-- Tareas de Elementos Externos -->
+                            {% for item in tareas_elementos %}
+                                {% for tarea in item.tareas %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary mb-1">Elemento Externo</span><br>
+                                        <small class="fw-bold">{{ item.proyecto }}</small>
+                                    </td>
+                                    <td>
+                                        <strong>{{ tarea.title }}</strong>
+                                        {% if tarea.description %}
+                                        <br><small class="text-muted">{{ tarea.description|truncatewords:15 }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ tarea.assigned_to.get_full_name|default:tarea.assigned_to.username }}</td>
+                                    <td>{{ tarea.due_date|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ tarea.get_priority_color }}">
+                                            {{ tarea.get_priority_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ tarea.get_status_color }}">
+                                            {{ tarea.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Resumen de Tareas -->
+                {% with total_tareas=tareas_proyectos|length|add:tareas_elementos|length %}
+                <div class="mt-3 p-3 bg-light rounded">
+                    <h6 class="mb-2">Resumen de Tareas Asignadas:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="mb-0">
+                                <li>Total de tareas asignadas: <strong>
+                                    {% for item in tareas_proyectos %}
+                                        {% for tarea in item.tareas %}{% if forloop.counter == 1 and forloop.parentloop.counter == 1 %}0{% endif %}{% endfor %}
+                                    {% endfor %}
+                                    {% for item in tareas_elementos %}
+                                        {% for tarea in item.tareas %}{% if forloop.counter == 1 and forloop.parentloop.counter == 1 %}0{% endif %}{% endfor %}
+                                    {% endfor %}
+                                    {% for item in tareas_proyectos %}{{ item.tareas|length }}{% if not forloop.last %}+{% endif %}{% endfor %}
+                                    {% if tareas_proyectos and tareas_elementos %}+{% endif %}
+                                    {% for item in tareas_elementos %}{{ item.tareas|length }}{% if not forloop.last %}+{% endif %}{% endfor %}
+                                </strong></li>
+                                <li>Proyectos con tareas: <strong>{{ tareas_proyectos|length }}</strong></li>
+                                <li>Elementos externos con tareas: <strong>{{ tareas_elementos|length }}</strong></li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-0 text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Las tareas asignadas serán gestionadas a través del módulo de tareas del sistema.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Observaciones Generales -->
     {% if comite.observaciones %}

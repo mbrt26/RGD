@@ -18,6 +18,8 @@ from servicios.models import SolicitudServicio
 from proyectos.forms.comite_forms import (
     ComiteProyectoForm, SeguimientoProyectoComiteForm, SeguimientoServicioComiteForm, ElementoExternoComiteForm
 )
+from proyectos.forms.task_forms import TareasComiteFormSet
+from tasks.models import Task
 
 
 class ComiteListView(LoginRequiredMixin, ListView):
@@ -296,6 +298,21 @@ class SeguimientoUpdateView(LoginRequiredMixin, UpdateView):
             context['avance_sugerido'] = seguimiento.proyecto.avance
             context['avance_desde_proyecto'] = True
         
+        # Agregar formulario de tareas
+        context['tareas_formset'] = TareasComiteFormSet(prefix='tareas')
+        
+        # Agregar tareas existentes
+        context['tareas_existentes'] = seguimiento.tareas_generadas.all().select_related(
+            'assigned_to', 'created_by'
+        ).order_by('-created_at')
+        
+        # Usuarios disponibles para asignar tareas
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        context['usuarios_disponibles'] = User.objects.filter(
+            is_active=True
+        ).order_by('first_name', 'last_name')
+        
         return context
     
     def get_initial(self):
@@ -310,11 +327,35 @@ class SeguimientoUpdateView(LoginRequiredMixin, UpdateView):
         return initial
 
     def form_valid(self, form):
+        response = super().form_valid(form)
+        
+        # Procesar las tareas si se enviaron
+        tareas_formset = TareasComiteFormSet(self.request.POST, prefix='tareas')
+        
+        if tareas_formset.is_valid() and tareas_formset.cleaned_data.get('tareas_json'):
+            try:
+                tareas_creadas = tareas_formset.save(
+                    seguimiento=self.object,
+                    usuario_creador=self.request.user
+                )
+                
+                if tareas_creadas:
+                    messages.success(
+                        self.request,
+                        f'Se crearon {len(tareas_creadas)} tareas para el proyecto {self.object.proyecto.nombre_proyecto}'
+                    )
+            except Exception as e:
+                messages.error(
+                    self.request,
+                    f'Error al crear las tareas: {str(e)}'
+                )
+        
         messages.success(
             self.request,
             f'Seguimiento actualizado para {self.object.proyecto.nombre_proyecto}'
         )
-        return super().form_valid(form)
+        
+        return response
 
 
 class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
@@ -611,6 +652,35 @@ class ComiteActaView(LoginRequiredMixin, DetailView):
         externos_amarillos = context['elementos_externos'].filter(estado_seguimiento='amarillo').count()
         total_amarillos = proyectos_amarillos + servicios_amarillos + externos_amarillos
         
+        # Obtener todas las tareas relacionadas
+        from tasks.models import Task
+        tareas_proyectos = []
+        tareas_elementos = []
+        
+        # Tareas de seguimientos de proyectos
+        for seguimiento in context['seguimientos']:
+            tareas = seguimiento.tareas_generadas.all().select_related(
+                'assigned_to', 'created_by'
+            ).order_by('-created_at')
+            if tareas.exists():
+                tareas_proyectos.append({
+                    'proyecto': seguimiento.proyecto.nombre_proyecto,
+                    'tipo': 'proyecto',
+                    'tareas': tareas
+                })
+        
+        # Tareas de elementos externos
+        for elemento in context['elementos_externos']:
+            tareas = elemento.tareas_generadas.all().select_related(
+                'assigned_to', 'created_by'
+            ).order_by('-created_at')
+            if tareas.exists():
+                tareas_elementos.append({
+                    'proyecto': elemento.nombre_proyecto,
+                    'tipo': 'elemento_externo',
+                    'tareas': tareas
+                })
+        
         context.update({
             'title': f'Acta - {comite.nombre}',
             'total_proyectos': total_proyectos,
@@ -620,6 +690,9 @@ class ComiteActaView(LoginRequiredMixin, DetailView):
             'proyectos_verdes': total_verdes,
             'proyectos_rojos': total_rojos,
             'proyectos_amarillos': total_amarillos,
+            'tareas_proyectos': tareas_proyectos,
+            'tareas_elementos': tareas_elementos,
+            'tiene_tareas': bool(tareas_proyectos or tareas_elementos),
         })
         
         return context
@@ -708,6 +781,17 @@ class ElementoExternoCreateView(LoginRequiredMixin, CreateView):
         context['title'] = f'Agregar Elemento Externo - {comite.nombre}'
         context['form_title'] = 'Agregar Proyecto/Servicio Externo'
         context['colaboradores'] = Colaborador.objects.all().order_by('nombre')
+        
+        # Agregar formulario de tareas
+        context['tareas_formset'] = TareasComiteFormSet(prefix='tareas')
+        
+        # Usuarios disponibles para asignar tareas
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        context['usuarios_disponibles'] = User.objects.filter(
+            is_active=True
+        ).order_by('first_name', 'last_name')
+        
         return context
     
     def get_form_kwargs(self):
@@ -722,11 +806,50 @@ class ElementoExternoCreateView(LoginRequiredMixin, CreateView):
         form.instance.creado_por = self.request.user
         form.instance.actualizado_por = self.request.user
         
+        # Asignar orden de presentación automáticamente
+        from django.db.models import Max
+        ultimo_orden = ElementoExternoComite.objects.filter(
+            comite=comite
+        ).aggregate(max_orden=Max('orden_presentacion'))['max_orden'] or 0
+        form.instance.orden_presentacion = ultimo_orden + 1
+        
+        response = super().form_valid(form)
+        
+        # Procesar las tareas si se enviaron
+        tareas_formset = TareasComiteFormSet(self.request.POST, prefix='tareas')
+        
+        if tareas_formset.is_valid() and tareas_formset.cleaned_data.get('tareas_json'):
+            try:
+                # Crear objeto mock para compatibilidad con el método save
+                class ElementoExternoMock:
+                    def __init__(self, elemento):
+                        self.proyecto = None
+                        self.centro_costos = elemento.centro_costos
+                        self.tareas_generadas = elemento.tareas_generadas
+                
+                mock_seguimiento = ElementoExternoMock(self.object)
+                
+                tareas_creadas = tareas_formset.save(
+                    seguimiento=mock_seguimiento,
+                    usuario_creador=self.request.user
+                )
+                
+                if tareas_creadas:
+                    messages.success(
+                        self.request,
+                        f'Se crearon {len(tareas_creadas)} tareas para el elemento externo {self.object.nombre_proyecto}'
+                    )
+            except Exception as e:
+                messages.error(
+                    self.request,
+                    f'Error al crear tareas: {str(e)}'
+                )
+        
         messages.success(
             self.request,
             f'Elemento externo "{form.instance.nombre_proyecto}" agregado exitosamente al comité.'
         )
-        return super().form_valid(form)
+        return response
 
 
 class ElementoExternoUpdateView(LoginRequiredMixin, UpdateView):
@@ -745,6 +868,22 @@ class ElementoExternoUpdateView(LoginRequiredMixin, UpdateView):
         context['title'] = f'Editar Elemento Externo - {elemento.nombre_proyecto}'
         context['form_title'] = 'Editar Proyecto/Servicio Externo'
         context['colaboradores'] = Colaborador.objects.all().order_by('nombre')
+        
+        # Agregar formulario de tareas
+        context['tareas_formset'] = TareasComiteFormSet(prefix='tareas')
+        
+        # Agregar tareas existentes
+        context['tareas_existentes'] = elemento.tareas_generadas.all().select_related(
+            'assigned_to', 'created_by'
+        ).order_by('-created_at')
+        
+        # Usuarios disponibles para asignar tareas
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        context['usuarios_disponibles'] = User.objects.filter(
+            is_active=True
+        ).order_by('first_name', 'last_name')
+        
         return context
     
     def get_form_kwargs(self):

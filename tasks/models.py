@@ -245,6 +245,27 @@ class Task(models.Model):
                 user.is_superuser or
                 user.has_module_permission('tasks', 'change'))
     
+    def get_priority_color(self):
+        """Retorna el color CSS para el badge de prioridad."""
+        colors = {
+            'low': 'secondary',
+            'medium': 'info',
+            'high': 'warning',
+            'urgent': 'danger'
+        }
+        return colors.get(self.priority, 'secondary')
+    
+    def get_status_color(self):
+        """Retorna el color CSS para el badge de estado."""
+        colors = {
+            'pending': 'secondary',
+            'in_progress': 'primary',
+            'completed': 'success',
+            'cancelled': 'dark',
+            'on_hold': 'warning'
+        }
+        return colors.get(self.status, 'secondary')
+    
     def can_be_viewed_by(self, user):
         """Verifica si un usuario puede ver la tarea."""
         return (user == self.assigned_to or 

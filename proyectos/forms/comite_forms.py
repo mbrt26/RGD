@@ -233,7 +233,8 @@ class SeguimientoServicioComiteForm(forms.ModelForm):
         model = SeguimientoServicioComite
         fields = [
             'estado_seguimiento', 'avance_reportado', 'logros_periodo',
-            'dificultades', 'acciones_requeridas', 'responsable_reporte'
+            'dificultades', 'acciones_requeridas', 'responsable_reporte',
+            'decision_tomada'
         ]
         widgets = {
             'estado_seguimiento': forms.Select(attrs={
@@ -262,6 +263,11 @@ class SeguimientoServicioComiteForm(forms.ModelForm):
             }),
             'responsable_reporte': forms.Select(attrs={
                 'class': 'form-select'
+            }),
+            'decision_tomada': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Describa la decisión tomada por el comité...'
             })
         }
     
@@ -296,13 +302,18 @@ class ElementoExternoComiteForm(forms.ModelForm):
     class Meta:
         model = ElementoExternoComite
         fields = [
-            'tipo_elemento', 'centro_costos', 'nombre_proyecto', 'observaciones',
-            'estado_seguimiento', 'avance_reportado', 'responsable_reporte',
-            'fecha_proximo_hito', 'requiere_decision', 'orden_presentacion'
+            'tipo_elemento', 'cliente', 'centro_costos', 'nombre_proyecto',
+            'estado_seguimiento', 'avance_reportado', 'logros_periodo',
+            'dificultades', 'acciones_requeridas', 'responsable_reporte',
+            'observaciones', 'decision_tomada'
         ]
         widgets = {
             'tipo_elemento': forms.Select(attrs={
                 'class': 'form-select'
+            }),
+            'cliente': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre del cliente'
             }),
             'centro_costos': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -312,34 +323,40 @@ class ElementoExternoComiteForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Nombre descriptivo del proyecto o servicio'
             }),
-            'observaciones': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 4,
-                'placeholder': 'Información adicional, descripción, detalles relevantes...'
-            }),
-            'estado_seguimiento': forms.Select(attrs={
-                'class': 'form-select'
-            }),
+            'estado_seguimiento': forms.HiddenInput(),
             'avance_reportado': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': 0,
                 'max': 100,
-                'step': 0.01,
-                'value': 0
+                'step': 0.01
+            }),
+            'logros_periodo': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Describa los principales logros y avances desde el último comité...'
+            }),
+            'dificultades': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Describa los problemas, obstáculos o riesgos identificados...'
+            }),
+            'acciones_requeridas': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Especifique las acciones concretas a tomar...'
             }),
             'responsable_reporte': forms.Select(attrs={
                 'class': 'form-select'
             }),
-            'fecha_proximo_hito': forms.DateInput(attrs={
+            'observaciones': forms.Textarea(attrs={
                 'class': 'form-control',
-                'type': 'date'
+                'rows': 3,
+                'placeholder': 'Observaciones adicionales...'
             }),
-            'requiere_decision': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
-            }),
-            'orden_presentacion': forms.NumberInput(attrs={
+            'decision_tomada': forms.Textarea(attrs={
                 'class': 'form-control',
-                'min': 1
+                'rows': 2,
+                'placeholder': 'Decisiones tomadas o por tomar...'
             })
         }
     
@@ -353,18 +370,18 @@ class ElementoExternoComiteForm(forms.ModelForm):
         
         # Configurar campos requeridos
         self.fields['tipo_elemento'].required = True
-        self.fields['centro_costos'].required = True
+        self.fields['cliente'].required = True
+        self.fields['centro_costos'].required = False  # No obligatorio
         self.fields['nombre_proyecto'].required = True
-        self.fields['observaciones'].required = True
+        self.fields['estado_seguimiento'].required = True
+        self.fields['avance_reportado'].required = True
+        self.fields['logros_periodo'].required = True
         
         # Configurar valores por defecto
-        if not self.instance.pk and comite:
-            # Obtener el siguiente número de orden
-            from django.db.models import Max
-            ultimo_orden = ElementoExternoComite.objects.filter(
-                comite=comite
-            ).aggregate(max_orden=Max('orden_presentacion'))['max_orden'] or 0
-            self.fields['orden_presentacion'].initial = ultimo_orden + 1
+        if not self.instance.pk:
+            # Establecer estado por defecto
+            self.fields['estado_seguimiento'].initial = 'verde'
+            self.fields['avance_reportado'].initial = 0
     
     def clean_avance_reportado(self):
         avance = self.cleaned_data.get('avance_reportado')

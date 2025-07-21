@@ -260,19 +260,26 @@
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
+                                <th width="20%">Cliente</th>
+                                <th width="15%">Centro de Costos</th>
                                 <th width="5%">#</th>
                                 <th width="20%">Proyecto/Servicio</th>
                                 <th width="10%">Tipo</th>
-                                <th width="15%">Estado</th>
-                                <th width="15%">Responsable</th>
-                                <th width="15%">Fecha Clave</th>
-                                <th width="20%">Acciones</th>
+                                <th width="10%">Estado</th>
+                                <th width="10%">Responsable</th>
+                                <th width="10%">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             <!-- Proyectos en seguimiento -->
                             {% for seguimiento in seguimientos %}
                             <tr class="proyecto-row estado-{{ seguimiento.estado_seguimiento }}">
+                                <td class="align-middle">
+                                    {{ seguimiento.proyecto.cliente }}
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-info text-white">{{ seguimiento.proyecto.centro_costos }}</span>
+                                </td>
                                 <td class="align-middle">
                                     <span class="badge bg-light text-dark">{{ seguimiento.orden_presentacion }}</span>
                                 </td>
@@ -282,8 +289,6 @@
                                            class="text-decoration-none fw-bold">
                                             {{ seguimiento.proyecto.nombre_proyecto }}
                                         </a>
-                                        <br>
-                                        <small class="text-muted">{{ seguimiento.proyecto.cliente }}</small>
                                     </div>
                                 </td>
                                 <td class="align-middle">
@@ -299,30 +304,13 @@
                                     </span>
                                     <div class="mt-1">
                                         <small class="text-muted">{{ seguimiento.avance_reportado }}%</small>
-                                        {% if seguimiento.variacion_avance is not None %}
-                                            <span class="ms-1 small {% if seguimiento.variacion_avance > 0 %}variacion-positiva{% elif seguimiento.variacion_avance < 0 %}variacion-negativa{% else %}variacion-neutral{% endif %}">
-                                                {% if seguimiento.variacion_avance > 0 %}+{% endif %}{{ seguimiento.variacion_avance|floatformat:1 }}%
-                                            </span>
-                                        {% endif %}
-                                    </div>
-                                    <div class="avance-bar mt-1">
-                                        <div class="avance-fill" 
-                                             style="width: {{ seguimiento.avance_reportado }}%; background-color: {{ seguimiento.color_seguimiento }};"></div>
                                     </div>
                                 </td>
                                 <td class="align-middle">
                                     {% if seguimiento.responsable_reporte %}
-                                        <div class="small">{{ seguimiento.responsable_reporte.nombre }}</div>
-                                        <div class="text-muted" style="font-size: 0.75rem;">{{ seguimiento.responsable_reporte.cargo }}</div>
+                                        <small>{{ seguimiento.responsable_reporte.nombre }}</small>
                                     {% else %}
-                                        <span class="text-muted">Sin asignar</span>
-                                    {% endif %}
-                                </td>
-                                <td class="align-middle">
-                                    {% if seguimiento.fecha_proximo_hito %}
-                                        <small>{{ seguimiento.fecha_proximo_hito|date:"d/m/Y" }}</small>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
+                                        <span class="text-muted small">Sin asignar</span>
                                     {% endif %}
                                 </td>
                                 <td class="align-middle">
@@ -341,6 +329,12 @@
                             {% for seguimiento_servicio in seguimientos_servicios %}
                             <tr class="proyecto-row estado-{{ seguimiento_servicio.estado_seguimiento }}">
                                 <td class="align-middle">
+                                    {{ seguimiento_servicio.servicio.cliente_crm.nombre }}
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-info text-white">{{ seguimiento_servicio.servicio.centro_costos|default:"Sin CC" }}</span>
+                                </td>
+                                <td class="align-middle">
                                     <span class="badge bg-light text-dark">S{{ seguimiento_servicio.orden_presentacion }}</span>
                                 </td>
                                 <td class="align-middle">
@@ -349,8 +343,10 @@
                                            class="text-decoration-none fw-bold">
                                             {{ seguimiento_servicio.servicio.numero_orden }}
                                         </a>
+                                        {% if seguimiento_servicio.servicio.trato_origen and seguimiento_servicio.servicio.trato_origen.descripcion %}
                                         <br>
-                                        <small class="text-muted">{{ seguimiento_servicio.servicio.cliente_crm.nombre }}</small>
+                                        <small class="text-muted">{{ seguimiento_servicio.servicio.trato_origen.descripcion|truncatewords:10 }}</small>
+                                        {% endif %}
                                     </div>
                                 </td>
                                 <td class="align-middle">
@@ -367,24 +363,12 @@
                                     <div class="mt-1">
                                         <small class="text-muted">{{ seguimiento_servicio.avance_reportado }}%</small>
                                     </div>
-                                    <div class="avance-bar mt-1">
-                                        <div class="avance-fill" 
-                                             style="width: {{ seguimiento_servicio.avance_reportado }}%; background-color: {{ seguimiento_servicio.color_seguimiento }};"></div>
-                                    </div>
                                 </td>
                                 <td class="align-middle">
                                     {% if seguimiento_servicio.responsable_reporte %}
-                                        <div class="small">{{ seguimiento_servicio.responsable_reporte.nombre }}</div>
-                                        <div class="text-muted" style="font-size: 0.75rem;">{{ seguimiento_servicio.responsable_reporte.cargo }}</div>
+                                        <small>{{ seguimiento_servicio.responsable_reporte.nombre }}</small>
                                     {% else %}
-                                        <span class="text-muted">Sin asignar</span>
-                                    {% endif %}
-                                </td>
-                                <td class="align-middle">
-                                    {% if seguimiento_servicio.fecha_proximo_hito %}
-                                        <small>{{ seguimiento_servicio.fecha_proximo_hito|date:"d/m/Y" }}</small>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
+                                        <span class="text-muted small">Sin asignar</span>
                                     {% endif %}
                                 </td>
                                 <td class="align-middle">
@@ -403,6 +387,12 @@
                             {% for servicio in servicios_activos %}
                             <tr class="proyecto-row {% if servicio.estado == 'atrasado' %}estado-rojo{% elif servicio.estado == 'en_ejecucion' %}estado-amarillo{% else %}estado-verde{% endif %}">
                                 <td class="align-middle">
+                                    {{ servicio.cliente_crm.nombre }}
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-info text-white">{{ servicio.centro_costos|default:"Sin CC" }}</span>
+                                </td>
+                                <td class="align-middle">
                                     <span class="badge bg-light text-dark">S{{ forloop.counter|add:seguimientos_servicios.count }}</span>
                                 </td>
                                 <td class="align-middle">
@@ -411,8 +401,10 @@
                                            class="text-decoration-none fw-bold">
                                             {{ servicio.numero_orden }}
                                         </a>
+                                        {% if servicio.trato_origen and servicio.trato_origen.descripcion %}
                                         <br>
-                                        <small class="text-muted">{{ servicio.cliente_crm.nombre }}</small>
+                                        <small class="text-muted">{{ servicio.trato_origen.descripcion|truncatewords:10 }}</small>
+                                        {% endif %}
                                     </div>
                                 </td>
                                 <td class="align-middle">
@@ -423,36 +415,19 @@
                                 <td class="align-middle">
                                     <span class="badge estado-badge {% if servicio.estado == 'pendiente' %}bg-secondary{% elif servicio.estado == 'en_ejecucion' %}bg-warning text-dark{% elif servicio.estado == 'atrasado' %}bg-danger{% else %}bg-success{% endif %}">
                                         <i class="fas fa-{% if servicio.estado == 'pendiente' %}clock{% elif servicio.estado == 'en_ejecucion' %}play{% elif servicio.estado == 'atrasado' %}exclamation-triangle{% else %}check{% endif %} me-1"></i>
-                                        {{ servicio.get_estado_display }}
+                                        {{ servicio.get_estado_display|slice:":8" }}
                                     </span>
-                                    <div class="mt-1">
-                                        <small class="text-muted">
-                                            {% if servicio.prioridad %}
-                                                <span class="badge badge-sm {% if servicio.prioridad == 'urgente' %}bg-danger{% elif servicio.prioridad == 'alta' %}bg-warning text-dark{% elif servicio.prioridad == 'media' %}bg-info{% else %}bg-secondary{% endif %}">
-                                                    {{ servicio.get_prioridad_display }}
-                                                </span>
-                                            {% endif %}
-                                        </small>
-                                    </div>
                                 </td>
                                 <td class="align-middle">
                                     {% if servicio.director_proyecto %}
-                                        <div class="small">{{ servicio.director_proyecto.nombre }}</div>
-                                        <div class="text-muted" style="font-size: 0.75rem;">Director</div>
+                                        <small>{{ servicio.director_proyecto.nombre }}</small>
                                     {% elif servicio.ingeniero_residente %}
-                                        <div class="small">{{ servicio.ingeniero_residente.nombre }}</div>
-                                        <div class="text-muted" style="font-size: 0.75rem;">Ing. Residente</div>
+                                        <small>{{ servicio.ingeniero_residente.nombre }}</small>
                                     {% elif servicio.tecnico_asignado %}
-                                        <div class="small">{{ servicio.tecnico_asignado.nombre }}</div>
-                                        <div class="text-muted" style="font-size: 0.75rem;">Técnico</div>
+                                        <small>{{ servicio.tecnico_asignado.nombre }}</small>
                                     {% else %}
-                                        <span class="text-muted">Sin asignar</span>
+                                        <span class="text-muted small">Sin asignar</span>
                                     {% endif %}
-                                </td>
-                                <td class="align-middle">
-                                    <small>{{ servicio.fecha_contractual|date:"d/m/Y" }}</small>
-                                    <br>
-                                    <small class="text-muted">Contractual</small>
                                 </td>
                                 <td class="align-middle">
                                     <div class="btn-group btn-group-sm">
@@ -503,28 +478,31 @@
                     <table class="table table-hover">
                         <thead class="table-light">
                             <tr>
-                                <th>Ord.</th>
-                                <th>Proyecto/Servicio</th>
-                                <th>Tipo</th>
-                                <th>Estado</th>
-                                <th>Responsable</th>
-                                <th>% Avance</th>
-                                <th>Acciones</th>
+                                <th width="20%">Cliente</th>
+                                <th width="15%">Centro de Costos</th>
+                                <th width="5%">#</th>
+                                <th width="20%">Proyecto/Servicio</th>
+                                <th width="10%">Tipo</th>
+                                <th width="10%">Estado</th>
+                                <th width="10%">Responsable</th>
+                                <th width="10%">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for elemento in elementos_externos %}
                             <tr class="proyecto-row estado-{{ elemento.estado_seguimiento }}">
                                 <td class="align-middle">
+                                    {{ elemento.cliente }}
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-info text-white">{{ elemento.centro_costos }}</span>
+                                </td>
+                                <td class="align-middle">
                                     <span class="badge bg-secondary">E{{ elemento.orden_presentacion }}</span>
                                 </td>
                                 <td class="align-middle">
                                     <div>
                                         <span class="fw-bold">{{ elemento.nombre_proyecto }}</span>
-                                        <br>
-                                        <small class="text-muted">
-                                            <i class="fas fa-building me-1"></i>{{ elemento.centro_costos }}
-                                        </small>
                                     </div>
                                 </td>
                                 <td class="align-middle">
@@ -536,30 +514,18 @@
                                 <td class="align-middle">
                                     <span class="badge estado-badge {% if elemento.estado_seguimiento == 'verde' %}bg-success{% elif elemento.estado_seguimiento == 'amarillo' %}bg-warning text-dark{% elif elemento.estado_seguimiento == 'rojo' %}bg-danger{% else %}bg-info{% endif %}">
                                         <i class="fas fa-circle me-1"></i>
-                                        {{ elemento.get_estado_seguimiento_display }}
+                                        {{ elemento.get_estado_seguimiento_display|slice:":1" }}{{ elemento.get_estado_seguimiento_display|slice:"7:" }}
                                     </span>
-                                    {% if elemento.requiere_decision %}
                                     <div class="mt-1">
-                                        <span class="badge badge-sm bg-warning text-dark">
-                                            <i class="fas fa-exclamation-triangle me-1"></i>Decisión
-                                        </span>
+                                        <small class="text-muted">{{ elemento.avance_reportado }}%</small>
                                     </div>
-                                    {% endif %}
                                 </td>
                                 <td class="align-middle">
                                     {% if elemento.responsable_reporte %}
-                                        <div class="small">{{ elemento.responsable_reporte.nombre }}</div>
-                                        <div class="text-muted" style="font-size: 0.75rem;">Responsable</div>
+                                        <small>{{ elemento.responsable_reporte.nombre }}</small>
                                     {% else %}
-                                        <span class="text-muted">Sin asignar</span>
+                                        <span class="text-muted small">Sin asignar</span>
                                     {% endif %}
-                                </td>
-                                <td class="align-middle">
-                                    <div class="avance-bar">
-                                        <div class="avance-fill {% if elemento.avance_reportado >= 80 %}bg-success{% elif elemento.avance_reportado >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
-                                             style="width: {{ elemento.avance_reportado }}%"></div>
-                                    </div>
-                                    <small class="text-muted">{{ elemento.avance_reportado }}%</small>
                                 </td>
                                 <td class="align-middle">
                                     <div class="btn-group btn-group-sm">
