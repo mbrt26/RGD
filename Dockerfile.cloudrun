@@ -21,14 +21,19 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar código
 COPY . .
 
-# Recopilar archivos estáticos usando settings locales
-ENV DJANGO_SETTINGS_MODULE=rgd_aire.settings_cloudrun
-RUN python manage.py collectstatic --noinput
+# Hacer ejecutable el script de entrada
+RUN chmod +x /app/entrypoint.sh
+
+# Recopilar archivos estáticos usando settings de App Engine
+ENV DJANGO_SETTINGS_MODULE=rgd_aire.settings_appengine
+RUN python manage.py collectstatic --noinput || true
 
 # Crear usuario no-root para seguridad
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Script de inicio que ejecuta migraciones y luego arranca el servidor
-# Temporalmente usando runserver para mejor debugging
-CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:$PORT"]
+# Exponer puerto
+EXPOSE 8080
+
+# Usar el script de entrada
+CMD ["/app/entrypoint.sh"]
