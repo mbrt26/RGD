@@ -153,9 +153,7 @@ class SeguimientoProyectoComiteForm(forms.ModelForm):
         fields = [
             'estado_seguimiento', 'avance_reportado', 'logros_periodo',
             'dificultades', 'acciones_requeridas', 'responsable_reporte',
-            'fecha_proximo_hito', 'presupuesto_ejecutado', 'observaciones',
-            'orden_presentacion', 'tiempo_asignado', 'requiere_decision',
-            'decision_tomada'
+            'observaciones', 'decision_tomada'
         ]
         widgets = {
             'estado_seguimiento': forms.Select(attrs={
@@ -185,32 +183,10 @@ class SeguimientoProyectoComiteForm(forms.ModelForm):
             'responsable_reporte': forms.Select(attrs={
                 'class': 'form-select'
             }),
-            'fecha_proximo_hito': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'presupuesto_ejecutado': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': 0,
-                'step': 0.01
-            }),
             'observaciones': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 2,
                 'placeholder': 'Observaciones adicionales...'
-            }),
-            'orden_presentacion': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': 1
-            }),
-            'tiempo_asignado': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': 5,
-                'max': 60,
-                'value': 10
-            }),
-            'requiere_decision': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
             }),
             'decision_tomada': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -232,9 +208,7 @@ class SeguimientoProyectoComiteForm(forms.ModelForm):
         self.fields['logros_periodo'].required = True
         
         # Configurar valores por defecto si no existen
-        if not self.instance.pk:
-            self.fields['tiempo_asignado'].initial = 10
-            self.fields['orden_presentacion'].initial = 1
+        # (campos removidos: tiempo_asignado, orden_presentacion)
     
     def clean_avance_reportado(self):
         avance = self.cleaned_data.get('avance_reportado')
@@ -245,34 +219,10 @@ class SeguimientoProyectoComiteForm(forms.ModelForm):
         
         return avance
     
-    def clean_tiempo_asignado(self):
-        tiempo = self.cleaned_data.get('tiempo_asignado')
-        
-        if tiempo is not None:
-            if tiempo < 5 or tiempo > 60:
-                raise ValidationError('El tiempo asignado debe estar entre 5 y 60 minutos.')
-        
-        return tiempo
-    
-    def clean_presupuesto_ejecutado(self):
-        presupuesto = self.cleaned_data.get('presupuesto_ejecutado')
-        
-        if presupuesto is not None and presupuesto < 0:
-            raise ValidationError('El presupuesto ejecutado no puede ser negativo.')
-        
-        return presupuesto
     
     def clean(self):
         cleaned_data = super().clean()
-        requiere_decision = cleaned_data.get('requiere_decision')
-        decision_tomada = cleaned_data.get('decision_tomada')
-        
-        # Si requiere decisión, validar que se haya especificado la decisión
-        if requiere_decision and not decision_tomada:
-            # No es error crítico, pero mostrar advertencia
-            self.add_error('decision_tomada', 
-                'Si el proyecto requiere decisión, especifique cuál fue tomada.')
-        
+        # Validación removida para requiere_decision
         return cleaned_data
 
 
@@ -283,8 +233,7 @@ class SeguimientoServicioComiteForm(forms.ModelForm):
         model = SeguimientoServicioComite
         fields = [
             'estado_seguimiento', 'avance_reportado', 'logros_periodo',
-            'dificultades', 'acciones_requeridas', 'responsable_reporte',
-            'fecha_proximo_hito', 'orden_presentacion', 'requiere_decision'
+            'dificultades', 'acciones_requeridas', 'responsable_reporte'
         ]
         widgets = {
             'estado_seguimiento': forms.Select(attrs={
@@ -313,17 +262,6 @@ class SeguimientoServicioComiteForm(forms.ModelForm):
             }),
             'responsable_reporte': forms.Select(attrs={
                 'class': 'form-select'
-            }),
-            'fecha_proximo_hito': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'orden_presentacion': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': 1
-            }),
-            'requiere_decision': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
             })
         }
     
@@ -340,8 +278,7 @@ class SeguimientoServicioComiteForm(forms.ModelForm):
         self.fields['logros_periodo'].required = True
         
         # Configurar valores por defecto si no existen
-        if not self.instance.pk:
-            self.fields['orden_presentacion'].initial = 1
+        # (campo removido: orden_presentacion)
     
     def clean_avance_reportado(self):
         avance = self.cleaned_data.get('avance_reportado')

@@ -883,8 +883,7 @@ function agregarSeguimientoServicio(servicioId) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken,
-                'X-Csrftoken': csrfToken  // Agregar ambas versiones por compatibilidad
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({
                 'servicio_id': servicioId
