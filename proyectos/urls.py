@@ -1,6 +1,7 @@
 from django.urls import path, include
 from django.contrib.auth.decorators import login_required
 from django.views.generic import TemplateView
+from django.views.decorators.csrf import csrf_exempt
 from . import views
 from .views import (
     ProyectoListView, ProyectoCreateView, ProyectoDetailView, ProyectoUpdateView,
@@ -154,7 +155,7 @@ urlpatterns = [
         path('<int:pk>/eliminar/', login_required(ComiteDeleteView.as_view()), name='comite_delete'),
         path('<int:comite_id>/participantes/', login_required(gestionar_participantes_comite), name='gestionar_participantes_comite'),
         path('<int:comite_id>/duplicar/', login_required(duplicar_comite), name='duplicar_comite'),
-        path('<int:comite_id>/agregar-servicio/', login_required(agregar_servicio_seguimiento), name='agregar_servicio_seguimiento'),
+        path('<int:comite_id>/agregar-servicio/', csrf_exempt(login_required(agregar_servicio_seguimiento)), name='agregar_servicio_seguimiento'),
         path('<int:comite_id>/elemento-externo/nuevo/', login_required(ElementoExternoCreateView.as_view()), name='elemento_externo_create'),
         path('elemento-externo/<int:pk>/editar/', login_required(ElementoExternoUpdateView.as_view()), name='elemento_externo_update'),
         path('seguimiento/<int:pk>/editar/', login_required(SeguimientoUpdateView.as_view()), name='seguimiento_update'),

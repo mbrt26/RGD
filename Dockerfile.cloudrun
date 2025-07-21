@@ -29,5 +29,6 @@ RUN python manage.py collectstatic --noinput
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Script de inicio que ejecuta migraciones y luego arranca gunicorn
-CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn rgd_aire.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 0 --access-logfile - --error-logfile -"]
+# Script de inicio que ejecuta migraciones y luego arranca el servidor
+# Temporalmente usando runserver para mejor debugging
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:$PORT"]

@@ -8,6 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q, Count, Avg
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from decimal import Decimal
 
 from proyectos.models import (
@@ -346,6 +347,7 @@ class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
 
 
 @require_http_methods(["POST"])
+@csrf_exempt  # Temporal para debugging
 def agregar_servicio_seguimiento(request, comite_id):
     """Vista AJAX para agregar un servicio al seguimiento del comité"""
     import json
