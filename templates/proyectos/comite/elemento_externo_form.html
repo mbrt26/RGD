@@ -201,18 +201,6 @@
                     </div>
                 </div>
                 
-                <div class="mb-3">
-                    <div class="form-check">
-                        {{ form.requiere_decision }}
-                        <label class="form-check-label" for="{{ form.requiere_decision.id_for_label }}">
-                            Requiere decisión del comité
-                        </label>
-                        {% if form.requiere_decision.errors %}
-                            <div class="invalid-feedback d-block">{{ form.requiere_decision.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="help-text">Marque si este elemento requiere una decisión del comité</div>
-                </div>
             </div>
 
             <!-- Botones de Acción -->

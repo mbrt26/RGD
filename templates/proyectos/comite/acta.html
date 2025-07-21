@@ -185,7 +185,7 @@
                         <th style="width: 15%;">Responsable</th>
                         <th style="width: 10%;">% Avance</th>
                         <th style="width: 10%;">Estado</th>
-                        <th style="width: 10%;">Decisión Req.</th>
+                        <th style="width: 10%;">Registro</th>
                         <th style="width: 30%;">Observaciones</th>
                     </tr>
                 </thead>
@@ -215,11 +215,7 @@
                             </span>
                         </td>
                         <td class="text-center">
-                            {% if seguimiento.requiere_decision %}
-                                <i class="fas fa-exclamation-triangle text-warning" title="Requiere decisión"></i>
-                            {% else %}
-                                <i class="fas fa-check-circle text-success" title="No requiere decisión"></i>
-                            {% endif %}
+                            <i class="fas fa-check-circle text-success" title="Seguimiento registrado"></i>
                         </td>
                         <td>
                             <small>{{ seguimiento.observaciones|default:"-" }}</small>
@@ -389,7 +385,7 @@
                         <tbody>
                             <!-- Decisiones de Proyectos -->
                             {% for seguimiento in seguimientos %}
-                            {% if seguimiento.requiere_decision or seguimiento.decision_tomada %}
+                            {% if seguimiento.decision_tomada %}
                             <tr>
                                 <td><span class="badge bg-primary">Proyecto</span></td>
                                 <td class="fw-bold">{{ seguimiento.proyecto.nombre_proyecto }}</td>
@@ -402,7 +398,7 @@
                             
                             <!-- Decisiones de Servicios -->
                             {% for seguimiento_servicio in seguimientos_servicios %}
-                            {% if seguimiento_servicio.requiere_decision or seguimiento_servicio.acciones_requeridas %}
+                            {% if seguimiento_servicio.acciones_requeridas %}
                             <tr>
                                 <td><span class="badge bg-success">Servicio</span></td>
                                 <td class="fw-bold">{{ seguimiento_servicio.servicio.numero_orden }}</td>
@@ -415,7 +411,7 @@
                             
                             <!-- Decisiones de Elementos Externos -->
                             {% for elemento in elementos_externos %}
-                            {% if elemento.requiere_decision %}
+                            {% if elemento.acciones_requeridas %}
                             <tr>
                                 <td><span class="badge bg-secondary">Externo</span></td>
                                 <td class="fw-bold">{{ elemento.nombre_proyecto }}</td>

@@ -120,31 +120,16 @@
                             </div>
                         </div>
 
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="{{ form.orden_presentacion.id_for_label }}" class="form-label">
-                                    {{ form.orden_presentacion.label }}
-                                </label>
-                                {{ form.orden_presentacion }}
-                                {% if form.orden_presentacion.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.orden_presentacion.errors.0 }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check mt-4">
-                                    {{ form.requiere_decision }}
-                                    <label class="form-check-label" for="{{ form.requiere_decision.id_for_label }}">
-                                        {{ form.requiere_decision.label }}
-                                    </label>
+                        <div class="mb-3">
+                            <label for="{{ form.orden_presentacion.id_for_label }}" class="form-label">
+                                {{ form.orden_presentacion.label }}
+                            </label>
+                            {{ form.orden_presentacion }}
+                            {% if form.orden_presentacion.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.orden_presentacion.errors.0 }}
                                 </div>
-                                {% if form.requiere_decision.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.requiere_decision.errors.0 }}
-                                    </div>
-                                {% endif %}
-                            </div>
+                            {% endif %}
                         </div>
 
                         <div class="d-flex justify-content-between">

@@ -80,17 +80,6 @@
         color: #6c757d;
         border: 1px solid rgba(108, 117, 125, 0.2);
     }
-    .decision-required {
-        background: linear-gradient(45deg, #ff6b6b, #ffa500);
-        color: white;
-        border: none;
-        animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-        0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
-        70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
-    }
 </style>
 {% endblock %}
 
@@ -270,55 +259,7 @@
                         </div>
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="{{ form.presupuesto_ejecutado.id_for_label }}" class="form-label">
-                                {{ form.presupuesto_ejecutado.label }}
-                            </label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                {{ form.presupuesto_ejecutado }}
-                            </div>
-                            {% if form.presupuesto_ejecutado.errors %}
-                                <div class="text-danger small">{{ form.presupuesto_ejecutado.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-6">
-                            <label for="{{ form.tiempo_asignado.id_for_label }}" class="form-label">
-                                {{ form.tiempo_asignado.label }}
-                            </label>
-                            <div class="input-group">
-                                {{ form.tiempo_asignado }}
-                                <span class="input-group-text">min</span>
-                            </div>
-                            {% if form.tiempo_asignado.errors %}
-                                <div class="text-danger small">{{ form.tiempo_asignado.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
 
-                    <!-- Requiere decisión -->
-                    <div class="mb-3">
-                        <div class="form-check">
-                            {{ form.requiere_decision }}
-                            <label class="form-check-label" for="{{ form.requiere_decision.id_for_label }}">
-                                {{ form.requiere_decision.label }}
-                            </label>
-                        </div>
-                        <div class="form-text">Marque si este proyecto requiere una decisión específica del comité</div>
-                    </div>
-
-                    <!-- Decisión tomada (solo si requiere decisión) -->
-                    <div class="mb-3" id="decisionContainer" style="display: none;">
-                        <label for="{{ form.decision_tomada.id_for_label }}" class="form-label">
-                            {{ form.decision_tomada.label }}
-                        </label>
-                        {{ form.decision_tomada }}
-                        <div class="form-text">Descripción de la decisión tomada por el comité</div>
-                        {% if form.decision_tomada.errors %}
-                            <div class="text-danger small">{{ form.decision_tomada.errors.0 }}</div>
-                        {% endif %}
-                    </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
@@ -445,11 +386,8 @@ document.addEventListener('DOMContentLoaded', function() {
         'id_acciones_requeridas': 'form-control',
         'id_responsable_reporte': 'form-select',
         'id_fecha_proximo_hito': 'form-control',
-        'id_presupuesto_ejecutado': 'form-control',
         'id_observaciones': 'form-control',
         'id_orden_presentacion': 'form-control',
-        'id_tiempo_asignado': 'form-control',
-        'id_requiere_decision': 'form-check-input',
         'id_decision_tomada': 'form-control'
     };
 
@@ -484,27 +422,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Configurar la lógica de "requiere decisión"
-    const requiereDecisionCheck = document.getElementById('id_requiere_decision');
-    const decisionContainer = document.getElementById('decisionContainer');
-    const submitBtn = document.getElementById('submitBtn');
-
-    function toggleDecision() {
-        if (requiereDecisionCheck && requiereDecisionCheck.checked) {
-            decisionContainer.style.display = 'block';
-            submitBtn.classList.add('decision-required');
-            submitBtn.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Guardar - Requiere Decisión';
-        } else {
-            decisionContainer.style.display = 'none';
-            submitBtn.classList.remove('decision-required');
-            submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Seguimiento';
-        }
-    }
-
-    if (requiereDecisionCheck) {
-        toggleDecision(); // Configurar estado inicial
-        requiereDecisionCheck.addEventListener('change', toggleDecision);
-    }
 
     // Configurar el avance reportado
     const avanceInput = document.getElementById('id_avance_reportado');
@@ -627,17 +544,6 @@ document.getElementById('seguimientoForm').addEventListener('submit', function(e
         return;
     }
 
-    // Confirmar si requiere decisión pero no se ha especificado
-    const requiereDecision = document.getElementById('id_requiere_decision');
-    const decisionTomada = document.getElementById('id_decision_tomada');
-    
-    if (requiereDecision && requiereDecision.checked && !decisionTomada.value.trim()) {
-        if (!confirm('Ha marcado que requiere decisión pero no ha especificado cuál. ¿Desea continuar?')) {
-            e.preventDefault();
-            decisionTomada.focus();
-            return;
-        }
-    }
 });
 </script>
 {% endblock %}
