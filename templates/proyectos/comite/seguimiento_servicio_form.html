@@ -120,6 +120,55 @@
                             {% endif %}
                         </div>
 
+                        <!-- Sección de Tareas -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-tasks me-2"></i>Tareas del Servicio
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <!-- Tareas existentes -->
+                                {% if tareas_existentes %}
+                                <div class="mb-3">
+                                    <h6 class="text-muted">Tareas creadas anteriormente:</h6>
+                                    <div class="list-group list-group-flush">
+                                        {% for tarea in tareas_existentes %}
+                                        <div class="list-group-item px-0">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <h6 class="mb-1">{{ tarea.title }}</h6>
+                                                    <p class="mb-1 text-muted small">{{ tarea.description|default:"Sin descripción" }}</p>
+                                                    <div class="small">
+                                                        <span class="text-muted">Asignado a:</span> {{ tarea.assigned_to.get_full_name|default:tarea.assigned_to.username }}
+                                                        <span class="ms-2 text-muted">Vence:</span> {{ tarea.due_date|date:"d/m/Y" }}
+                                                        <span class="ms-2 badge bg-{{ tarea.get_priority_color }}">{{ tarea.get_priority_display }}</span>
+                                                    </div>
+                                                </div>
+                                                <span class="badge bg-{{ tarea.get_status_color }}">{{ tarea.get_status_display }}</span>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <hr>
+                                {% endif %}
+
+                                <!-- Formulario para nuevas tareas -->
+                                <h6 class="mb-3">Agregar nuevas tareas:</h6>
+                                <div id="tareas-container">
+                                    <!-- Las tareas dinámicas se agregarán aquí -->
+                                </div>
+                                
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="agregar-tarea">
+                                    <i class="fas fa-plus me-1"></i>Agregar Tarea
+                                </button>
+                                
+                                <!-- Campo oculto para almacenar las tareas en JSON -->
+                                <input type="hidden" name="tareas-tareas_json" id="tareas-json">
+                            </div>
+                        </div>
+
                         <div class="d-flex justify-content-between">
                             <a href="{% url 'proyectos:comite_detail' comite.pk %}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left me-1"></i>Volver al Comité
@@ -215,4 +264,109 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Funcionalidad para tareas dinámicas
+let tareaCounter = 0;
+const tareasContainer = document.getElementById('tareas-container');
+const agregarTareaBtn = document.getElementById('agregar-tarea');
+const tareasJsonInput = document.getElementById('tareas-json');
+
+function agregarTarea() {
+    tareaCounter++;
+    const tareaId = `tarea-${tareaCounter}`;
+    
+    const tareaHtml = `
+        <div class="card mb-3 tarea-item" id="${tareaId}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <h6 class="mb-0">Nueva Tarea ${tareaCounter}</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarTarea('${tareaId}')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="row">
+                    <div class="col-md-12 mb-2">
+                        <input type="text" class="form-control tarea-titulo" placeholder="Título de la tarea..." required>
+                    </div>
+                    <div class="col-md-12 mb-2">
+                        <textarea class="form-control tarea-descripcion" rows="2" placeholder="Descripción de la tarea..."></textarea>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <select class="form-select tarea-responsable" required>
+                            <option value="">Seleccione responsable...</option>
+                            {% for user in usuarios_disponibles %}
+                            <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <input type="date" class="form-control tarea-fecha" required>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <select class="form-select tarea-prioridad">
+                            <option value="low">Baja</option>
+                            <option value="medium" selected>Media</option>
+                            <option value="high">Alta</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    tareasContainer.insertAdjacentHTML('beforeend', tareaHtml);
+    
+    // Establecer fecha por defecto (7 días desde hoy)
+    const fechaInput = document.querySelector(`#${tareaId} .tarea-fecha`);
+    const today = new Date();
+    today.setDate(today.getDate() + 7);
+    fechaInput.value = today.toISOString().split('T')[0];
+}
+
+function eliminarTarea(tareaId) {
+    const tareaElement = document.getElementById(tareaId);
+    if (tareaElement) {
+        tareaElement.remove();
+    }
+}
+
+function recopilarTareas() {
+    const tareas = [];
+    const tareaItems = document.querySelectorAll('.tarea-item');
+    
+    tareaItems.forEach(item => {
+        const titulo = item.querySelector('.tarea-titulo').value;
+        const descripcion = item.querySelector('.tarea-descripcion').value;
+        const responsable = item.querySelector('.tarea-responsable').value;
+        const fecha = item.querySelector('.tarea-fecha').value;
+        const prioridad = item.querySelector('.tarea-prioridad').value;
+        
+        if (titulo && responsable && fecha) {
+            tareas.push({
+                titulo: titulo,
+                descripcion: descripcion,
+                responsable: responsable,
+                fecha_vencimiento: fecha,
+                prioridad: prioridad
+            });
+        }
+    });
+    
+    return tareas;
+}
+
+// Event listeners
+if (agregarTareaBtn) {
+    agregarTareaBtn.addEventListener('click', agregarTarea);
+}
+
+// Al enviar el formulario, recopilar las tareas y ponerlas en el campo JSON
+document.querySelector('form').addEventListener('submit', function(e) {
+    const tareas = recopilarTareas();
+    tareasJsonInput.value = JSON.stringify(tareas);
+});
+</script>
 {% endblock %}

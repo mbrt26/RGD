@@ -87,39 +87,84 @@
                 </table>
             </div>
             <div class="col-md-6">
-                <div class="card bg-light">
-                    <div class="card-body">
-                        <h6 class="card-title">Resumen</h6>
-                        <div class="row text-center">
-                            <div class="col-3">
-                                <div class="h5 text-primary">{{ total_proyectos }}</div>
-                                <small>Proyectos</small>
-                            </div>
-                            <div class="col-3">
-                                <div class="h5 text-info">{{ total_servicios }}</div>
-                                <small>Servicios</small>
-                            </div>
-                            <div class="col-3">
-                                <div class="h5 text-secondary">{{ total_externos }}</div>
-                                <small>Externos</small>
-                            </div>
-                            <div class="col-3">
-                                <div class="h5 text-dark">{{ total_items }}</div>
-                                <small>Total</small>
+                <h5 class="mb-3"><i class="fas fa-chart-line me-2"></i>Resumen del Comité</h5>
+                
+                <!-- Tarjetas de resumen -->
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center py-3">
+                                <i class="fas fa-project-diagram text-primary mb-2" style="font-size: 1.5rem;"></i>
+                                <h3 class="text-primary mb-0">{{ total_proyectos }}</h3>
+                                <small class="text-muted fw-bold">PROYECTOS</small>
                             </div>
                         </div>
-                        <div class="row text-center mt-2">
+                    </div>
+                    <div class="col-6">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center py-3">
+                                <i class="fas fa-tools text-info mb-2" style="font-size: 1.5rem;"></i>
+                                <h3 class="text-info mb-0">{{ total_servicios }}</h3>
+                                <small class="text-muted fw-bold">SERVICIOS</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center py-3">
+                                <i class="fas fa-external-link-alt text-secondary mb-2" style="font-size: 1.5rem;"></i>
+                                <h3 class="text-secondary mb-0">{{ total_externos }}</h3>
+                                <small class="text-muted fw-bold">EXTERNOS</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card border-0 shadow-sm bg-primary bg-opacity-10">
+                            <div class="card-body text-center py-3">
+                                <i class="fas fa-clipboard-list text-primary mb-2" style="font-size: 1.5rem;"></i>
+                                <h3 class="text-primary mb-0">{{ total_items }}</h3>
+                                <small class="text-primary fw-bold">TOTAL ITEMS</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Indicadores de estado -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-3"><i class="fas fa-traffic-light me-2"></i>Estado de Seguimiento</h6>
+                        <div class="row g-2">
                             <div class="col-4">
-                                <div class="h6 text-success">{{ proyectos_verdes }}</div>
-                                <small>En Verde</small>
+                                <div class="d-flex align-items-center justify-content-center flex-column p-2 rounded bg-success bg-opacity-10">
+                                    <i class="fas fa-check-circle text-success mb-1" style="font-size: 1.5rem;"></i>
+                                    <h4 class="text-success mb-0">{{ proyectos_verdes }}</h4>
+                                    <small class="text-success fw-bold">EN VERDE</small>
+                                </div>
                             </div>
                             <div class="col-4">
-                                <div class="h6 text-warning">{{ proyectos_amarillos }}</div>
-                                <small>En Amarillo</small>
+                                <div class="d-flex align-items-center justify-content-center flex-column p-2 rounded bg-warning bg-opacity-10">
+                                    <i class="fas fa-exclamation-circle text-warning mb-1" style="font-size: 1.5rem;"></i>
+                                    <h4 class="text-warning mb-0">{{ proyectos_amarillos }}</h4>
+                                    <small class="text-warning fw-bold">EN AMARILLO</small>
+                                </div>
                             </div>
                             <div class="col-4">
-                                <div class="h6 text-danger">{{ proyectos_rojos }}</div>
-                                <small>En Rojo</small>
+                                <div class="d-flex align-items-center justify-content-center flex-column p-2 rounded bg-danger bg-opacity-10">
+                                    <i class="fas fa-times-circle text-danger mb-1" style="font-size: 1.5rem;"></i>
+                                    <h4 class="text-danger mb-0">{{ proyectos_rojos }}</h4>
+                                    <small class="text-danger fw-bold">EN ROJO</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Barra de progreso visual -->
+                        <div class="mt-3">
+                            <div class="progress" style="height: 10px;">
+                                {% if total_items > 0 %}
+                                <div class="progress-bar bg-success" style="width: {% widthratio proyectos_verdes total_items 100 %}%"></div>
+                                <div class="progress-bar bg-warning" style="width: {% widthratio proyectos_amarillos total_items 100 %}%"></div>
+                                <div class="progress-bar bg-danger" style="width: {% widthratio proyectos_rojos total_items 100 %}%"></div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -257,7 +302,7 @@
                     {% for seguimiento_servicio in seguimientos_servicios %}
                     <tr>
                         <td>{{ seguimiento_servicio.servicio.cliente_crm.nombre }}</td>
-                        <td class="text-center">{{ seguimiento_servicio.servicio.centro_costos|default:"Sin CC" }}</td>
+                        <td class="text-center">{{ seguimiento_servicio.servicio.centro_costo|default:"Sin CC" }}</td>
                         <td class="fw-bold">{{ seguimiento_servicio.servicio.numero_orden }}</td>
                         <td>
                             {% if seguimiento_servicio.servicio.trato_origen and seguimiento_servicio.servicio.trato_origen.descripcion %}
@@ -367,7 +412,7 @@
                             </span>
                         </td>
                         <td>
-                            <small>{{ elemento.observaciones|truncatewords:10|default:"-" }}</small>
+                            <small>{{ elemento.observaciones|default:"-" }}</small>
                         </td>
                     </tr>
                     {% empty %}
@@ -463,12 +508,14 @@
                     <table class="table table-sm">
                         <thead>
                             <tr>
-                                <th style="width: 20%;">Proyecto/Elemento</th>
-                                <th style="width: 30%;">Tarea</th>
-                                <th style="width: 15%;">Responsable</th>
-                                <th style="width: 12%;">Fecha Vencimiento</th>
-                                <th style="width: 10%;">Prioridad</th>
-                                <th style="width: 13%;">Estado</th>
+                                <th style="width: 12%;">Cliente</th>
+                                <th style="width: 8%;">Centro de Costos</th>
+                                <th style="width: 20%;">Descripción</th>
+                                <th style="width: 20%;">Tarea</th>
+                                <th style="width: 12%;">Responsable</th>
+                                <th style="width: 10%;">Fecha Vencimiento</th>
+                                <th style="width: 8%;">Prioridad</th>
+                                <th style="width: 10%;">Estado</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -476,14 +523,52 @@
                             {% for item in tareas_proyectos %}
                                 {% for tarea in item.tareas %}
                                 <tr>
+                                    <td>{{ item.cliente }}</td>
+                                    <td class="text-center">{{ item.centro_costos }}</td>
                                     <td>
-                                        <span class="badge bg-primary mb-1">Proyecto</span><br>
                                         <small class="fw-bold">{{ item.proyecto }}</small>
+                                        {% if item.descripcion %}
+                                        <br><small class="text-muted">{{ item.descripcion|truncatewords:10 }}</small>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <strong>{{ tarea.title }}</strong>
                                         {% if tarea.description %}
-                                        <br><small class="text-muted">{{ tarea.description|truncatewords:15 }}</small>
+                                        <br><small class="text-muted">{{ tarea.description|truncatewords:10 }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ tarea.assigned_to.get_full_name|default:tarea.assigned_to.username }}</td>
+                                    <td>{{ tarea.due_date|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ tarea.get_priority_color }}">
+                                            {{ tarea.get_priority_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ tarea.get_status_color }}">
+                                            {{ tarea.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endfor %}
+                            
+                            <!-- Tareas de Servicios -->
+                            {% for item in tareas_servicios %}
+                                {% for tarea in item.tareas %}
+                                <tr>
+                                    <td>{{ item.cliente }}</td>
+                                    <td class="text-center">{{ item.centro_costos }}</td>
+                                    <td>
+                                        <small class="fw-bold">{{ item.proyecto }}</small>
+                                        {% if item.descripcion %}
+                                        <br><small class="text-muted">{{ item.descripcion|truncatewords:10 }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ tarea.title }}</strong>
+                                        {% if tarea.description %}
+                                        <br><small class="text-muted">{{ tarea.description|truncatewords:10 }}</small>
                                         {% endif %}
                                     </td>
                                     <td>{{ tarea.assigned_to.get_full_name|default:tarea.assigned_to.username }}</td>
@@ -506,14 +591,18 @@
                             {% for item in tareas_elementos %}
                                 {% for tarea in item.tareas %}
                                 <tr>
+                                    <td>{{ item.cliente }}</td>
+                                    <td class="text-center">{{ item.centro_costos }}</td>
                                     <td>
-                                        <span class="badge bg-secondary mb-1">Elemento Externo</span><br>
                                         <small class="fw-bold">{{ item.proyecto }}</small>
+                                        {% if item.descripcion %}
+                                        <br><small class="text-muted">{{ item.descripcion|truncatewords:10 }}</small>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <strong>{{ tarea.title }}</strong>
                                         {% if tarea.description %}
-                                        <br><small class="text-muted">{{ tarea.description|truncatewords:15 }}</small>
+                                        <br><small class="text-muted">{{ tarea.description|truncatewords:10 }}</small>
                                         {% endif %}
                                     </td>
                                     <td>{{ tarea.assigned_to.get_full_name|default:tarea.assigned_to.username }}</td>
@@ -554,6 +643,7 @@
                                     {% for item in tareas_elementos %}{{ item.tareas|length }}{% if not forloop.last %}+{% endif %}{% endfor %}
                                 </strong></li>
                                 <li>Proyectos con tareas: <strong>{{ tareas_proyectos|length }}</strong></li>
+                                <li>Servicios con tareas: <strong>{{ tareas_servicios|length }}</strong></li>
                                 <li>Elementos externos con tareas: <strong>{{ tareas_elementos|length }}</strong></li>
                             </ul>
                         </div>

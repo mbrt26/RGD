@@ -1532,6 +1532,15 @@ class SeguimientoServicioComite(models.Model):
         help_text='Orden en que se presenta en el comité'
     )
     
+    # Relación con tareas generadas
+    tareas = models.ManyToManyField(
+        'tasks.Task',
+        blank=True,
+        related_name='seguimientos_servicio_comite',
+        verbose_name='Tareas Generadas',
+        help_text='Tareas creadas desde este seguimiento de servicio en comité'
+    )
+    
     # Metadatos
     fecha_actualizacion = models.DateTimeField(auto_now=True)
     actualizado_por = models.ForeignKey(

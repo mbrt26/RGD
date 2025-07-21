@@ -1,4 +1,4 @@
-from django.views.generic import ListView, CreateView, UpdateView, DetailView
+from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.http import JsonResponse, HttpResponseRedirect
@@ -375,15 +375,88 @@ class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
         context['servicio'] = seguimiento.servicio
         context['colaboradores'] = Colaborador.objects.all().order_by('nombre')
         
+        # Agregar formulario de tareas
+        context['tareas_formset'] = TareasComiteFormSet(prefix='tareas')
+        
+        # Agregar tareas existentes
+        context['tareas_existentes'] = seguimiento.tareas.all().select_related(
+            'assigned_to', 'created_by'
+        ).order_by('-created_at')
+        
+        # Usuarios disponibles para asignar tareas
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        context['usuarios_disponibles'] = User.objects.filter(
+            is_active=True
+        ).order_by('first_name', 'last_name')
+        
         return context
 
     def form_valid(self, form):
         form.instance.actualizado_por = self.request.user
+        response = super().form_valid(form)
+        
+        # Procesar las tareas si se enviaron
+        tareas_formset = TareasComiteFormSet(self.request.POST, prefix='tareas')
+        
+        if tareas_formset.is_valid():
+            tareas_json = tareas_formset.cleaned_data.get('tareas_json', [])
+            if tareas_json:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"Procesando {len(tareas_json)} tareas para servicio {self.object.servicio.numero_orden}")
+                try:
+                    # Modificar el save para servicios
+                    tareas_creadas = []
+                    
+                    # Obtener o crear categoría para servicios
+                    from tasks.models import TaskCategory
+                    categoria, _ = TaskCategory.objects.get_or_create(
+                        name='Comité - Servicios',
+                        module='servicios',
+                        defaults={
+                            'description': 'Tareas generadas desde seguimiento de servicio en comité',
+                            'color': '#28a745'
+                        }
+                    )
+                    
+                    for tarea_data in tareas_json:
+                        # Crear la tarea
+                        tarea = Task.objects.create(
+                            title=tarea_data['titulo'],
+                            description=tarea_data.get('descripcion', ''),
+                            assigned_to_id=tarea_data['responsable'],
+                            created_by=self.request.user,
+                            due_date=tarea_data['fecha_vencimiento'],
+                            priority=tarea_data.get('prioridad', 'medium'),
+                            category=categoria,
+                            solicitud_servicio=self.object.servicio,
+                            centro_costos=self.object.servicio.centro_costo,
+                            task_type='task',
+                            status='pending'
+                        )
+                        
+                        tareas_creadas.append(tarea)
+                        
+                    # Asociar las tareas al seguimiento
+                    self.object.tareas.add(*tareas_creadas)
+                    
+                    if tareas_creadas:
+                        messages.success(
+                            self.request,
+                            f'Se crearon {len(tareas_creadas)} tareas para el servicio {self.object.servicio.numero_orden}'
+                        )
+                except Exception as e:
+                    messages.error(
+                        self.request,
+                        f'Error al crear las tareas: {str(e)}'
+                    )
+        
         messages.success(
             self.request,
             f'Seguimiento actualizado para servicio {self.object.servicio.numero_orden}'
         )
-        return super().form_valid(form)
+        return response
 
 
 @require_http_methods(["POST"])
@@ -655,6 +728,7 @@ class ComiteActaView(LoginRequiredMixin, DetailView):
         # Obtener todas las tareas relacionadas
         from tasks.models import Task
         tareas_proyectos = []
+        tareas_servicios = []
         tareas_elementos = []
         
         # Tareas de seguimientos de proyectos
@@ -665,7 +739,30 @@ class ComiteActaView(LoginRequiredMixin, DetailView):
             if tareas.exists():
                 tareas_proyectos.append({
                     'proyecto': seguimiento.proyecto.nombre_proyecto,
+                    'cliente': seguimiento.proyecto.cliente,
+                    'centro_costos': seguimiento.proyecto.centro_costos,
+                    'descripcion': seguimiento.proyecto.descripcion_breve,
                     'tipo': 'proyecto',
+                    'tareas': tareas
+                })
+        
+        # Tareas de seguimientos de servicios
+        for seguimiento_servicio in context['seguimientos_servicios']:
+            tareas = seguimiento_servicio.tareas.all().select_related(
+                'assigned_to', 'created_by'
+            ).order_by('-created_at')
+            if tareas.exists():
+                servicio = seguimiento_servicio.servicio
+                descripcion_servicio = ''
+                if servicio.trato_origen and servicio.trato_origen.descripcion:
+                    descripcion_servicio = servicio.trato_origen.descripcion
+                
+                tareas_servicios.append({
+                    'proyecto': f"Servicio {servicio.numero_orden}",
+                    'cliente': servicio.cliente_crm.nombre if servicio.cliente_crm else 'Sin cliente',
+                    'centro_costos': servicio.centro_costo or 'Sin CC',
+                    'descripcion': descripcion_servicio,
+                    'tipo': 'servicio',
                     'tareas': tareas
                 })
         
@@ -677,6 +774,9 @@ class ComiteActaView(LoginRequiredMixin, DetailView):
             if tareas.exists():
                 tareas_elementos.append({
                     'proyecto': elemento.nombre_proyecto,
+                    'cliente': elemento.cliente,
+                    'centro_costos': elemento.centro_costos or 'Sin CC',
+                    'descripcion': elemento.descripcion,
                     'tipo': 'elemento_externo',
                     'tareas': tareas
                 })
@@ -691,8 +791,9 @@ class ComiteActaView(LoginRequiredMixin, DetailView):
             'proyectos_rojos': total_rojos,
             'proyectos_amarillos': total_amarillos,
             'tareas_proyectos': tareas_proyectos,
+            'tareas_servicios': tareas_servicios,
             'tareas_elementos': tareas_elementos,
-            'tiene_tareas': bool(tareas_proyectos or tareas_elementos),
+            'tiene_tareas': bool(tareas_proyectos or tareas_servicios or tareas_elementos),
         })
         
         return context
@@ -898,6 +999,21 @@ class ElementoExternoUpdateView(LoginRequiredMixin, UpdateView):
             f'Elemento externo "{form.instance.nombre_proyecto}" actualizado exitosamente.'
         )
         return super().form_valid(form)
+
+
+class ElementoExternoDeleteView(LoginRequiredMixin, DeleteView):
+    """Vista para eliminar elementos externos"""
+    model = ElementoExternoComite
+    template_name = 'proyectos/comite/elemento_externo_confirm_delete.html'
+    
+    def get_success_url(self):
+        return reverse_lazy('proyectos:comite_detail', kwargs={'pk': self.object.comite.pk})
+    
+    def delete(self, request, *args, **kwargs):
+        elemento = self.get_object()
+        comite = elemento.comite
+        messages.success(request, f'Elemento externo "{elemento.nombre_proyecto}" eliminado exitosamente.')
+        return super().delete(request, *args, **kwargs)
 
 
 class ComiteIniciarView(LoginRequiredMixin, DetailView):
