@@ -413,9 +413,7 @@ class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
             except json.JSONDecodeError:
                 pass
         
-        response = super().form_valid(form)
-        
-        # Procesar las tareas si se enviaron
+        # Procesar las tareas ANTES de guardar el formulario principal
         tareas_formset = TareasComiteFormSet(self.request.POST, prefix='tareas')
         
         if tareas_formset.is_valid():
@@ -470,6 +468,9 @@ class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
                         self.request,
                         f'Error al crear las tareas: {str(e)}'
                     )
+        
+        # Ahora sí guardamos el formulario principal
+        response = super().form_valid(form)
         
         messages.success(
             self.request,
