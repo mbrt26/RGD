@@ -39,7 +39,8 @@ from .views.comite.views import (
     ComiteDeleteView, ComiteActaView, ComiteExportView, ComiteIniciarView, 
     ComiteFinalizarView, SeguimientoUpdateView, SeguimientoServicioUpdateView, gestionar_participantes_comite, 
     duplicar_comite, ajax_buscar_colaboradores, agregar_servicio_seguimiento,
-    ElementoExternoCreateView, ElementoExternoUpdateView, ElementoExternoDeleteView
+    ElementoExternoCreateView, ElementoExternoUpdateView, ElementoExternoDeleteView,
+    SeguimientoDeleteView, SeguimientoServicioDeleteView
 )
 from .views.prorroga.views import (
     ProrrogaListView, ProrrogaCreateView, ProrrogaDetailView, ProrrogaAprobacionView,
@@ -159,7 +160,9 @@ urlpatterns = [
         path('elemento-externo/<int:pk>/editar/', login_required(ElementoExternoUpdateView.as_view()), name='elemento_externo_update'),
         path('elemento-externo/<int:pk>/eliminar/', login_required(ElementoExternoDeleteView.as_view()), name='elemento_externo_delete'),
         path('seguimiento/<int:pk>/editar/', login_required(SeguimientoUpdateView.as_view()), name='seguimiento_update'),
+        path('seguimiento/<int:pk>/eliminar/', login_required(SeguimientoDeleteView.as_view()), name='seguimiento_delete'),
         path('seguimiento-servicio/<int:pk>/editar/', login_required(SeguimientoServicioUpdateView.as_view()), name='seguimiento_servicio_update'),
+        path('seguimiento-servicio/<int:pk>/eliminar/', login_required(SeguimientoServicioDeleteView.as_view()), name='seguimiento_servicio_delete'),
         path('ajax/buscar-colaboradores/', login_required(ajax_buscar_colaboradores), name='ajax_buscar_colaboradores'),
     ])),
     

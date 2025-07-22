@@ -298,9 +298,9 @@
                                 <h6 class="text-muted">Tareas creadas anteriormente:</h6>
                                 <div class="list-group list-group-flush">
                                     {% for tarea in tareas_existentes %}
-                                    <div class="list-group-item px-0">
+                                    <div class="list-group-item px-0 tarea-existente" data-tarea-id="{{ tarea.id }}">
                                         <div class="d-flex justify-content-between align-items-start">
-                                            <div>
+                                            <div class="flex-grow-1">
                                                 <h6 class="mb-1">{{ tarea.title }}</h6>
                                                 <p class="mb-1 text-muted small">{{ tarea.description|default:"Sin descripción" }}</p>
                                                 <div class="small">
@@ -309,7 +309,12 @@
                                                     <span class="ms-2 badge bg-{{ tarea.get_priority_color }}">{{ tarea.get_priority_display }}</span>
                                                 </div>
                                             </div>
-                                            <span class="badge bg-{{ tarea.get_status_color }}">{{ tarea.get_status_display }}</span>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-{{ tarea.get_status_color }}">{{ tarea.get_status_display }}</span>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="marcarTareaParaEliminar({{ tarea.id }}, this)" title="Marcar para eliminar">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                     {% endfor %}
@@ -330,6 +335,8 @@
                             
                             <!-- Campo oculto para almacenar las tareas en JSON -->
                             <input type="hidden" name="tareas-tareas_json" id="tareas-json">
+                            <!-- Campo oculto para tareas a eliminar -->
+                            <input type="hidden" name="tareas_a_eliminar" id="tareas-a-eliminar">
                         </div>
                     </div>
 
@@ -581,6 +588,33 @@ function seleccionarEstado(estado, elemento) {
     }
 }
 
+// Función para marcar tareas existentes para eliminar
+function marcarTareaParaEliminar(tareaId, boton) {
+    const tareaElement = boton.closest('.tarea-existente');
+    
+    if (tareaElement.classList.contains('marcada-eliminar')) {
+        // Si ya está marcada, desmarcar
+        tareaElement.classList.remove('marcada-eliminar');
+        tareaElement.style.opacity = '1';
+        tareaElement.style.textDecoration = 'none';
+        boton.innerHTML = '<i class="fas fa-trash"></i>';
+        boton.classList.remove('btn-warning');
+        boton.classList.add('btn-outline-danger');
+        boton.title = 'Marcar para eliminar';
+    } else {
+        // Marcar para eliminar
+        if (confirm('¿Está seguro de que desea eliminar esta tarea? La tarea se eliminará al guardar los cambios.')) {
+            tareaElement.classList.add('marcada-eliminar');
+            tareaElement.style.opacity = '0.5';
+            tareaElement.style.textDecoration = 'line-through';
+            boton.innerHTML = '<i class="fas fa-undo"></i>';
+            boton.classList.remove('btn-outline-danger');
+            boton.classList.add('btn-warning');
+            boton.title = 'Cancelar eliminación';
+        }
+    }
+}
+
 // Validación del formulario
 document.getElementById('elementoExternoForm').addEventListener('submit', function(e) {
     const estadoSelect = document.getElementById('id_estado_seguimiento');
@@ -626,6 +660,11 @@ document.getElementById('elementoExternoForm').addEventListener('submit', functi
     // Recopilar y guardar las tareas en el campo JSON antes de enviar
     const tareas = recopilarTareas();
     tareasJsonInput.value = JSON.stringify(tareas);
+    
+    // Recopilar las tareas marcadas para eliminar
+    const tareasAEliminar = Array.from(document.querySelectorAll('.tarea-existente.marcada-eliminar'))
+        .map(el => el.dataset.tareaId);
+    document.getElementById('tareas-a-eliminar').value = JSON.stringify(tareasAEliminar);
 });
 </script>
 {% endblock %}

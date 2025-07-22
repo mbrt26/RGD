@@ -323,6 +323,12 @@
                                            title="Editar seguimiento">
                                             <i class="fas fa-edit"></i> Editar
                                         </a>
+                                        <button type="button" 
+                                                class="btn btn-outline-danger" 
+                                                onclick="confirmarEliminacionSeguimiento('{% url 'proyectos:seguimiento_delete' seguimiento.pk %}', 'proyecto', '{{ seguimiento.proyecto.nombre_proyecto|escapejs }}')"
+                                                title="Eliminar seguimiento">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -387,6 +393,12 @@
                                            title="Editar seguimiento">
                                             <i class="fas fa-edit"></i> Editar
                                         </a>
+                                        <button type="button" 
+                                                class="btn btn-outline-danger" 
+                                                onclick="confirmarEliminacionSeguimiento('{% url 'proyectos:seguimiento_servicio_delete' seguimiento_servicio.pk %}', 'servicio', '{{ seguimiento_servicio.servicio.numero_orden|escapejs }}')"
+                                                title="Eliminar seguimiento">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -787,6 +799,29 @@ function finalizarComite() {
 // Función para exportar proyectos
 function exportarProyectos() {
     window.location.href = "{% url 'proyectos:comite_export' comite.pk %}";
+}
+
+function confirmarEliminacionSeguimiento(url, tipo, nombre) {
+    const tipoTexto = tipo === 'proyecto' ? 'proyecto' : 'servicio';
+    const mensaje = `¿Está seguro de que desea eliminar el seguimiento del ${tipoTexto} "${nombre}" de este comité?\n\nEsta acción no se puede deshacer.`;
+    
+    if (confirm(mensaje)) {
+        // Crear un formulario para hacer POST con CSRF token
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+        
+        // Agregar CSRF token
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = 'csrfmiddlewaretoken';
+        csrfToken.value = getCSRFToken();
+        form.appendChild(csrfToken);
+        
+        // Agregar el formulario al body y enviarlo
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
 </script>
 {% endblock %}

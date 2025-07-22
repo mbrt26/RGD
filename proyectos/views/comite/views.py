@@ -394,6 +394,24 @@ class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         form.instance.actualizado_por = self.request.user
+        
+        # Procesar tareas a eliminar
+        tareas_a_eliminar_json = self.request.POST.get('tareas_a_eliminar', '[]')
+        if tareas_a_eliminar_json:
+            try:
+                import json
+                tareas_ids = json.loads(tareas_a_eliminar_json)
+                if tareas_ids:
+                    # Eliminar las tareas marcadas
+                    from tasks.models import Task
+                    Task.objects.filter(
+                        id__in=tareas_ids,
+                        id__in=form.instance.tareas.values_list('id', flat=True)
+                    ).delete()
+                    messages.info(self.request, f'{len(tareas_ids)} tarea(s) eliminada(s).')
+            except json.JSONDecodeError:
+                pass
+        
         response = super().form_valid(form)
         
         # Procesar las tareas si se enviaron
@@ -691,7 +709,7 @@ class ComiteActaView(LoginRequiredMixin, DetailView):
         comite = self.get_object()
         
         # Obtener seguimientos de proyectos ordenados
-        context['seguimientos'] = comite.seguimientos.select_related('proyecto').order_by('orden_presentacion', 'proyecto__nombre_proyecto')
+        context['seguimientos'] = comite.seguimientos.select_related('proyecto', 'proyecto__director_proyecto').order_by('orden_presentacion', 'proyecto__nombre_proyecto')
         
         # Obtener seguimientos de servicios ordenados
         context['seguimientos_servicios'] = comite.seguimientos_servicios.select_related('servicio').order_by('orden_presentacion', 'servicio__numero_orden')
@@ -994,6 +1012,36 @@ class ElementoExternoUpdateView(LoginRequiredMixin, UpdateView):
     
     def form_valid(self, form):
         form.instance.actualizado_por = self.request.user
+        
+        # Procesar tareas a eliminar
+        tareas_a_eliminar_json = self.request.POST.get('tareas_a_eliminar', '[]')
+        if tareas_a_eliminar_json:
+            try:
+                import json
+                tareas_ids = json.loads(tareas_a_eliminar_json)
+                if tareas_ids:
+                    # Eliminar las tareas marcadas
+                    from tasks.models import Task
+                    Task.objects.filter(
+                        id__in=tareas_ids,
+                        id__in=form.instance.tareas_generadas.values_list('id', flat=True)
+                    ).delete()
+                    messages.info(self.request, f'{len(tareas_ids)} tarea(s) eliminada(s).')
+            except json.JSONDecodeError:
+                pass
+        
+        # Procesar nuevas tareas
+        tareas_formset = TareasComiteFormSet(self.request.POST, prefix='tareas')
+        if tareas_formset.is_valid():
+            tareas = tareas_formset.save(
+                usuario=self.request.user,
+                proyecto=None,
+                servicio=None,
+                elemento_externo=form.instance
+            )
+            if tareas:
+                messages.info(self.request, f'{len(tareas)} nueva(s) tarea(s) creada(s).')
+        
         messages.success(
             self.request,
             f'Elemento externo "{form.instance.nombre_proyecto}" actualizado exitosamente.'
@@ -1013,6 +1061,38 @@ class ElementoExternoDeleteView(LoginRequiredMixin, DeleteView):
         elemento = self.get_object()
         comite = elemento.comite
         messages.success(request, f'Elemento externo "{elemento.nombre_proyecto}" eliminado exitosamente.')
+        return super().delete(request, *args, **kwargs)
+
+
+class SeguimientoDeleteView(LoginRequiredMixin, DeleteView):
+    """Vista para eliminar seguimiento de proyecto del comité"""
+    model = SeguimientoProyectoComite
+    template_name = 'proyectos/comite/seguimiento_confirm_delete.html'
+    
+    def get_success_url(self):
+        return reverse_lazy('proyectos:comite_detail', kwargs={'pk': self.object.comite.pk})
+    
+    def delete(self, request, *args, **kwargs):
+        seguimiento = self.get_object()
+        proyecto_nombre = seguimiento.proyecto.nombre_proyecto
+        comite = seguimiento.comite
+        messages.success(request, f'Seguimiento del proyecto "{proyecto_nombre}" eliminado del comité.')
+        return super().delete(request, *args, **kwargs)
+
+
+class SeguimientoServicioDeleteView(LoginRequiredMixin, DeleteView):
+    """Vista para eliminar seguimiento de servicio del comité"""
+    model = SeguimientoServicioComite
+    template_name = 'proyectos/comite/seguimiento_servicio_confirm_delete.html'
+    
+    def get_success_url(self):
+        return reverse_lazy('proyectos:comite_detail', kwargs={'pk': self.object.comite.pk})
+    
+    def delete(self, request, *args, **kwargs):
+        seguimiento = self.get_object()
+        servicio_numero = seguimiento.servicio.numero_orden
+        comite = seguimiento.comite
+        messages.success(request, f'Seguimiento del servicio "{servicio_numero}" eliminado del comité.')
         return super().delete(request, *args, **kwargs)
 
 
