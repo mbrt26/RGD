@@ -405,7 +405,8 @@ class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
                     # Eliminar las tareas marcadas
                     from tasks.models import Task
                     Task.objects.filter(
-                        id__in=tareas_ids,
+                        id__in=tareas_ids
+                    ).filter(
                         id__in=form.instance.tareas.values_list('id', flat=True)
                     ).delete()
                     messages.info(self.request, f'{len(tareas_ids)} tarea(s) eliminada(s).')
@@ -1023,7 +1024,8 @@ class ElementoExternoUpdateView(LoginRequiredMixin, UpdateView):
                     # Eliminar las tareas marcadas
                     from tasks.models import Task
                     Task.objects.filter(
-                        id__in=tareas_ids,
+                        id__in=tareas_ids
+                    ).filter(
                         id__in=form.instance.tareas_generadas.values_list('id', flat=True)
                     ).delete()
                     messages.info(self.request, f'{len(tareas_ids)} tarea(s) eliminada(s).')
