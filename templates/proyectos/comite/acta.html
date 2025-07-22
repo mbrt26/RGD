@@ -57,7 +57,7 @@
         <h1 class="mb-1">ACTA DE COMITÉ DE PROYECTOS</h1>
         <h3 class="text-primary">{{ comite.nombre }}</h3>
         <p class="text-muted mb-0">
-            {{ comite.fecha_comite|date:"l, d \d\e F \d\e Y \a \l\a\s H:i" }}
+            {{ comite.fecha_comite|date:"l, d" }} de {{ comite.fecha_comite|date:"F" }} de {{ comite.fecha_comite|date:"Y" }} a las {{ comite.fecha_comite|date:"H:i" }}
             {% if comite.lugar %} - {{ comite.lugar }}{% endif %}
         </p>
     </div>
