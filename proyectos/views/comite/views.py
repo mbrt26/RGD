@@ -1034,15 +1034,26 @@ class ElementoExternoUpdateView(LoginRequiredMixin, UpdateView):
         
         # Procesar nuevas tareas
         tareas_formset = TareasComiteFormSet(self.request.POST, prefix='tareas')
-        if tareas_formset.is_valid():
-            tareas = tareas_formset.save(
-                usuario=self.request.user,
-                proyecto=None,
-                servicio=None,
-                elemento_externo=form.instance
-            )
-            if tareas:
-                messages.info(self.request, f'{len(tareas)} nueva(s) tarea(s) creada(s).')
+        if tareas_formset.is_valid() and tareas_formset.cleaned_data.get('tareas_json'):
+            try:
+                # Crear objeto mock para compatibilidad con el método save
+                class ElementoExternoMock:
+                    def __init__(self, elemento):
+                        self.proyecto = None
+                        self.centro_costos = elemento.centro_costos
+                        self.tareas_generadas = elemento.tareas_generadas
+                
+                mock_seguimiento = ElementoExternoMock(form.instance)
+                
+                tareas_creadas = tareas_formset.save(
+                    seguimiento=mock_seguimiento,
+                    usuario_creador=self.request.user
+                )
+                
+                if tareas_creadas:
+                    messages.info(self.request, f'{len(tareas_creadas)} nueva(s) tarea(s) creada(s).')
+            except Exception as e:
+                messages.error(self.request, f'Error al crear tareas: {str(e)}')
         
         messages.success(
             self.request,

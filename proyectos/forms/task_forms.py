@@ -109,8 +109,8 @@ class TareasComiteFormSet(forms.Form):
                 due_date=tarea_data['fecha_vencimiento'],
                 priority=tarea_data.get('prioridad', 'medium'),
                 category=categoria,
-                proyecto_relacionado=seguimiento.proyecto,
-                centro_costos=seguimiento.proyecto.centro_costos,
+                proyecto_relacionado=seguimiento.proyecto if hasattr(seguimiento, 'proyecto') else None,
+                centro_costos=seguimiento.centro_costos if hasattr(seguimiento, 'centro_costos') else None,
                 task_type='task',
                 status='pending'
             )
