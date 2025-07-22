@@ -760,7 +760,7 @@ class ComiteActaView(LoginRequiredMixin, DetailView):
                     'proyecto': seguimiento.proyecto.nombre_proyecto,
                     'cliente': seguimiento.proyecto.cliente,
                     'centro_costos': seguimiento.proyecto.centro_costos,
-                    'descripcion': seguimiento.proyecto.descripcion_breve,
+                    'descripcion': seguimiento.proyecto.observaciones or '',
                     'tipo': 'proyecto',
                     'tareas': tareas
                 })
