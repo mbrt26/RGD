@@ -1,0 +1,15 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/rgd-aire:${_IMAGE_TAG}', '-f', 'Dockerfile.cloudrun', '.']
+  
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/rgd-aire:${_IMAGE_TAG}']
+
+# Images to push
+images:
+  - 'gcr.io/$PROJECT_ID/rgd-aire:${_IMAGE_TAG}'
+
+# Timeout for the entire build
+timeout: '1200s'

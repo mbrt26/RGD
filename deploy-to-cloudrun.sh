@@ -33,7 +33,8 @@ CLOUD_SQL_INSTANCE="appsindunnova:us-central1:rgd-aire-db"
 
 echo "📦 Construyendo imagen Docker..."
 echo "   Tag: ${IMAGE_NAME}:${IMAGE_TAG}"
-gcloud builds submit --tag "${IMAGE_NAME}:${IMAGE_TAG}" . --timeout=20m
+# Usar cloudbuild.yaml con sustituciones
+gcloud builds submit --config=cloudbuild.yaml --substitutions=_IMAGE_TAG="${IMAGE_TAG}" .
 
 echo "🎯 Desplegando a Cloud Run..."
 gcloud run deploy ${SERVICE_NAME} \

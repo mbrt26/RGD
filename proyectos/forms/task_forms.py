@@ -118,6 +118,9 @@ class TareasComiteFormSet(forms.Form):
             tareas_creadas.append(tarea)
             
         # Asociar las tareas al seguimiento
-        seguimiento.tareas_generadas.add(*tareas_creadas)
+        if hasattr(seguimiento, 'tareas_generadas'):
+            seguimiento.tareas_generadas.add(*tareas_creadas)
+        elif hasattr(seguimiento, 'tareas'):
+            seguimiento.tareas.add(*tareas_creadas)
         
         return tareas_creadas

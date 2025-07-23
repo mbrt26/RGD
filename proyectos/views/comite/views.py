@@ -403,7 +403,6 @@ class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
                 tareas_ids = json.loads(tareas_a_eliminar_json)
                 if tareas_ids:
                     # Eliminar las tareas marcadas
-                    from tasks.models import Task
                     Task.objects.filter(
                         id__in=tareas_ids
                     ).filter(
@@ -416,11 +415,17 @@ class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
         # Procesar las tareas ANTES de guardar el formulario principal
         tareas_formset = TareasComiteFormSet(self.request.POST, prefix='tareas')
         
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"POST data: {self.request.POST}")
+        logger.info(f"Tareas formset valid: {tareas_formset.is_valid()}")
+        if not tareas_formset.is_valid():
+            logger.error(f"Tareas formset errors: {tareas_formset.errors}")
+        
         if tareas_formset.is_valid():
             tareas_json = tareas_formset.cleaned_data.get('tareas_json', [])
+            logger.info(f"Tareas JSON data: {tareas_json}")
             if tareas_json:
-                import logging
-                logger = logging.getLogger(__name__)
                 logger.info(f"Procesando {len(tareas_json)} tareas para servicio {self.object.servicio.numero_orden}")
                 try:
                     # Modificar el save para servicios
@@ -455,8 +460,11 @@ class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
                         
                         tareas_creadas.append(tarea)
                         
-                    # Asociar las tareas al seguimiento
-                    self.object.tareas.add(*tareas_creadas)
+                    # NO guardamos aquí, lo haremos después con super().form_valid()
+                    logger.info(f"Tareas creadas en memoria: {len(tareas_creadas)}")
+                    
+                    # Guardamos las tareas creadas para asociarlas después
+                    self._tareas_creadas = tareas_creadas
                     
                     if tareas_creadas:
                         messages.success(
@@ -464,6 +472,7 @@ class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
                             f'Se crearon {len(tareas_creadas)} tareas para el servicio {self.object.servicio.numero_orden}'
                         )
                 except Exception as e:
+                    logger.error(f"Error al crear las tareas: {str(e)}", exc_info=True)
                     messages.error(
                         self.request,
                         f'Error al crear las tareas: {str(e)}'
@@ -471,6 +480,11 @@ class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
         
         # Ahora sí guardamos el formulario principal
         response = super().form_valid(form)
+        
+        # Después de guardar, asociamos las tareas si las hay
+        if hasattr(self, '_tareas_creadas') and self._tareas_creadas:
+            self.object.tareas.add(*self._tareas_creadas)
+            logger.info(f"Tareas asociadas al seguimiento {self.object.id}: {len(self._tareas_creadas)} tareas")
         
         messages.success(
             self.request,
@@ -1023,7 +1037,6 @@ class ElementoExternoUpdateView(LoginRequiredMixin, UpdateView):
                 tareas_ids = json.loads(tareas_a_eliminar_json)
                 if tareas_ids:
                     # Eliminar las tareas marcadas
-                    from tasks.models import Task
                     Task.objects.filter(
                         id__in=tareas_ids
                     ).filter(

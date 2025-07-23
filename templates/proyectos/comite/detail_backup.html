@@ -1,0 +1,933 @@
+{% extends "base.html" %}
+{% load static %}
+{% load project_filters %}
+
+{% block title %}{{ comite.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .header-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .stats-mini {
+        background: rgba(255,255,255,0.1);
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+        text-align: center;
+    }
+    .participante-card {
+        transition: transform 0.2s;
+    }
+    .participante-card:hover {
+        transform: translateY(-2px);
+    }
+    .proyecto-row {
+        transition: all 0.2s;
+        border-left: 4px solid transparent;
+    }
+    .proyecto-row.estado-verde { border-left-color: #28a745; }
+    .proyecto-row.estado-amarillo { border-left-color: #ffc107; }
+    .proyecto-row.estado-rojo { border-left-color: #dc3545; }
+    .proyecto-row.estado-azul { border-left-color: #007bff; }
+    
+    .estado-badge {
+        font-size: 0.8rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 0.5rem;
+    }
+    .avance-bar {
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        background: #e9ecef;
+    }
+    .avance-fill {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+    .btn-floating {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    .timeline-item {
+        position: relative;
+        padding-left: 2rem;
+        padding-bottom: 1rem;
+    }
+    .timeline-item:before {
+        content: '';
+        position: absolute;
+        left: 0.5rem;
+        top: 0.5rem;
+        bottom: -1rem;
+        width: 2px;
+        background: #dee2e6;
+    }
+    .timeline-item:last-child:before {
+        display: none;
+    }
+    .timeline-marker {
+        position: absolute;
+        left: 0;
+        top: 0.5rem;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        background: #007bff;
+        border: 2px solid white;
+        box-shadow: 0 0 0 2px #dee2e6;
+    }
+    .variacion-positiva { color: #28a745; }
+    .variacion-negativa { color: #dc3545; }
+    .variacion-neutral { color: #6c757d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+<!-- Token CSRF para JavaScript -->
+<form style="display: none;">
+    {% csrf_token %}
+</form>
+
+<!-- Header del comité -->
+<div class="card header-card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-1">
+                    <i class="fas fa-users me-2"></i>{{ comite.nombre }}
+                </h2>
+                <p class="mb-0 opacity-75">
+                    <i class="fas fa-calendar me-2"></i>{{ comite.fecha_comite|date:"l, d \d\e F \d\e Y" }} a las {{ comite.fecha_comite|date:"H:i" }}
+                </p>
+                {% if comite.lugar %}
+                <p class="mb-0 opacity-75">
+                    <i class="fas fa-map-marker-alt me-2"></i>{{ comite.lugar }}
+                </p>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
+                <div class="row g-2">
+                    <div class="col-4">
+                        <div class="stats-mini">
+                            <div class="h4 mb-0">{{ estadisticas_comite.total_proyectos }}</div>
+                            <small>Proyectos</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stats-mini">
+                            <div class="h4 mb-0">{{ estadisticas_comite.participantes_confirmados }}</div>
+                            <small>Confirmados</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stats-mini">
+                            <div class="h4 mb-0">{{ estadisticas_comite.avance_promedio }}%</div>
+                            <small>Avance Prom.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs de navegación -->
+<ul class="nav nav-tabs mb-4" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="seguimiento-tab" data-bs-toggle="tab" data-bs-target="#seguimiento" type="button" role="tab">
+            <i class="fas fa-project-diagram me-2"></i>Seguimiento de Proyectos y Servicios
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">
+            <i class="fas fa-info-circle me-2"></i>Información General
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="participantes-tab" data-bs-toggle="tab" data-bs-target="#participantes" type="button" role="tab">
+            <i class="fas fa-users me-2"></i>Participantes
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="acciones-tab" data-bs-toggle="tab" data-bs-target="#acciones" type="button" role="tab">
+            <i class="fas fa-tasks me-2"></i>Acciones
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="historial-tab" data-bs-toggle="tab" data-bs-target="#historial" type="button" role="tab">
+            <i class="fas fa-history me-2"></i>Historial
+        </button>
+    </li>
+</ul>
+
+<!-- Contenido de los tabs -->
+<div class="tab-content">
+    <!-- Tab de Seguimiento -->
+    <div class="tab-pane fade show active" id="seguimiento" role="tabpanel">
+        <!-- Resumen de estados -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Información General
+                </h5>
+                <div>
+                    <span class="badge estado-badge {% if comite.estado == 'programado' %}bg-info{% elif comite.estado == 'en_curso' %}bg-warning text-dark{% elif comite.estado == 'finalizado' %}bg-success{% else %}bg-secondary{% endif %}">
+                        {{ comite.get_estado_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Coordinador</h6>
+                        <p class="text-muted">
+                            {% if comite.coordinador %}
+                                <i class="fas fa-user-tie me-2"></i>{{ comite.coordinador.nombre }}<br>
+                                <small>{{ comite.coordinador.cargo }}</small>
+                            {% else %}
+                                <i class="fas fa-user-slash me-2"></i>Sin coordinador asignado
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Tipo y Duración</h6>
+                        <p class="text-muted">
+                            <i class="fas fa-tag me-2"></i>{{ comite.get_tipo_comite_display }}<br>
+                            <small><i class="fas fa-clock me-1"></i>{{ comite.duracion_estimada }} minutos estimados</small>
+                        </p>
+                    </div>
+                </div>
+                
+                {% if comite.agenda %}
+                <h6>Agenda</h6>
+                <div class="bg-light p-3 rounded">
+                    {{ comite.agenda|linebreaks }}
+                </div>
+                {% endif %}
+                
+                {% if comite.observaciones %}
+                <h6 class="mt-3">Observaciones</h6>
+                <div class="text-muted">
+                    {{ comite.observaciones|linebreaks }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Resumen de estados -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Estado de Proyectos
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="text-center p-3 rounded" style="background: rgba(40, 167, 69, 0.1);">
+                            <div class="h3 text-success mb-1">{{ estadisticas_comite.proyectos_normales }}</div>
+                            <div class="small text-success">
+                                <i class="fas fa-check-circle me-1"></i>Sin problemas
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 rounded" style="background: rgba(255, 193, 7, 0.1);">
+                            <div class="h3 text-warning mb-1">{{ estadisticas_comite.proyectos_atencion }}</div>
+                            <div class="small text-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Requieren atención
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 rounded" style="background: rgba(220, 53, 69, 0.1);">
+                            <div class="h3 text-danger mb-1">{{ estadisticas_comite.proyectos_criticos }}</div>
+                            <div class="small text-danger">
+                                <i class="fas fa-exclamation-circle me-1"></i>Críticos
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 rounded" style="background: rgba(0, 123, 255, 0.1);">
+                            <div class="h3 text-info mb-1">
+                                {{ estadisticas_comite.total_proyectos|add:"-0"|add:estadisticas_comite.proyectos_normales|add:estadisticas_comite.proyectos_atencion|add:estadisticas_comite.proyectos_criticos }}
+                            </div>
+                            <div class="small text-info">
+                                <i class="fas fa-pause-circle me-1"></i>En pausa
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seguimientos de proyectos y servicios -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-project-diagram me-2"></i>Seguimiento de Proyectos y Servicios
+                </h5>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="exportarProyectos()">
+                        <i class="fas fa-download me-1"></i>Exportar
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="imprimirActa()">
+                        <i class="fas fa-print me-1"></i>Acta
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if seguimientos or servicios_activos %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="20%">Cliente</th>
+                                <th width="15%">Centro de Costos</th>
+                                <th width="5%">#</th>
+                                <th width="20%">Proyecto/Servicio</th>
+                                <th width="10%">Tipo</th>
+                                <th width="10%">Estado</th>
+                                <th width="10%">Responsable</th>
+                                <th width="10%">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Proyectos en seguimiento -->
+                            {% for seguimiento in seguimientos %}
+                            <tr class="proyecto-row estado-{{ seguimiento.estado_seguimiento }}">
+                                <td class="align-middle">
+                                    {{ seguimiento.proyecto.cliente }}
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-info text-white">{{ seguimiento.proyecto.centro_costos }}</span>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-light text-dark">{{ seguimiento.orden_presentacion }}</span>
+                                </td>
+                                <td class="align-middle">
+                                    <div>
+                                        <a href="{% url 'proyectos:proyecto_detail' seguimiento.proyecto.pk %}" 
+                                           class="text-decoration-none fw-bold">
+                                            {{ seguimiento.proyecto.nombre_proyecto }}
+                                        </a>
+                                    </div>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-project-diagram me-1"></i>Proyecto
+                                    </span>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge estado-badge"
+                                          style="background-color: {{ seguimiento.color_seguimiento }}; color: white;">
+                                        <i class="{{ seguimiento.icono_seguimiento }} me-1"></i>
+                                        {{ seguimiento.get_estado_seguimiento_display|slice:":1" }}{{ seguimiento.get_estado_seguimiento_display|slice:"7:" }}
+                                    </span>
+                                    <div class="mt-1">
+                                        <small class="text-muted">{{ seguimiento.avance_reportado }}%</small>
+                                    </div>
+                                </td>
+                                <td class="align-middle">
+                                    {% if seguimiento.responsable_reporte %}
+                                        <small>{{ seguimiento.responsable_reporte.nombre }}</small>
+                                    {% else %}
+                                        <span class="text-muted small">Sin asignar</span>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'proyectos:seguimiento_update' seguimiento.pk %}" 
+                                           class="btn btn-outline-primary btn-sm" 
+                                           title="Editar seguimiento">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            
+                            <!-- Seguimientos de servicios -->
+                            {% for seguimiento_servicio in seguimientos_servicios %}
+                            <tr class="proyecto-row estado-{{ seguimiento_servicio.estado_seguimiento }}">
+                                <td class="align-middle">
+                                    {{ seguimiento_servicio.servicio.cliente_crm.nombre }}
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-info text-white">{{ seguimiento_servicio.servicio.centro_costos|default:"Sin CC" }}</span>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-light text-dark">S{{ seguimiento_servicio.orden_presentacion }}</span>
+                                </td>
+                                <td class="align-middle">
+                                    <div>
+                                        <a href="{% url 'servicios:solicitud_detail' seguimiento_servicio.servicio.pk %}" 
+                                           class="text-decoration-none fw-bold">
+                                            {{ seguimiento_servicio.servicio.numero_orden }}
+                                        </a>
+                                        {% if seguimiento_servicio.servicio.trato_origen and seguimiento_servicio.servicio.trato_origen.descripcion %}
+                                        <br>
+                                        <small class="text-muted">{{ seguimiento_servicio.servicio.trato_origen.descripcion|truncatewords:10 }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-tools me-1"></i>Servicio
+                                    </span>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge estado-badge"
+                                          style="background-color: {{ seguimiento_servicio.color_seguimiento }}; color: white;">
+                                        <i class="{{ seguimiento_servicio.icono_seguimiento }} me-1"></i>
+                                        {{ seguimiento_servicio.get_estado_seguimiento_display|slice:":1" }}{{ seguimiento_servicio.get_estado_seguimiento_display|slice:"7:" }}
+                                    </span>
+                                    <div class="mt-1">
+                                        <small class="text-muted">{{ seguimiento_servicio.avance_reportado }}%</small>
+                                    </div>
+                                </td>
+                                <td class="align-middle">
+                                    {% if seguimiento_servicio.responsable_reporte %}
+                                        <small>{{ seguimiento_servicio.responsable_reporte.nombre }}</small>
+                                    {% else %}
+                                        <span class="text-muted small">Sin asignar</span>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'proyectos:seguimiento_servicio_update' seguimiento_servicio.pk %}" 
+                                           class="btn btn-outline-primary btn-sm" 
+                                           title="Editar seguimiento">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            
+                            <!-- Servicios activos sin seguimiento -->
+                            {% for servicio in servicios_activos %}
+                            <tr class="proyecto-row {% if servicio.estado == 'atrasado' %}estado-rojo{% elif servicio.estado == 'en_ejecucion' %}estado-amarillo{% else %}estado-verde{% endif %}">
+                                <td class="align-middle">
+                                    {{ servicio.cliente_crm.nombre }}
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-info text-white">{{ servicio.centro_costos|default:"Sin CC" }}</span>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-light text-dark">S{{ forloop.counter|add:seguimientos_servicios.count }}</span>
+                                </td>
+                                <td class="align-middle">
+                                    <div>
+                                        <a href="{% url 'servicios:solicitud_detail' servicio.pk %}" 
+                                           class="text-decoration-none fw-bold">
+                                            {{ servicio.numero_orden }}
+                                        </a>
+                                        {% if servicio.trato_origen and servicio.trato_origen.descripcion %}
+                                        <br>
+                                        <small class="text-muted">{{ servicio.trato_origen.descripcion|truncatewords:10 }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-tools me-1"></i>Servicio
+                                    </span>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge estado-badge {% if servicio.estado == 'pendiente' %}bg-secondary{% elif servicio.estado == 'en_ejecucion' %}bg-warning text-dark{% elif servicio.estado == 'atrasado' %}bg-danger{% else %}bg-success{% endif %}">
+                                        <i class="fas fa-{% if servicio.estado == 'pendiente' %}clock{% elif servicio.estado == 'en_ejecucion' %}play{% elif servicio.estado == 'atrasado' %}exclamation-triangle{% else %}check{% endif %} me-1"></i>
+                                        {{ servicio.get_estado_display|slice:":8" }}
+                                    </span>
+                                </td>
+                                <td class="align-middle">
+                                    {% if servicio.director_proyecto %}
+                                        <small>{{ servicio.director_proyecto.nombre }}</small>
+                                    {% elif servicio.ingeniero_residente %}
+                                        <small>{{ servicio.ingeniero_residente.nombre }}</small>
+                                    {% elif servicio.tecnico_asignado %}
+                                        <small>{{ servicio.tecnico_asignado.nombre }}</small>
+                                    {% else %}
+                                        <span class="text-muted small">Sin asignar</span>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'servicios:solicitud_detail' servicio.pk %}" 
+                                           class="btn btn-outline-info btn-sm" 
+                                           title="Ver servicio">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <button class="btn btn-outline-success btn-sm" 
+                                                title="Agregar seguimiento"
+                                                onclick="agregarSeguimientoServicio({{ servicio.pk }})">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-project-diagram text-muted" style="font-size: 3rem;"></i>
+                    <h5 class="text-muted mt-3">No hay proyectos ni servicios en seguimiento</h5>
+                    <p class="text-muted">Los proyectos y servicios activos se agregan automáticamente al crear el comité</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Elementos Externos -->
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-external-link-alt me-2"></i>Elementos Externos
+                    {% if elementos_externos.count > 0 %}
+                        <span class="badge bg-info">{{ elementos_externos.count }}</span>
+                    {% endif %}
+                </h5>
+                <a href="{% url 'proyectos:elemento_externo_create' comite.pk %}" 
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-plus me-1"></i>Agregar
+                </a>
+            </div>
+            <div class="card-body">
+                {% if elementos_externos %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="20%">Cliente</th>
+                                <th width="15%">Centro de Costos</th>
+                                <th width="5%">#</th>
+                                <th width="20%">Proyecto/Servicio</th>
+                                <th width="10%">Tipo</th>
+                                <th width="10%">Estado</th>
+                                <th width="10%">Responsable</th>
+                                <th width="10%">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for elemento in elementos_externos %}
+                            <tr class="proyecto-row estado-{{ elemento.estado_seguimiento }}">
+                                <td class="align-middle">
+                                    {{ elemento.cliente }}
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-info text-white">{{ elemento.centro_costos }}</span>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge bg-secondary">E{{ elemento.orden_presentacion }}</span>
+                                </td>
+                                <td class="align-middle">
+                                    <div>
+                                        <span class="fw-bold">{{ elemento.nombre_proyecto }}</span>
+                                    </div>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge {% if elemento.tipo_elemento == 'proyecto' %}bg-primary{% else %}bg-success{% endif %}">
+                                        <i class="fas fa-{% if elemento.tipo_elemento == 'proyecto' %}project-diagram{% else %}tools{% endif %} me-1"></i>
+                                        {{ elemento.get_tipo_elemento_display }}
+                                    </span>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge estado-badge {% if elemento.estado_seguimiento == 'verde' %}bg-success{% elif elemento.estado_seguimiento == 'amarillo' %}bg-warning text-dark{% elif elemento.estado_seguimiento == 'rojo' %}bg-danger{% else %}bg-info{% endif %}">
+                                        <i class="fas fa-circle me-1"></i>
+                                        {{ elemento.get_estado_seguimiento_display|slice:":1" }}{{ elemento.get_estado_seguimiento_display|slice:"7:" }}
+                                    </span>
+                                    <div class="mt-1">
+                                        <small class="text-muted">{{ elemento.avance_reportado }}%</small>
+                                    </div>
+                                </td>
+                                <td class="align-middle">
+                                    {% if elemento.responsable_reporte %}
+                                        <small>{{ elemento.responsable_reporte.nombre }}</small>
+                                    {% else %}
+                                        <span class="text-muted small">Sin asignar</span>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'proyectos:elemento_externo_update' elemento.pk %}" 
+                                           class="btn btn-outline-primary btn-sm" 
+                                           title="Editar elemento">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-external-link-alt text-muted" style="font-size: 2rem;"></i>
+                    <h6 class="text-muted mt-2">No hay elementos externos</h6>
+                    <p class="text-muted small">Agregue proyectos o servicios que no están en el sistema</p>
+                    <a href="{% url 'proyectos:elemento_externo_create' comite.pk %}" 
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus me-1"></i>Agregar Primer Elemento
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar con participantes y acciones -->
+    <div class="col-lg-4">
+        <!-- Acciones rápidas -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-tools me-2"></i>Acciones
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'proyectos:comite_update' comite.pk %}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>Editar Comité
+                    </a>
+                    {% if comite.estado == 'programado' %}
+                    <button class="btn btn-outline-success" onclick="iniciarComite()">
+                        <i class="fas fa-play me-2"></i>Iniciar Comité
+                    </button>
+                    <form method="post" action="{% url 'proyectos:duplicar_comite' comite.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-info w-100">
+                            <i class="fas fa-copy me-2"></i>Duplicar Comité
+                        </button>
+                    </form>
+                    {% elif comite.estado == 'en_curso' %}
+                    <button class="btn btn-outline-warning" onclick="finalizarComite()">
+                        <i class="fas fa-stop me-2"></i>Finalizar Comité
+                    </button>
+                    {% endif %}
+                    <a href="{% url 'proyectos:comite_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver al Listado
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Participantes -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-users me-2"></i>Participantes ({{ participantes.count }})
+                </h6>
+                <a href="{% url 'proyectos:gestionar_participantes_comite' comite.pk %}" class="btn btn-sm btn-outline-primary" title="Gestionar participantes">
+                    <i class="fas fa-user-plus"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if participantes %}
+                    {% for participante in participantes %}
+                    <div class="participante-card p-3 border-bottom">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="fw-bold">{{ participante.colaborador.nombre }}</div>
+                                <div class="text-muted small">{{ participante.colaborador.cargo }}</div>
+                                {% if participante.rol_en_comite %}
+                                <div class="text-info small">{{ participante.rol_en_comite }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="text-end">
+                                <span class="badge {% if participante.estado_asistencia == 'confirmado' %}bg-success{% elif participante.estado_asistencia == 'presente' %}bg-primary{% elif participante.estado_asistencia == 'ausente' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                    {{ participante.get_estado_asistencia_display }}
+                                </span>
+                                <div class="small text-muted mt-1">
+                                    {{ participante.get_tipo_participacion_display }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="p-3 text-center text-muted">
+                    <i class="fas fa-user-slash mb-2"></i><br>
+                    Sin participantes registrados
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Historial -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Historial
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="timeline-item">
+                    <div class="timeline-marker bg-primary"></div>
+                    <div>
+                        <div class="small fw-bold">Comité creado</div>
+                        <div class="text-muted small">{{ comite.fecha_creacion|date:"d/m/Y H:i" }}</div>
+                        {% if comite.creado_por %}
+                        <div class="text-muted small">por {{ comite.creado_por.get_full_name|default:comite.creado_por.username }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if comite.fecha_actualizacion != comite.fecha_creacion %}
+                <div class="timeline-item">
+                    <div class="timeline-marker bg-info"></div>
+                    <div>
+                        <div class="small fw-bold">Última actualización</div>
+                        <div class="text-muted small">{{ comite.fecha_actualizacion|date:"d/m/Y H:i" }}</div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Botón flotante para acciones rápidas -->
+{% if comite.estado == 'programado' or comite.estado == 'en_curso' %}
+<button class="btn btn-primary btn-floating" onclick="accionRapida()" title="Acción rápida">
+    <i class="fas fa-bolt"></i>
+</button>
+{% endif %}
+
+<!-- Campo CSRF oculto para JavaScript -->
+{% csrf_token %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Función helper para obtener el token CSRF de manera robusta
+function getCSRFToken() {
+    // Primero buscar en el input hidden del formulario
+    let csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfToken && csrfToken.value) {
+        console.log('CSRF token encontrado en formulario');
+        return csrfToken.value;
+    }
+    
+    // Si no se encuentra, buscar en cookies
+    const name = 'csrftoken';
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                console.log('CSRF token encontrado en cookie');
+                break;
+            }
+        }
+    }
+    
+    if (!cookieValue) {
+        console.error('No se pudo encontrar el token CSRF');
+    }
+    
+    return cookieValue;
+}
+
+function iniciarComite() {
+    if (confirm('¿Está seguro de que desea iniciar este comité?')) {
+        const csrfTokenValue = getCSRFToken();
+        
+        // Debug: verificar si encontramos el token CSRF
+        if (!csrfTokenValue) {
+            alert('Error: No se encontró el token CSRF. Recargue la página e intente nuevamente.');
+            return;
+        }
+        
+        console.log('Token CSRF encontrado:', csrfTokenValue);
+        
+        fetch(`/proyectos/comite/{{ comite.pk }}/iniciar/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfTokenValue,
+                'X-Csrftoken': csrfTokenValue,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                return response.text().then(text => {
+                    console.error('Error response:', text);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message || 'Error al iniciar el comité');
+            }
+        })
+        .catch(error => {
+            console.error('Error completo:', error);
+            alert(`Error de conexión al iniciar el comité: ${error.message}`);
+        });
+    }
+}
+
+function finalizarComite() {
+    if (confirm('¿Está seguro de que desea finalizar este comité?')) {
+        const csrfTokenValue = getCSRFToken();
+        
+        // Debug: verificar si encontramos el token CSRF
+        if (!csrfTokenValue) {
+            alert('Error: No se encontró el token CSRF. Recargue la página e intente nuevamente.');
+            return;
+        }
+        
+        console.log('Token CSRF encontrado:', csrfTokenValue);
+        
+        fetch(`/proyectos/comite/{{ comite.pk }}/finalizar/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfTokenValue,
+                'X-Csrftoken': csrfTokenValue,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            
+            if (!response.ok) {
+                return response.text().then(text => {
+                    console.error('Error response:', text);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message || 'Error al finalizar el comité');
+            }
+        })
+        .catch(error => {
+            console.error('Error completo:', error);
+            alert(`Error de conexión al finalizar el comité: ${error.message}`);
+        });
+    }
+}
+
+function exportarProyectos() {
+    window.open(`/proyectos/comite/{{ comite.pk }}/exportar/`, '_blank');
+}
+
+function imprimirActa() {
+    window.open(`/proyectos/comite/{{ comite.pk }}/acta/`, '_blank');
+}
+
+function agregarSeguimientoServicio(servicioId) {
+    if (confirm('¿Desea agregar este servicio al seguimiento del comité?')) {
+        console.log('Agregando servicio ID:', servicioId);
+        
+        // Obtener el token CSRF usando el método mejorado
+        const csrfToken = getCSRFToken();
+        console.log('CSRF Token:', csrfToken ? 'Encontrado' : 'No encontrado');
+        
+        if (!csrfToken) {
+            alert('Error: No se pudo obtener el token CSRF. Por favor recarga la página.');
+            return;
+        }
+        
+        // Crear seguimiento de servicio via AJAX
+        fetch(`/proyectos/comite/{{ comite.pk }}/agregar-servicio/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                'servicio_id': servicioId
+            })
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            
+            if (!response.ok) {
+                // Si es 403, probablemente es un problema de CSRF
+                if (response.status === 403) {
+                    throw new Error('Error de autenticación (403). Por favor recarga la página e intenta nuevamente.');
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            
+            if (data.success) {
+                alert('Servicio agregado al seguimiento del comité');
+                location.reload();
+            } else {
+                alert(data.message || 'Error al agregar el servicio');
+            }
+        })
+        .catch(error => {
+            console.error('Error completo:', error);
+            alert(`Error al agregar el servicio al seguimiento: ${error.message}`);
+        });
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function accionRapida() {
+    {% if comite.estado == 'programado' %}
+    iniciarComite();
+    {% elif comite.estado == 'en_curso' %}
+    finalizarComite();
+    {% endif %}
+}
+
+// Auto-refresh para comités en curso
+{% if comite.estado == 'en_curso' %}
+setInterval(function() {
+    // Refrescar cada 2 minutos durante comités activos
+    location.reload();
+}, 120000);
+{% endif %}
+</script>
+{% endblock %}
