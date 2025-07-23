@@ -57,7 +57,22 @@ class CustomLoginView(LoginView):
         )
         if redirect_to:
             return redirect_to
-        return reverse_lazy('crm:dashboard')
+        
+        # Redirigir según los permisos del usuario
+        user = self.request.user
+        if user.is_superuser or user.has_module_permission('crm', 'view'):
+            return reverse_lazy('crm:dashboard')
+        elif user.has_module_permission('proyectos', 'view'):
+            return reverse_lazy('proyectos:proyecto_list')
+        elif user.has_module_permission('servicios', 'view'):
+            return reverse_lazy('servicios:solicitud_list')
+        elif user.has_module_permission('tasks', 'view'):
+            return reverse_lazy('tasks:task_list')
+        elif user.has_module_permission('users', 'view'):
+            return reverse_lazy('users:user_list')
+        else:
+            # Si no tiene permisos en ningún módulo, ir al perfil
+            return reverse_lazy('users:user_detail', kwargs={'pk': user.pk})
     
     def form_valid(self, form):
         """Security check complete. Log the user in."""
