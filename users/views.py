@@ -66,9 +66,16 @@ class CustomLoginView(LoginView):
 
 class CustomLogoutView(LogoutView):
     next_page = 'users:login'
+    http_method_names = ['get', 'post', 'options']  # Permitir GET además de POST
+    
+    def get(self, request, *args, **kwargs):
+        """Permitir logout con GET request."""
+        messages.info(request, _('Has cerrado sesión correctamente.'))
+        return self.post(request, *args, **kwargs)
     
     def dispatch(self, request, *args, **kwargs):
-        messages.info(request, _('Has cerrado sesión correctamente.'))
+        if request.method == 'POST':
+            messages.info(request, _('Has cerrado sesión correctamente.'))
         return super().dispatch(request, *args, **kwargs)
 
 # VISTAS PARA GESTIÓN DE USUARIOS
