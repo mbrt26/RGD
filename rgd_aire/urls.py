@@ -62,9 +62,9 @@ urlpatterns = [
     path('accounts/login/', RedirectView.as_view(url='/users/login/')),
     path('accounts/logout/', RedirectView.as_view(url='/users/logout/')),
     
-    # Authentication URLs
-    path('login/', auth_views.LoginView.as_view(), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    # Authentication URLs - Redirect to users app
+    path('login/', RedirectView.as_view(url='/users/login/', permanent=True), name='login'),
+    path('logout/', RedirectView.as_view(url='/users/logout/', permanent=True), name='logout'),
 ]
 
 # Serve static files in development
