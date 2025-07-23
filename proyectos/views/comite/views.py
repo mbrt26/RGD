@@ -327,6 +327,24 @@ class SeguimientoUpdateView(LoginRequiredMixin, UpdateView):
         return initial
 
     def form_valid(self, form):
+        # Consolidar campos en observaciones
+        observaciones_partes = []
+        
+        if form.cleaned_data.get('logros_periodo'):
+            observaciones_partes.append(f"**Logros del Período:**\n{form.cleaned_data['logros_periodo']}")
+        
+        if form.cleaned_data.get('dificultades'):
+            observaciones_partes.append(f"**Dificultades Encontradas:**\n{form.cleaned_data['dificultades']}")
+        
+        if form.cleaned_data.get('acciones_requeridas'):
+            observaciones_partes.append(f"**Acciones Requeridas:**\n{form.cleaned_data['acciones_requeridas']}")
+        
+        if form.cleaned_data.get('observaciones'):
+            observaciones_partes.append(f"**Observaciones Específicas:**\n{form.cleaned_data['observaciones']}")
+        
+        # Unir todas las partes con saltos de línea dobles
+        form.instance.observaciones = '\n\n'.join(observaciones_partes)
+        
         response = super().form_valid(form)
         
         # Procesar las tareas si se enviaron
@@ -394,6 +412,21 @@ class SeguimientoServicioUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         form.instance.actualizado_por = self.request.user
+        
+        # Consolidar campos en observaciones
+        observaciones_partes = []
+        
+        if form.cleaned_data.get('logros_periodo'):
+            observaciones_partes.append(f"**Logros del Período:**\n{form.cleaned_data['logros_periodo']}")
+        
+        if form.cleaned_data.get('dificultades'):
+            observaciones_partes.append(f"**Dificultades Encontradas:**\n{form.cleaned_data['dificultades']}")
+        
+        if form.cleaned_data.get('acciones_requeridas'):
+            observaciones_partes.append(f"**Acciones Requeridas:**\n{form.cleaned_data['acciones_requeridas']}")
+        
+        # Unir todas las partes con saltos de línea dobles
+        form.instance.observaciones = '\n\n'.join(observaciones_partes)
         
         # Procesar tareas a eliminar
         tareas_a_eliminar_json = self.request.POST.get('tareas_a_eliminar', '[]')
@@ -1028,6 +1061,24 @@ class ElementoExternoUpdateView(LoginRequiredMixin, UpdateView):
     
     def form_valid(self, form):
         form.instance.actualizado_por = self.request.user
+        
+        # Consolidar campos en observaciones
+        observaciones_partes = []
+        
+        if form.cleaned_data.get('logros_periodo'):
+            observaciones_partes.append(f"**Logros del Período:**\n{form.cleaned_data['logros_periodo']}")
+        
+        if form.cleaned_data.get('dificultades'):
+            observaciones_partes.append(f"**Dificultades Encontradas:**\n{form.cleaned_data['dificultades']}")
+        
+        if form.cleaned_data.get('acciones_requeridas'):
+            observaciones_partes.append(f"**Acciones Requeridas:**\n{form.cleaned_data['acciones_requeridas']}")
+        
+        if form.cleaned_data.get('observaciones'):
+            observaciones_partes.append(f"**Observaciones Específicas:**\n{form.cleaned_data['observaciones']}")
+        
+        # Unir todas las partes con saltos de línea dobles
+        form.instance.observaciones = '\n\n'.join(observaciones_partes)
         
         # Procesar tareas a eliminar
         tareas_a_eliminar_json = self.request.POST.get('tareas_a_eliminar', '[]')

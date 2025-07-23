@@ -1526,6 +1526,12 @@ class SeguimientoServicioComite(models.Model):
         help_text='Decisión específica tomada por el comité para este servicio'
     )
     
+    observaciones = models.TextField(
+        'Observaciones',
+        blank=True,
+        help_text='Observaciones consolidadas del seguimiento'
+    )
+    
     orden_presentacion = models.PositiveIntegerField(
         'Orden de Presentación',
         default=1,

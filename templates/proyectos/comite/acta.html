@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load markdown_filters %}
 
 {% block title %}{{ title }}{% endblock %}
 
@@ -16,6 +17,16 @@
     }
     .acta-table {
         font-size: 0.9rem;
+    }
+    .acta-table td small p {
+        margin-bottom: 0.5rem;
+    }
+    .acta-table td small p:last-child {
+        margin-bottom: 0;
+    }
+    .acta-table td small strong {
+        color: #333;
+        font-weight: 600;
     }
     .estado-verde { color: #28a745; font-weight: bold; }
     .estado-amarillo { color: #ffc107; font-weight: bold; }
@@ -267,7 +278,7 @@
                             <i class="fas fa-check-circle text-success" title="Seguimiento registrado"></i>
                         </td>
                         <td>
-                            <small>{{ seguimiento.observaciones|default:"-" }}</small>
+                            <small>{{ seguimiento.observaciones|markdown_to_html|default:"-" }}</small>
                         </td>
                     </tr>
                     {% empty %}
@@ -341,7 +352,7 @@
                             </span>
                         </td>
                         <td>
-                            <small>{{ seguimiento_servicio.logros_periodo|default:"-" }}</small>
+                            <small>{{ seguimiento_servicio.observaciones|markdown_to_html|default:"-" }}</small>
                         </td>
                     </tr>
                     {% empty %}
@@ -412,7 +423,7 @@
                             </span>
                         </td>
                         <td>
-                            <small>{{ elemento.observaciones|default:"-" }}</small>
+                            <small>{{ elemento.observaciones|markdown_to_html|default:"-" }}</small>
                         </td>
                     </tr>
                     {% empty %}
