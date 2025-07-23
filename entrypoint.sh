@@ -13,6 +13,10 @@ sleep 5
 echo "Running database migrations..."
 python manage.py migrate --noinput || echo "Migration failed, but continuing..."
 
+# Consolidar campos de observaciones (ejecutar solo una vez)
+echo "Consolidating observation fields..."
+python manage.py consolidate_observaciones || echo "Consolidation failed or already done, continuing..."
+
 # Recolectar archivos estáticos
 echo "Collecting static files..."
 python manage.py collectstatic --noinput || echo "Collectstatic failed, but continuing..."
