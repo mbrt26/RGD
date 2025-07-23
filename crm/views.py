@@ -5,6 +5,7 @@ from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
 from django.db.models import Q, Sum, Count, F, ProtectedError
+from users.mixins import ModulePermissionMixin
 from django.utils import timezone
 from django.contrib import messages
 from django.shortcuts import redirect, get_object_or_404
@@ -25,7 +26,9 @@ from .forms import (
 )
 from .forms.import_forms import ClienteImportForm, TratoImportForm, ContactoImportForm
 
-class CRMDashboardView(LoginRequiredMixin, TemplateView):
+class CRMDashboardView(LoginRequiredMixin, ModulePermissionMixin, TemplateView):
+    module_name = 'crm'
+    permission_action = 'view'
     template_name = 'crm/dashboard.html'
 
     def get_queryset_filters(self, request):
@@ -221,12 +224,16 @@ class CRMDashboardView(LoginRequiredMixin, TemplateView):
         return self.render_to_response(context)
 
 # Vistas para Cliente
-class ClienteListView(LoginRequiredMixin, ListView):
+class ClienteListView(LoginRequiredMixin, ModulePermissionMixin, ListView):
+    module_name = 'crm'
+    permission_action = 'view'
     model = Cliente
     template_name = 'crm/cliente/list.html'
     context_object_name = 'clientes'
 
-class ClienteCreateView(LoginRequiredMixin, CreateView):
+class ClienteCreateView(LoginRequiredMixin, ModulePermissionMixin, CreateView):
+    module_name = 'crm'
+    permission_action = 'add'
     model = Cliente
     template_name = 'crm/cliente/form.html'
     fields = ['nombre', 'sector_actividad', 'nit', 'correo', 'telefono', 'direccion', 
@@ -249,7 +256,9 @@ class ClienteCreateView(LoginRequiredMixin, CreateView):
         
         return self.form_invalid(form)
 
-class ClienteDetailView(LoginRequiredMixin, DetailView):
+class ClienteDetailView(LoginRequiredMixin, ModulePermissionMixin, DetailView):
+    module_name = 'crm'
+    permission_action = 'view'
     model = Cliente
     template_name = 'crm/cliente/detail.html'
     context_object_name = 'cliente'

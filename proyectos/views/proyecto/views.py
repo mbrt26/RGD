@@ -6,6 +6,7 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Q, Count, Sum, Case, When, IntegerField
+from users.mixins import ModulePermissionMixin
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -17,7 +18,9 @@ from django.views.generic import (
 from proyectos.models import Proyecto, Actividad, Bitacora, EntregaDocumental
 
 
-class ProyectoListView(LoginRequiredMixin, ListView):
+class ProyectoListView(LoginRequiredMixin, ModulePermissionMixin, ListView):
+    module_name = 'proyectos'
+    permission_action = 'view'
     model = Proyecto
     template_name = 'proyectos/proyecto/list.html'
     context_object_name = 'proyectos'
