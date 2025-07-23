@@ -19,6 +19,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar código fuente
 COPY . .
 
+# Hacer el entrypoint ejecutable
+RUN chmod +x /app/entrypoint.sh
+
 # Crear usuario no-root
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
@@ -26,5 +29,5 @@ USER appuser
 # Exponer puerto
 EXPOSE 8080
 
-# Comando por defecto (será sobrescrito por docker-compose)
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8080"]
+# Usar el entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
