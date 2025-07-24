@@ -243,6 +243,7 @@ INSTALLED_APPS = [
     # Apps del proyecto
     'users',
     'crm',
+    'colaboradores',  # Debe estar antes de proyectos para evitar importaciones circulares
     'proyectos', 
     'servicios',
     'mantenimiento',
