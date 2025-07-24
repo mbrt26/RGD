@@ -13,7 +13,7 @@ IMAGE_TAG=$(date +%Y%m%d-%H%M%S)
 IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"
 
 # Variables de entorno para Cloud Run
-ENV_VARS="DJANGO_SETTINGS_MODULE=rgd_aire.settings_appengine,\
+ENV_VARS="DJANGO_SETTINGS_MODULE=rgd_aire.settings_cloudrun,\
 GOOGLE_CLOUD_PROJECT=appsindunnova,\
 USE_CLOUD_SQL=true,\
 DJANGO_SECRET_KEY=RGD-Aire-2024-SuperSecure-Key-For-Production-9j8h7g6f5d4s3a2,\

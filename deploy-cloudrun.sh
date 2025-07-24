@@ -36,7 +36,7 @@ gcloud run deploy $SERVICE_NAME \
   --timeout 300 \
   --concurrency 100 \
   --cpu-throttling \
-  --set-env-vars "DJANGO_SETTINGS_MODULE=rgd_aire.settings_appengine" \
+  --set-env-vars "DJANGO_SETTINGS_MODULE=rgd_aire.settings_cloudrun" \
   --set-env-vars "GOOGLE_CLOUD_PROJECT=appsindunnova" \
   --set-env-vars "USE_CLOUD_SQL=true" \
   --set-env-vars "DJANGO_SECRET_KEY=RGD-Aire-2024-SuperSecure-Key-For-Production-9j8h7g6f5d4s3a2" \
