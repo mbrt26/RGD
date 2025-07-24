@@ -80,8 +80,8 @@
                                             <i class="fas fa-user text-white" style="font-size: 10px;"></i>
                                         </div>
                                         <div>
-                                            <div style="font-size: 12px;">{{ informe.solicitud_servicio.tecnico_asignado.codigo_tecnico }}</div>
-                                            <small class="text-muted">{{ informe.solicitud_servicio.tecnico_asignado.nombre_completo|truncatechars:15 }}</small>
+                                            <div style="font-size: 12px;">{{ informe.solicitud_servicio.tecnico_asignado.nombre }}</div>
+                                            <small class="text-muted">{{ informe.solicitud_servicio.tecnico_asignado.nombre|truncatechars:15 }}</small>
                                         </div>
                                     </div>
                                 {% else %}

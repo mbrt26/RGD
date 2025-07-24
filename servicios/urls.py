@@ -7,11 +7,11 @@ urlpatterns = [
     # Dashboard
     path('', views.ServiciosDashboardView.as_view(), name='dashboard'),
     
-    # Técnicos
-    path('tecnicos/', views.TecnicoListView.as_view(), name='tecnico_list'),
-    path('tecnicos/nuevo/', views.TecnicoCreateView.as_view(), name='tecnico_create'),
-    path('tecnicos/<int:pk>/', views.TecnicoDetailView.as_view(), name='tecnico_detail'),
-    path('tecnicos/<int:pk>/editar/', views.TecnicoUpdateView.as_view(), name='tecnico_update'),
+    # Técnicos (deshabilitado - ahora se usan colaboradores)
+    # path('tecnicos/', views.TecnicoListView.as_view(), name='tecnico_list'),
+    # path('tecnicos/nuevo/', views.TecnicoCreateView.as_view(), name='tecnico_create'),
+    # path('tecnicos/<int:pk>/', views.TecnicoDetailView.as_view(), name='tecnico_detail'),
+    # path('tecnicos/<int:pk>/editar/', views.TecnicoUpdateView.as_view(), name='tecnico_update'),
     
     # Solicitudes de Servicio
     path('solicitudes/', views.SolicitudServicioListView.as_view(), name='solicitud_list'),

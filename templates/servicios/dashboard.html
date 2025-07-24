@@ -125,7 +125,7 @@
                                     <td>{{ servicio.fecha_programada|date:"d/m/Y H:i" }}</td>
                                     <td>
                                         {% if servicio.tecnico_asignado %}
-                                            {{ servicio.tecnico_asignado.codigo_tecnico }}
+                                            {{ servicio.tecnico_asignado.nombre }}
                                         {% else %}
                                             <span class="text-muted">Sin asignar</span>
                                         {% endif %}

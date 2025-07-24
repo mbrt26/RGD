@@ -14,8 +14,9 @@ import base64
 import io
 from PIL import Image
 
-from .models import Tecnico, SolicitudServicio, InformeTrabajo, MaterialConsumible, MaterialRequerido, AdjuntoInforme, UbicacionTecnico
+from .models import SolicitudServicio, InformeTrabajo, MaterialConsumible, MaterialRequerido, AdjuntoInforme, UbicacionTecnico
 from crm.models import Cliente, Contacto
+from colaboradores.models import Colaborador
 
 # Crear formset para materiales requeridos
 MaterialRequeridoFormSet = inlineformset_factory(
@@ -71,7 +72,7 @@ class ServiciosDashboardView(LoginRequiredMixin, TemplateView):
         inicio_mes = hoy.replace(day=1)
         
         context.update({
-            'total_tecnicos': Tecnico.objects.filter(activo=True).count(),
+            # 'total_tecnicos': Tecnico.objects.filter(activo=True).count(),
             'solicitudes_pendientes': SolicitudServicio.objects.filter(estado='planeada').count(),
             'servicios_hoy': SolicitudServicio.objects.filter(fecha_programada__date=hoy).count(),
             'informes_pendientes': SolicitudServicio.objects.filter(estado='en_proceso').count(),
@@ -89,98 +90,98 @@ class ServiciosDashboardView(LoginRequiredMixin, TemplateView):
             ).order_by('fecha_programada')[:10],
             
             # Técnicos más activos
-            'tecnicos_activos': Tecnico.objects.annotate(
-                servicios_mes=Count('servicios_asignados', 
-                                  filter=Q(servicios_asignados__fecha_programada__gte=inicio_mes))
-            ).filter(activo=True).order_by('-servicios_mes')[:5],
+            # 'tecnicos_activos': Tecnico.objects.annotate(
+            #     servicios_mes=Count('servicios_asignados', 
+            #                       filter=Q(servicios_asignados__fecha_programada__gte=inicio_mes))
+            # ).filter(activo=True).order_by('-servicios_mes')[:5],
         })
         
         return context
 
 
-class TecnicoListView(LoginRequiredMixin, ListView):
-    model = Tecnico
-    template_name = 'servicios/tecnico/list.html'
-    context_object_name = 'tecnicos'
-    paginate_by = 15
-    
-    def get_queryset(self):
-        queryset = super().get_queryset().select_related('usuario')
-        
-        # Filtro por búsqueda
-        search = self.request.GET.get('q', '')
-        if search:
-            queryset = queryset.filter(
-                Q(codigo_tecnico__icontains=search) |
-                Q(usuario__first_name__icontains=search) |
-                Q(usuario__last_name__icontains=search) |
-                Q(especialidades__icontains=search)
-            )
-        
-        # Filtro por estado
-        if self.request.GET.get('activo') == '1':
-            queryset = queryset.filter(activo=True)
-        elif self.request.GET.get('activo') == '0':
-            queryset = queryset.filter(activo=False)
-            
-        return queryset.order_by('codigo_tecnico')
+# class TecnicoListView(LoginRequiredMixin, ListView):
+#     model = Tecnico
+#     template_name = 'servicios/tecnico/list.html'
+#     context_object_name = 'tecnicos'
+#     paginate_by = 15
+#     
+#     def get_queryset(self):
+#         queryset = super().get_queryset().select_related('usuario')
+#         
+#         # Filtro por búsqueda
+#         search = self.request.GET.get('q', '')
+#         if search:
+#             queryset = queryset.filter(
+#                 Q(codigo_tecnico__icontains=search) |
+#                 Q(usuario__first_name__icontains=search) |
+#                 Q(usuario__last_name__icontains=search) |
+#                 Q(especialidades__icontains=search)
+#             )
+#         
+#         # Filtro por estado
+#         if self.request.GET.get('activo') == '1':
+#             queryset = queryset.filter(activo=True)
+#         elif self.request.GET.get('activo') == '0':
+#             queryset = queryset.filter(activo=False)
+#             
+#         return queryset.order_by('codigo_tecnico')
 
 
-class TecnicoCreateView(LoginRequiredMixin, CreateView):
-    model = Tecnico
-    template_name = 'servicios/tecnico/form.html'
-    fields = ['usuario', 'codigo_tecnico', 'telefono', 'especialidades', 'activo']
-    success_url = reverse_lazy('servicios:tecnico_list')
-    
-    def form_valid(self, form):
-        messages.success(self.request, 'Técnico creado exitosamente.')
-        return super().form_valid(form)
+# class TecnicoCreateView(LoginRequiredMixin, CreateView):
+#     model = Tecnico
+#     template_name = 'servicios/tecnico/form.html'
+#     fields = ['usuario', 'codigo_tecnico', 'telefono', 'especialidades', 'activo']
+#     success_url = reverse_lazy('servicios:tecnico_list')
+#     
+#     def form_valid(self, form):
+#         messages.success(self.request, 'Técnico creado exitosamente.')
+#         return super().form_valid(form)
 
 
-class TecnicoDetailView(LoginRequiredMixin, DetailView):
-    model = Tecnico
-    template_name = 'servicios/tecnico/detail.html'
-    context_object_name = 'tecnico'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        tecnico = self.get_object()
-        
-        # Servicios recientes
-        context['servicios_recientes'] = tecnico.servicios_asignados.select_related(
-            'cliente_crm'
-        ).order_by('-fecha_programada')[:10]
-        
-        # Estadísticas del técnico
-        hoy = timezone.now().date()
-        inicio_mes = hoy.replace(day=1)
-        
-        context['estadisticas'] = {
-            'servicios_mes': tecnico.servicios_asignados.filter(
-                fecha_programada__gte=inicio_mes
-            ).count(),
-            'servicios_completados': tecnico.servicios_asignados.filter(
-                estado='ejecutada'
-            ).count(),
-            'promedio_satisfaccion': tecnico.servicios_asignados.filter(
-                informe__satisfaccion_cliente__isnull=False
-            ).aggregate(
-                promedio=Avg('informe__satisfaccion_cliente')
-            )['promedio'] or 0
-        }
-        
-        return context
+# class TecnicoDetailView(LoginRequiredMixin, DetailView):
+#     model = Tecnico
+#     template_name = 'servicios/tecnico/detail.html'
+#     context_object_name = 'tecnico'
+#     
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         tecnico = self.get_object()
+#         
+#         # Servicios recientes
+#         context['servicios_recientes'] = tecnico.servicios_asignados.select_related(
+#             'cliente_crm'
+#         ).order_by('-fecha_programada')[:10]
+#         
+#         # Estadísticas del técnico
+#         hoy = timezone.now().date()
+#         inicio_mes = hoy.replace(day=1)
+#         
+#         context['estadisticas'] = {
+#             'servicios_mes': tecnico.servicios_asignados.filter(
+#                 fecha_programada__gte=inicio_mes
+#             ).count(),
+#             'servicios_completados': tecnico.servicios_asignados.filter(
+#                 estado='ejecutada'
+#             ).count(),
+#             'promedio_satisfaccion': tecnico.servicios_asignados.filter(
+#                 informe__satisfaccion_cliente__isnull=False
+#             ).aggregate(
+#                 promedio=Avg('informe__satisfaccion_cliente')
+#             )['promedio'] or 0
+#         }
+#         
+#         return context
 
 
-class TecnicoUpdateView(LoginRequiredMixin, UpdateView):
-    model = Tecnico
-    template_name = 'servicios/tecnico/form.html'
-    fields = ['usuario', 'codigo_tecnico', 'telefono', 'especialidades', 'activo']
-    success_url = reverse_lazy('servicios:tecnico_list')
-    
-    def form_valid(self, form):
-        messages.success(self.request, 'Técnico actualizado exitosamente.')
-        return super().form_valid(form)
+# class TecnicoUpdateView(LoginRequiredMixin, UpdateView):
+#     model = Tecnico
+#     template_name = 'servicios/tecnico/form.html'
+#     fields = ['usuario', 'codigo_tecnico', 'telefono', 'especialidades', 'activo']
+#     success_url = reverse_lazy('servicios:tecnico_list')
+#     
+#     def form_valid(self, form):
+#         messages.success(self.request, 'Técnico actualizado exitosamente.')
+#         return super().form_valid(form)
 
 
 class SolicitudServicioListView(LoginRequiredMixin, ListView):
@@ -191,7 +192,7 @@ class SolicitudServicioListView(LoginRequiredMixin, ListView):
     
     def get_queryset(self):
         queryset = super().get_queryset().select_related(
-            'cliente_crm', 'tecnico_asignado', 'tecnico_asignado__usuario',
+            'cliente_crm', 'tecnico_asignado',
             'trato_origen', 'cotizacion_aprobada__cotizacion__trato'
         )
         
@@ -226,7 +227,7 @@ class SolicitudServicioListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['estados'] = SolicitudServicio.ESTADO_CHOICES
         context['tipos'] = SolicitudServicio.TIPO_SERVICIO_CHOICES
-        context['tecnicos'] = Tecnico.objects.filter(activo=True)
+        # context['tecnicos'] = Tecnico.objects.filter(activo=True)
         # Obtener centros de costos únicos
         context['centros_costos'] = SolicitudServicio.objects.exclude(
             centro_costo__isnull=True
@@ -252,8 +253,8 @@ class SolicitudServicioCreateView(LoginRequiredMixin, CreateView):
     
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        # Filtrar técnicos activos
-        form.fields['tecnico_asignado'].queryset = Tecnico.objects.filter(activo=True)
+        # Usar colaboradores como técnicos
+        form.fields['tecnico_asignado'].queryset = Colaborador.objects.all().order_by('nombre')
         
         # Importar y configurar colaboradores
         from colaboradores.models import Colaborador
@@ -329,8 +330,8 @@ class SolicitudServicioUpdateView(LoginRequiredMixin, UpdateView):
     
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        # Filtrar técnicos activos
-        form.fields['tecnico_asignado'].queryset = Tecnico.objects.filter(activo=True)
+        # Usar colaboradores como técnicos
+        form.fields['tecnico_asignado'].queryset = Colaborador.objects.all().order_by('nombre')
         
         # Importar y configurar colaboradores
         from colaboradores.models import Colaborador

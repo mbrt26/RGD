@@ -87,7 +87,14 @@ class SolicitudServicio(models.Model):
     # Programación
     fecha_programada = models.DateTimeField('Fecha Programada')
     duracion_estimada = models.PositiveIntegerField('Duración Estimada (minutos)', default=120)
-    tecnico_asignado = models.ForeignKey(Tecnico, on_delete=models.SET_NULL, null=True, blank=True, related_name='servicios_asignados')
+    tecnico_asignado = models.ForeignKey(
+        'colaboradores.Colaborador',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='servicios_como_tecnico',
+        verbose_name='Técnico Asignado'
+    )
     
     # Equipo del proyecto
     director_proyecto = models.ForeignKey(
@@ -413,7 +420,12 @@ class AdjuntoInforme(models.Model):
 
 class UbicacionTecnico(models.Model):
     """Modelo para tracking de ubicación de técnicos"""
-    tecnico = models.ForeignKey(Tecnico, on_delete=models.CASCADE, related_name='ubicaciones')
+    tecnico = models.ForeignKey(
+        'colaboradores.Colaborador',
+        on_delete=models.CASCADE,
+        related_name='ubicaciones_como_tecnico',
+        verbose_name='Técnico'
+    )
     solicitud_servicio = models.ForeignKey(SolicitudServicio, on_delete=models.CASCADE, related_name='ubicaciones_tecnico', null=True, blank=True)
     latitud = models.DecimalField('Latitud', max_digits=10, decimal_places=8)
     longitud = models.DecimalField('Longitud', max_digits=11, decimal_places=8)
