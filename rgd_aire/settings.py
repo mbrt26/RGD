@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',  # Añadido para formateo de números y fechas
     'crispy_forms',
     'crispy_bootstrap5',
+    'colaboradores',  # Movido antes de proyectos para evitar problemas de dependencias
     'proyectos',
     'crm',
     'users',
@@ -50,7 +51,6 @@ INSTALLED_APPS = [
     'mantenimiento',
     'tasks',
     'mejora_continua',
-    'colaboradores',
 ]
 
 MIDDLEWARE = [

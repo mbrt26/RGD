@@ -84,6 +84,7 @@ class ColaboradorDetailView(LoginRequiredMixin, DetailView):
         colaborador = self.get_object()
         
         # Get related projects and services from proyectos app
+        # Import here to avoid circular imports
         from proyectos.models import Proyecto, Servicio, Bitacora, Actividad, ComiteProyecto
         
         # Proyectos donde es director o ingeniero
