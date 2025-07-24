@@ -1,7 +1,8 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from proyectos.models import ComiteProyecto, ParticipanteComite, SeguimientoProyectoComite, SeguimientoServicioComite, ElementoExternoComite, Colaborador
+from proyectos.models import ComiteProyecto, ParticipanteComite, SeguimientoProyectoComite, SeguimientoServicioComite, ElementoExternoComite
+from colaboradores.models import Colaborador
 
 
 class ComiteProyectoForm(forms.ModelForm):

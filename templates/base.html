@@ -80,9 +80,6 @@
                             <li><a class="dropdown-item" href="{% url 'proyectos:proyecto_list' %}">
                                 <i class="fas fa-folder-open me-2"></i>Lista de Proyectos
                             </a></li>
-                            <li><a class="dropdown-item" href="{% url 'proyectos:colaborador_list' %}">
-                                <i class="fas fa-users-cog me-2"></i>Colaboradores
-                            </a></li>
                             <li><a class="dropdown-item" href="{% url 'proyectos:actividad_list' %}">
                                 <i class="fas fa-tasks me-2"></i>Actividades
                             </a></li>
@@ -248,6 +245,29 @@
                             <li><h6 class="dropdown-header">Gestión</h6></li>
                             <li><a class="dropdown-item" href="{% url 'proyectos:comite_list' %}">
                                 <i class="fas fa-search me-2"></i>Buscar Comités
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Menú desplegable Colaboradores -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="colaboradoresDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-users-cog me-1"></i>Colaboradores
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="colaboradoresDropdown">
+                            <li><a class="dropdown-item" href="{% url 'colaboradores:list' %}">
+                                <i class="fas fa-list me-2"></i>Lista de Colaboradores
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'colaboradores:create' %}">
+                                <i class="fas fa-plus me-2"></i>Nuevo Colaborador
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Importar</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'colaboradores:import' %}">
+                                <i class="fas fa-file-import me-2"></i>Importar desde Excel
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'colaboradores:plantilla_excel' %}">
+                                <i class="fas fa-download me-2"></i>Descargar Plantilla
                             </a></li>
                         </ul>
                     </li>

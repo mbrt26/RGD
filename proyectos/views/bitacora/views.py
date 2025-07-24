@@ -8,7 +8,8 @@ from django.contrib import messages
 from django.db.models import Q
 from django.db import transaction
 from django.utils import timezone
-from proyectos.models import Bitacora, Proyecto, Actividad, Colaborador, BitacoraArchivo
+from proyectos.models import Bitacora, Proyecto, Actividad, BitacoraArchivo
+from colaboradores.models import Colaborador
 from proyectos.forms.bitacora_forms import BitacoraForm, FiltroBitacorasForm
 
 @require_http_methods(["GET"])

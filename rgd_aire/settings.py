@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'mantenimiento',
     'tasks',
     'mejora_continua',
+    'colaboradores',
 ]
 
 MIDDLEWARE = [

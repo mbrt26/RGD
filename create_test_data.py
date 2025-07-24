@@ -15,7 +15,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rgd_aire.settings')
 django.setup()
 
 from users.models import User
-from proyectos.models import Proyecto, Colaborador, ComiteProyecto, SeguimientoProyectoComite
+from proyectos.models import Proyecto, ComiteProyecto, SeguimientoProyectoComite
+from colaboradores.models import Colaborador
 from servicios.models import SolicitudServicio, Tecnico
 from crm.models import Cliente, Contacto, Trato, RepresentanteVentas
 

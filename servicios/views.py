@@ -256,7 +256,7 @@ class SolicitudServicioCreateView(LoginRequiredMixin, CreateView):
         form.fields['tecnico_asignado'].queryset = Tecnico.objects.filter(activo=True)
         
         # Importar y configurar colaboradores
-        from proyectos.models import Colaborador
+        from colaboradores.models import Colaborador
         colaboradores = Colaborador.objects.all().order_by('nombre')
         form.fields['director_proyecto'].queryset = colaboradores
         form.fields['ingeniero_residente'].queryset = colaboradores
@@ -333,7 +333,7 @@ class SolicitudServicioUpdateView(LoginRequiredMixin, UpdateView):
         form.fields['tecnico_asignado'].queryset = Tecnico.objects.filter(activo=True)
         
         # Importar y configurar colaboradores
-        from proyectos.models import Colaborador
+        from colaboradores.models import Colaborador
         colaboradores = Colaborador.objects.all().order_by('nombre')
         form.fields['director_proyecto'].queryset = colaboradores
         form.fields['ingeniero_residente'].queryset = colaboradores

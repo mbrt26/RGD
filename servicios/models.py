@@ -91,7 +91,7 @@ class SolicitudServicio(models.Model):
     
     # Equipo del proyecto
     director_proyecto = models.ForeignKey(
-        'proyectos.Colaborador',
+        'colaboradores.Colaborador',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -100,7 +100,7 @@ class SolicitudServicio(models.Model):
         help_text='Colaborador responsable de dirigir el proyecto'
     )
     ingeniero_residente = models.ForeignKey(
-        'proyectos.Colaborador',
+        'colaboradores.Colaborador',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

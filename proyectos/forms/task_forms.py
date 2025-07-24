@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from tasks.models import Task, TaskCategory
-from proyectos.models import Colaborador
+from colaboradores.models import Colaborador
 import json
 
 User = get_user_model()

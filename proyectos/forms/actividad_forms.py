@@ -1,6 +1,7 @@
 from django import forms
 from django.forms import DateInput, Select
-from proyectos.models import Actividad, Proyecto, Colaborador
+from proyectos.models import Actividad, Proyecto
+from colaboradores.models import Colaborador
 
 class ProyectoChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):

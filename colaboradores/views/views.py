@@ -5,8 +5,7 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.db.models import Q
 from colaboradores.models import Colaborador
-from proyectos.models import Bitacora
-from proyectos.forms.import_forms import ColaboradorImportForm
+from colaboradores.forms import ColaboradorImportForm
 import pandas as pd
 import io
 from openpyxl import Workbook
@@ -80,29 +79,30 @@ class ColaboradorDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'colaborador'
     pk_url_kwarg = 'id'
 
-    def get_object(self, queryset=None):
-        obj = super().get_object(queryset=queryset)
-        print(f"DEBUG - Colaborador encontrado: {obj.id} - {obj.nombre}")
-        return obj
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         colaborador = self.get_object()
         
-        # Debug information
-        print(f"DEBUG - Context data for colaborador: {colaborador.id} - {colaborador.nombre}")
-        print(f"DEBUG - Email: {colaborador.email}, Teléfono: {colaborador.telefono}")
+        # Get related projects and services from proyectos app
+        from proyectos.models import Proyecto, Servicio, Bitacora, Actividad, ComiteProyecto
         
-        # Get related bitacoras
-        bitacoras = Bitacora.objects.filter(responsable=colaborador)
-        print(f"DEBUG - Bitácoras encontradas: {bitacoras.count()}")
+        # Proyectos donde es director o ingeniero
+        context['proyectos_director'] = Proyecto.objects.filter(director_asignado=colaborador)
+        context['proyectos_ingeniero'] = Proyecto.objects.filter(ingeniero_asignado=colaborador)
         
-        context['bitacoras'] = bitacoras
-        context['debug_info'] = {
-            'colaborador_id': colaborador.id,
-            'bitacoras_count': bitacoras.count(),
-            'all_fields': {field.name: getattr(colaborador, field.name) for field in colaborador._meta.fields}
-        }
+        # Servicios donde es director o ingeniero
+        context['servicios_director'] = Servicio.objects.filter(director_asignado=colaborador)
+        context['servicios_ingeniero'] = Servicio.objects.filter(ingeniero_asignado=colaborador)
+        
+        # Bitácoras donde es responsable
+        context['bitacoras'] = Bitacora.objects.filter(responsable=colaborador)
+        
+        # Actividades donde es responsable
+        context['actividades'] = Actividad.objects.filter(responsable=colaborador)
+        
+        # Comités donde es coordinador
+        context['comites_coordinador'] = ComiteProyecto.objects.filter(coordinador=colaborador)
+        
         return context
 
 class ColaboradorUpdateView(LoginRequiredMixin, UpdateView):

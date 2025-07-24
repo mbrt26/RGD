@@ -113,7 +113,7 @@ class ProyectoCreateView(LoginRequiredMixin, CreateView):
         
         # Importar modelos desde crm y proyectos
         from crm.models import Trato
-        from proyectos.models import Colaborador
+        from colaboradores.models import Colaborador
         
         # Filtrar solo los tratos ganados
         tratos_ganados = Trato.objects.filter(estado='ganado').select_related('cliente')
@@ -332,7 +332,7 @@ class ProyectoUpdateForm(forms.ModelForm):
         
         # Importar modelos necesarios
         from crm.models import Trato
-        from proyectos.models import Colaborador
+        from colaboradores.models import Colaborador
         
         # Remover validators de fecha_inicio para permitir fechas pasadas en edición
         if 'fecha_inicio' in self.fields:

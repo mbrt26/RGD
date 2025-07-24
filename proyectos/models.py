@@ -6,6 +6,7 @@ from django.conf import settings
 from decimal import Decimal
 import json
 import os
+from colaboradores.models import Colaborador
 
 # Use string reference to avoid circular import
 # Trato model will be referenced as 'crm.Trato'
@@ -21,19 +22,6 @@ def validate_fecha_futura_solo_nuevos(value):
 def validate_porcentaje(value):
     if value < 0 or value > 100:
         raise ValidationError('El porcentaje debe estar entre 0 y 100')
-
-class Colaborador(models.Model):
-    nombre = models.CharField(max_length=100)
-    cargo = models.CharField(max_length=100)
-    email = models.EmailField('Correo electrónico', blank=True)
-    telefono = models.CharField('Teléfono', max_length=20, blank=True)
-
-    class Meta:
-        verbose_name = 'Colaborador'
-        verbose_name_plural = 'Colaboradores'
-
-    def __str__(self):
-        return f"{self.nombre} - {self.cargo}"
 
 class Proyecto(models.Model):
     ESTADO_CHOICES = [
@@ -137,7 +125,7 @@ class Proyecto(models.Model):
     
     # Equipo del proyecto
     director_proyecto = models.ForeignKey(
-        'Colaborador',
+        'colaboradores.Colaborador',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -146,7 +134,7 @@ class Proyecto(models.Model):
         help_text='Colaborador responsable de dirigir el proyecto'
     )
     ingeniero_residente = models.ForeignKey(
-        'Colaborador',
+        'colaboradores.Colaborador',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -606,7 +594,7 @@ class Actividad(models.Model):
     
     # Nuevos campos
     responsable_asignado = models.ForeignKey(
-        'Colaborador',
+        'colaboradores.Colaborador',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

@@ -1,6 +1,7 @@
 from django import forms
 from django.utils import timezone
-from proyectos.models import Bitacora, Proyecto, Actividad, Colaborador
+from proyectos.models import Bitacora, Proyecto, Actividad
+from colaboradores.models import Colaborador
 
 
 class BitacoraForm(forms.ModelForm):

@@ -17,7 +17,8 @@ import pandas as pd
 import io
 import json
 
-from proyectos.models import Actividad, Proyecto, Bitacora, Colaborador
+from proyectos.models import Actividad, Proyecto, Bitacora
+from colaboradores.models import Colaborador
 from proyectos.forms.actividad_forms import ActividadForm
 from proyectos.forms.import_forms import ActividadImportForm
 
