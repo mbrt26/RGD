@@ -75,6 +75,32 @@
                     <small class="form-text text-muted">Describe brevemente el proyecto o servicio</small>
                 </div>
 
+                <div class="form-group">
+                    <label for="{{ form.responsable.id_for_label }}" class="form-label required">
+                        <i class="fas fa-user-tie text-secondary me-2"></i>Responsable
+                    </label>
+                    {{ form.responsable }}
+                    {% if form.responsable.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.responsable.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                    <small class="form-text text-muted">Representante de ventas responsable del proyecto</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.subclasificacion_comercial.id_for_label }}" class="form-label">
+                        <i class="fas fa-tags text-primary me-2"></i>Subclasificación Comercial
+                    </label>
+                    {{ form.subclasificacion_comercial }}
+                    {% if form.subclasificacion_comercial.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.subclasificacion_comercial.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                    <small class="form-text text-muted">Clasificación comercial del proyecto</small>
+                </div>
+
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">

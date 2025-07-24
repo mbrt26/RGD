@@ -254,11 +254,8 @@ class SolicitudServicioCreateView(LoginRequiredMixin, CreateView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         # Usar colaboradores como técnicos
-        form.fields['tecnico_asignado'].queryset = Colaborador.objects.all().order_by('nombre')
-        
-        # Importar y configurar colaboradores
-        from colaboradores.models import Colaborador
         colaboradores = Colaborador.objects.all().order_by('nombre')
+        form.fields['tecnico_asignado'].queryset = colaboradores
         form.fields['director_proyecto'].queryset = colaboradores
         form.fields['ingeniero_residente'].queryset = colaboradores
         form.fields['director_proyecto'].empty_label = "--- Seleccione un director ---"
@@ -331,11 +328,8 @@ class SolicitudServicioUpdateView(LoginRequiredMixin, UpdateView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         # Usar colaboradores como técnicos
-        form.fields['tecnico_asignado'].queryset = Colaborador.objects.all().order_by('nombre')
-        
-        # Importar y configurar colaboradores
-        from colaboradores.models import Colaborador
         colaboradores = Colaborador.objects.all().order_by('nombre')
+        form.fields['tecnico_asignado'].queryset = colaboradores
         form.fields['director_proyecto'].queryset = colaboradores
         form.fields['ingeniero_residente'].queryset = colaboradores
         form.fields['director_proyecto'].empty_label = "--- Seleccione un director ---"

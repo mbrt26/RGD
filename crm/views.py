@@ -1192,13 +1192,21 @@ class TratoCreateView(LoginRequiredMixin, CreateView):
 class TratoQuickCreateView(LoginRequiredMixin, CreateView):
     model = Trato
     template_name = 'crm/trato/quick_create.html'
-    fields = ['cliente', 'descripcion', 'fuente', 'contacto']
+    fields = ['cliente', 'descripcion', 'fuente', 'contacto', 'responsable', 'subclasificacion_comercial']
     
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         # Hacer que descripción sea requerida
         form.fields['descripcion'].required = True
         form.fields['cliente'].required = True
+        
+        # Configurar queryset para responsable (solo representantes de ventas)
+        User = get_user_model()
+        form.fields['responsable'].queryset = User.objects.filter(
+            representanteventas__isnull=False
+        ).distinct()
+        form.fields['responsable'].empty_label = "--- Seleccione un representante ---"
+        form.fields['responsable'].required = True
         
         # Personalizar widgets
         form.fields['descripcion'].widget = forms.Textarea(attrs={
@@ -1209,6 +1217,8 @@ class TratoQuickCreateView(LoginRequiredMixin, CreateView):
         form.fields['cliente'].widget.attrs.update({'class': 'form-select'})
         form.fields['fuente'].widget.attrs.update({'class': 'form-select'})
         form.fields['contacto'].widget.attrs.update({'class': 'form-select'})
+        form.fields['responsable'].widget.attrs.update({'class': 'form-select'})
+        form.fields['subclasificacion_comercial'].widget.attrs.update({'class': 'form-select'})
         
         return form
     
@@ -1217,7 +1227,7 @@ class TratoQuickCreateView(LoginRequiredMixin, CreateView):
         form.instance.estado = 'revision_tecnica'  # Estado inicial
         form.instance.probabilidad = 50  # Probabilidad por defecto
         form.instance.valor = 0  # Valor inicial
-        form.instance.responsable = self.request.user
+        # El responsable ahora se selecciona manualmente en el formulario
         
         # Determinar la acción del botón presionado
         action = self.request.POST.get('action', 'quick')
@@ -2537,6 +2547,16 @@ class TratoKanbanView(LoginRequiredMixin, TemplateView):
         if tipo_negociacion:
             tratos = tratos.filter(tipo_negociacion=tipo_negociacion)
         
+        # Filtros de fecha
+        fecha_desde = self.request.GET.get('fecha_desde')
+        fecha_hasta = self.request.GET.get('fecha_hasta')
+        
+        if fecha_desde:
+            tratos = tratos.filter(fecha_creacion__gte=fecha_desde)
+        
+        if fecha_hasta:
+            tratos = tratos.filter(fecha_creacion__lte=fecha_hasta)
+        
         # Agrupar tratos por estado
         estados_tratos = {}
         for estado_code, estado_name in Trato.ESTADO_CHOICES:
@@ -2557,6 +2577,8 @@ class TratoKanbanView(LoginRequiredMixin, TemplateView):
             'search_query': search,
             'responsable_selected': responsable_id,
             'tipo_selected': tipo_negociacion,
+            'fecha_desde': fecha_desde or '',
+            'fecha_hasta': fecha_hasta or '',
         })
         
         return context

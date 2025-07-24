@@ -187,6 +187,16 @@ class Trato(models.Model):
         ('suministro', 'Suministro'),
     ]
     
+    SUBCLASIFICACION_COMERCIAL_CHOICES = [
+        ('filtros', 'FILTROS'),
+        ('cartuchos', 'CARTUCHOS'),
+        ('suministros_varios', 'SUMINISTROS VARIOS'),
+        ('control', 'CONTROL'),
+        ('sensores', 'SENSORES'),
+        ('montaje_menor', 'MONTAJE MENOR'),
+        ('mantenimiento_menor', 'MANTENIMIENTO MENOR'),
+    ]
+    
     numero_oferta = models.CharField('# Oferta', max_length=10, unique=True, blank=True)
     nombre = models.CharField('Descripción', max_length=200, null=True, blank=True)
     cliente = models.ForeignKey(Cliente, verbose_name='Cliente', on_delete=models.CASCADE, related_name='tratos')
@@ -198,6 +208,7 @@ class Trato(models.Model):
     probabilidad = models.PositiveIntegerField('Probabilidad (%)', default=0)
     estado = models.CharField('Estado', max_length=20, choices=ESTADO_CHOICES, default='revision_tecnica')
     tipo_negociacion = models.CharField('Tipo de Negociación', max_length=20, choices=TIPO_CHOICES, default='contrato')
+    subclasificacion_comercial = models.CharField('Subclasificación Comercial', max_length=30, choices=SUBCLASIFICACION_COMERCIAL_CHOICES, blank=True)
     
     # Campos adicionales para proyectos
     centro_costos = models.CharField('Centro de Costos', max_length=100, blank=True)

@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from crm.models import Trato, Cliente, Contacto
+from crm.models import Trato, Cliente, Contacto, RepresentanteVentas
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -18,7 +18,7 @@ class TratoForm(forms.ModelForm):
             'descripcion', 'valor', 'probabilidad', 'estado', 'fuente', 
             'fecha_creacion', 'fecha_cierre', 'fecha_envio_cotizacion', 
             'dias_prometidos', 'responsable', 'notas', 'centro_costos', 
-            'nombre_proyecto', 'orden_contrato', 'tipo_negociacion'
+            'nombre_proyecto', 'orden_contrato', 'tipo_negociacion', 'subclasificacion_comercial'
         ]
         widgets = {
             'fecha_creacion': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
@@ -41,7 +41,11 @@ class TratoForm(forms.ModelForm):
         # Set up querysets for related fields
         self.fields['cliente'].queryset = Cliente.objects.all()
         self.fields['contacto'].queryset = Contacto.objects.all()
-        self.fields['responsable'].queryset = User.objects.filter(is_active=True)
+        # Usar representantes de ventas para el campo responsable
+        self.fields['responsable'].queryset = User.objects.filter(
+            representanteventas__isnull=False
+        ).distinct()
+        self.fields['responsable'].empty_label = "--- Seleccione un representante ---"
     
     def clean_numero_oferta(self):
         """
