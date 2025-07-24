@@ -31,6 +31,8 @@ CSRF_COOKIE_HTTPONLY = False  # Permitir acceso a JavaScript
 CSRF_USE_SESSIONS = False  # Usar cookies en lugar de sesiones
 CSRF_COOKIE_SAMESITE = 'Lax'  # Permitir cookies en peticiones del mismo sitio
 CSRF_COOKIE_NAME = 'csrftoken'  # Nombre estándar de la cookie
+CSRF_COOKIE_DOMAIN = None  # Permitir cookies en el dominio actual
+CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'  # Nombre estándar del header
 
 # Configuración de base de datos para Cloud Run + Cloud SQL
 if os.environ.get('CLOUD_SQL_CONNECTION_NAME'):
@@ -54,10 +56,10 @@ else:
     }
 
 # Configuración de seguridad para HTTPS
-SECURE_SSL_REDIRECT = not DEBUG
+SECURE_SSL_REDIRECT = False  # Cloud Run maneja HTTPS automáticamente
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = False  # Cloud Run proxy puede usar HTTP internamente
+CSRF_COOKIE_SECURE = False  # Cloud Run proxy puede usar HTTP internamente
 
 # Configuración de archivos estáticos
 STATIC_URL = '/static/'
