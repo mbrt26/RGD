@@ -34,7 +34,9 @@ class DebugCSRFMiddleware:
         # Log información sobre CSRF antes de procesar la petición
         if request.method == 'POST':
             logger.info(f"POST request to {request.path}")
-            logger.info(f"User authenticated: {request.user.is_authenticated}")
+            # Solo verificar usuario si ya ha sido procesado por AuthenticationMiddleware
+            if hasattr(request, 'user'):
+                logger.info(f"User authenticated: {request.user.is_authenticated}")
             logger.info(f"CSRF cookie present: {'csrftoken' in request.COOKIES}")
             logger.info(f"CSRF header present: {'HTTP_X_CSRFTOKEN' in request.META}")
             
