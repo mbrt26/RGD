@@ -30,7 +30,8 @@
 <div class="quick-form">
     <div class="info-banner text-center">
         <h4 class="mb-2"><i class="fas fa-rocket me-2"></i>Crear Trato Rápido</h4>
-        <p class="mb-0">Registra los datos esenciales ahora y completa la información detallada después</p>
+        <p class="mb-1">Registra los datos esenciales ahora y completa la información detallada después</p>
+        <p class="mb-0"><small>Se asignará el número de oferta: <strong>#{{ proximo_numero }}</strong></small></p>
     </div>
 
     <div class="card">
@@ -131,9 +132,19 @@
                     </div>
                 </div>
 
-                <div class="alert alert-info mt-4">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>¿Qué sigue?</strong> Después de crear el trato podrás completar información adicional como valor estimado, fechas, tipo de negociación y más detalles.
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-hashtag me-2"></i>
+                            <strong>Número de Oferta:</strong> Se asignará automáticamente el <strong>#{{ proximo_numero }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>¿Qué sigue?</strong> Podrás completar información adicional después.
+                        </div>
+                    </div>
                 </div>
 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-between mt-4">

@@ -1187,6 +1187,11 @@ class TratoCreateView(LoginRequiredMixin, CreateView):
         context['title'] = 'Nuevo ProyectoCRM'
         context['clientes'] = Cliente.objects.all()
         context['users'] = User.objects.filter(is_active=True)
+        
+        # Agregar el próximo número de oferta
+        config = ConfiguracionOferta.obtener_configuracion()
+        context['proximo_numero'] = f"{config.siguiente_numero:04d}"
+        
         return context
 
 class TratoQuickCreateView(LoginRequiredMixin, CreateView):
@@ -1260,6 +1265,15 @@ class TratoQuickCreateView(LoginRequiredMixin, CreateView):
     
     def get_success_url(self):
         return reverse('crm:trato_detail', kwargs={'pk': self.object.pk})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Agregar el próximo número de oferta
+        config = ConfiguracionOferta.obtener_configuracion()
+        context['proximo_numero'] = f"{config.siguiente_numero:04d}"
+        
+        return context
 
 class TratoDetailView(LoginRequiredMixin, DetailView):
     model = Trato
