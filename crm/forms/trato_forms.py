@@ -31,9 +31,12 @@ class TratoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # Configure numero_oferta field
+        # Configure numero_oferta field as read-only
         self.fields['numero_oferta'].required = False
-        self.fields['numero_oferta'].help_text = 'Deje vacío para asignar automáticamente'
+        self.fields['numero_oferta'].help_text = 'Se asigna automáticamente al guardar'
+        self.fields['numero_oferta'].widget.attrs['readonly'] = True
+        self.fields['numero_oferta'].widget.attrs['class'] = 'form-control-plaintext'
+        self.fields['numero_oferta'].widget.attrs['tabindex'] = '-1'
         
         # Configure date input formats
         self.fields['fecha_creacion'].input_formats = ['%Y-%m-%d']
@@ -49,20 +52,13 @@ class TratoForm(forms.ModelForm):
     
     def clean_numero_oferta(self):
         """
-        Validate that manual offer numbers don't conflict with existing ones.
+        Ensure numero_oferta is not manually modified.
+        For new instances, it will be auto-assigned.
+        For existing instances, preserve the current value.
         """
-        numero_oferta = self.cleaned_data.get('numero_oferta')
-        
-        if numero_oferta:
-            # Check if this number already exists (excluding current instance for updates)
-            existing_query = Trato.objects.filter(numero_oferta=numero_oferta)
-            if self.instance.pk:
-                existing_query = existing_query.exclude(pk=self.instance.pk)
-            
-            if existing_query.exists():
-                raise ValidationError(
-                    f'El número de oferta {numero_oferta} ya existe. '
-                    f'Use un número diferente o deje el campo vacío para asignar automáticamente.'
-                )
-        
-        return numero_oferta
+        if self.instance.pk:
+            # For existing instances, always use the current value
+            return self.instance.numero_oferta
+        else:
+            # For new instances, return None to trigger auto-assignment
+            return None
